@@ -10,9 +10,13 @@ See [DESIGN.md](DESIGN.md) for the full design.
 
 ```bash
 cp .env.example .env
-# edit .env: set ADMIN_TOKEN, SECRET_MASTER_KEY (see below), optionally embeddings
+# edit .env: set ADMIN_TOKEN, NEO4J_PASSWORD and SECRET_MASTER_KEY (see below)
 docker compose up -d --build
 ```
+
+Semantic recall works out of the box: the bundled `embedder` service runs a local
+multilingual model (fastembed, baked into the image at build time). No cloud, no
+runtime internet — the stack runs fully autonomously inside an organization.
 
 Generate a vault master key:
 

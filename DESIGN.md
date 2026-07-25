@@ -34,7 +34,7 @@ K3YVAULT-style vault thinking) — no code coupling.
 | Database | **Neo4j 5 (community)** — one store for graph, vectors, tenancy, vault, audit, chores | Cypher makes DAG traversal & promotion natural; native vector index; Neo4j Browser = visual window into the mind |
 | API | Python, FastAPI, layered `routers → services → repository` | house convention |
 | MCP | fastmcp mounted in the FastAPI app, bearer-gated per call | house convention |
-| Embeddings | configurable **OpenAI-compatible endpoint** (`EMBEDDINGS_BASE_URL/MODEL`) — works with OpenAI *and* Ollama; **never hardcode a model** | house rule; graceful degradation to graph+recency search when unset |
+| Embeddings | **local-only by default** (decided 2026-07-25): bundled `embedder` container — fastembed (ONNX, no torch), multilingual MiniLM (384d), model baked into the image at build time. Speaks the OpenAI-compatible `/v1/embeddings` interface, so the server just points `EMBEDDINGS_BASE_URL` at it; the endpoint stays configurable but **no cloud model is ever required** — the whole stack runs autonomously/offline inside an organization | org knowledge must not leak to a cloud API; graceful degradation to word-based search when unset |
 | Secrets crypto | Fernet (symmetric), master key from env | simple, rotatable |
 | Deploy | self-hosted Docker Compose (Neo4j + API) | house style |
 
