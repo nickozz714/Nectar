@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HiveMind</title>
+<style>
+  :root {
+    --bg: #14120e; --panel: #1e1b15; --panel2: #26221a; --line: #3a342a;
+    --text: #ece5d8; --dim: #9a917f; --honey: #e8a723; --honey2: #f6c85f;
+    --blue: #5aa9e6; --green: #6cc551; --teal: #3fc1c9; --purple: #b085f5;
+    --orange: #f08a4b; --red: #e4572e; --gray: #8d99ae;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 17px; color: var(--honey2); }
+  header .tabs { display: flex; gap: 4px; }
+  header .tabs button { background: none; border: 1px solid transparent; color: var(--dim); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  header .tabs button.active { background: var(--panel2); color: var(--text); border-color: var(--line); }
+  header .spacer { flex: 1; }
+  .badge { background: var(--honey); color: #201a08; border-radius: 10px; padding: 1px 8px; font-size: 12px; font-weight: 600; }
+  .rolebadge { background: var(--panel2); border: 1px solid var(--line); color: var(--dim); border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+  main { flex: 1; display: flex; min-height: 0; }
+  .col { overflow-y: auto; }
+  #left { width: 290px; background: var(--panel); border-right: 1px solid var(--line); padding: 12px; }
+  #center { flex: 1; position: relative; }
+  #right { width: 360px; background: var(--panel); border-left: 1px solid var(--line); padding: 14px; display: none; }
+  svg { width: 100%; height: 100%; display: block; cursor: grab; }
+  input, select, textarea { width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 14px; margin-bottom: 8px; }
+  button.action { background: var(--honey); color: #201a08; border: none; border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; margin-right: 6px; }
+  button.ghost { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .item { padding: 8px 10px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; }
+  .item:hover { background: var(--panel2); }
+  .item .t { font-size: 12px; color: var(--dim); }
+  .section { margin-bottom: 16px; }
+  .section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin-bottom: 8px; }
+  .chip { display: inline-block; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 1px 9px; font-size: 12px; margin: 0 4px 4px 0; cursor: pointer; }
+  .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .card .meta { font-size: 12px; color: var(--dim); margin-bottom: 6px; }
+  pre { background: #131109; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; margin: 6px 0; }
+  #overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  #overlay .box { width: 340px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  #overlay h2 { color: var(--honey2); margin-bottom: 4px; }
+  #overlay p { color: var(--dim); font-size: 13px; margin-bottom: 14px; }
+  .page { flex: 1; overflow-y: auto; padding: 20px; max-width: 900px; }
+  .err { color: var(--red); font-size: 13px; margin-top: 6px; }
+  .ok { color: var(--green); font-size: 13px; }
+  .legend { position: absolute; bottom: 12px; left: 12px; background: rgba(30,27,21,.9); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <div class="box">
+    <h2>🐝 HiveMind</h2>
+    <p>Log in met je account-token. Je rol bepaalt wat je mag: lezen &amp; schrijven (member), onderhoud (maintainer), reviewen (org_admin).</p>
+    <input id="tokenInput" type="password" placeholder="account token" autocomplete="off">
+    <button class="action" onclick="login()">Verbinden</button>
+    <div id="loginErr" class="err"></div>
+  </div>
+</div>
+
+<header>
+  <h1>🐝 HiveMind</h1>
+  <div class="tabs">
+    <button data-tab="mind" class="active" onclick="showTab('mind')">Mind</button>
+    <button data-tab="chores" onclick="showTab('chores')">Chores <span id="choreBadge"></span></button>
+    <button data-tab="review" id="reviewTab" style="display:none" onclick="showTab('review')">Review</button>
+    <button data-tab="beheer" onclick="showTab('beheer')">Beheer</button>
+  </div>
+  <div class="spacer"></div>
+  <span id="who" class="rolebadge"></span>
+  <button class="ghost" onclick="logout()">Uitloggen</button>
+</header>
+
+<main id="tab-mind">
+  <div id="left" class="col">
+    <div class="section">
+      <h3>Zoeken in de mind</h3>
+      <input id="q" placeholder="zoek semantisch…" onkeydown="if(event.key==='Enter')doSearch()">
+      <div id="results"></div>
+    </div>
+    <div class="section">
+      <h3>Topics</h3>
+      <div id="topicList"></div>
+    </div>
+  </div>
+  <div id="center">
+    <svg id="svg"></svg>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div id="right" class="col"></div>
+</main>
+
+<main id="tab-chores" style="display:none"><div class="page" id="choresPage"></div></main>
+<main id="tab-review" style="display:none"><div class="page" id="reviewPage"></div></main>
+<main id="tab-beheer" style="display:none"><div class="page" id="beheerPage"></div></main>
+
+<script>
+const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:"#3fc1c9",
+                 skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae" };
+let TOKEN = localStorage.getItem("hive_token") || "";
+let ME = null;
+
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: {
+    "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json", ...(opts.headers || {}) }});
+  if (r.status === 401) { logout(); throw new Error("unauthorized"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+async function login() {
+  TOKEN = document.getElementById("tokenInput").value.trim();
+  try {
+    ME = await api("/graph/me");
+    localStorage.setItem("hive_token", TOKEN);
+    document.getElementById("overlay").style.display = "none";
+    boot();
+  } catch (e) { document.getElementById("loginErr").textContent = "Token niet geldig"; }
+}
+function logout() { localStorage.removeItem("hive_token"); location.reload(); }
+
+function showTab(name) {
+  for (const m of document.querySelectorAll("main")) m.style.display = "none";
+  document.getElementById("tab-" + name).style.display = "flex";
+  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === name);
+  if (name === "chores") loadChores();
+  if (name === "review") loadReview();
+  if (name === "beheer") renderBeheer();
+}
+
+/* ---------- force graph ---------- */
+const nodes = new Map();   // uid -> {uid,title,type,x,y,vx,vy}
+const links = [];          // {a,b}
+const linkKeys = new Set();
+let selected = null, dragging = null, panning = null, vb = {x:-500,y:-350,w:1000,h:700};
+const svg = document.getElementById("svg");
+
+function addNode(n) {
+  if (nodes.has(n.uid)) return nodes.get(n.uid);
+  const node = { ...n, x: (Math.random()-.5)*400, y: (Math.random()-.5)*300, vx:0, vy:0 };
+  nodes.set(n.uid, node); return node;
+}
+function addLink(a, b) {
+  const k = a < b ? a+"|"+b : b+"|"+a;
+  if (linkKeys.has(k) || a === b) return;
+  linkKeys.add(k); links.push({ a, b });
+}
+
+function tick() {
+  const ns = [...nodes.values()];
+  for (let i = 0; i < ns.length; i++) for (let j = i+1; j < ns.length; j++) {
+    const p = ns[i], q = ns[j];
+    let dx = q.x-p.x, dy = q.y-p.y, d2 = dx*dx+dy*dy || 1, d = Math.sqrt(d2);
+    const f = Math.min(2200/d2, 8);
+    dx /= d; dy /= d;
+    p.vx -= dx*f; p.vy -= dy*f; q.vx += dx*f; q.vy += dy*f;
+  }
+  for (const l of links) {
+    const p = nodes.get(l.a), q = nodes.get(l.b);
+    let dx = q.x-p.x, dy = q.y-p.y, d = Math.sqrt(dx*dx+dy*dy) || 1;
+    const f = (d-110)*0.02; dx /= d; dy /= d;
+    p.vx += dx*f; p.vy += dy*f; q.vx -= dx*f; q.vy -= dy*f;
+  }
+  for (const n of ns) {
+    if (n === dragging) continue;
+    n.vx -= n.x*0.002; n.vy -= n.y*0.002;
+    n.vx *= 0.85; n.vy *= 0.85; n.x += n.vx; n.y += n.vy;
+  }
+  render();
+  requestAnimationFrame(tick);
+}
+
+function render() {
+  svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  let out = "";
+  for (const l of links) {
+    const p = nodes.get(l.a), q = nodes.get(l.b);
+    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3a342a" stroke-width="1.2"/>`;
+  }
+  for (const n of nodes.values()) {
+    const r = n.type === "topic" ? 16 : 10;
+    const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
+    out += `<g data-uid="${n.uid}" style="cursor:pointer">
+      <circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${COLORS[n.type] || "#8d99ae"}" ${sel}/>
+      <text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="11" fill="#c9c0ae">${esc(n.title.length > 26 ? n.title.slice(0,25)+"…" : n.title)}</text></g>`;
+  }
+  svg.innerHTML = out;
+}
+
+svg.addEventListener("pointerdown", e => {
+  const g = e.target.closest("g[data-uid]");
+  if (g) { dragging = nodes.get(g.dataset.uid); }
+  else panning = { x: e.clientX, y: e.clientY };
+});
+svg.addEventListener("pointermove", e => {
+  const scale = vb.w / svg.clientWidth;
+  if (dragging) { dragging.x += e.movementX*scale; dragging.y += e.movementY*scale; }
+  else if (panning) { vb.x -= e.movementX*scale; vb.y -= e.movementY*scale; }
+});
+svg.addEventListener("pointerup", async e => {
+  const g = e.target.closest("g[data-uid]");
+  if (dragging && g && nodes.get(g.dataset.uid) === dragging) await selectNode(dragging.uid);
+  dragging = null; panning = null;
+});
+svg.addEventListener("wheel", e => {
+  e.preventDefault();
+  const f = e.deltaY > 0 ? 1.1 : 0.9;
+  vb = { x: vb.x + vb.w*(1-f)/2, y: vb.y + vb.h*(1-f)/2, w: vb.w*f, h: vb.h*f };
+}, { passive: false });
+svg.addEventListener("dblclick", e => {
+  const g = e.target.closest("g[data-uid]");
+  if (g) expandNode(g.dataset.uid);
+});
+
+async function expandNode(uid) {
+  const data = await api("/graph/neighbors/" + uid);
+  addNode(data);
+  for (const nb of data.neighbors) {
+    addNode(nb);
+    nb.direction === "out" ? addLink(uid, nb.uid) : addLink(nb.uid, uid);
+  }
+}
+
+async function selectNode(uid) {
+  selected = nodes.get(uid) || null;
+  await expandNode(uid);
+  const n = await api("/graph/node/" + uid);
+  const right = document.getElementById("right");
+  right.style.display = "block";
+  const chips = (arr, label) => arr && arr.length
+    ? `<div class="section"><h3>${label}</h3>${arr.map(x =>
+        `<span class="chip" onclick="jumpTo('${x.uid}')">${esc(x.title)}</span>`).join("")}</div>` : "";
+  right.innerHTML = `
+    <div class="section"><h3>${esc(n.type)} · scope ${esc(n.scope)}</h3>
+      <strong style="font-size:16px">${esc(n.title)}</strong></div>
+    ${n.content ? `<pre>${esc(n.content)}</pre>` : ""}
+    ${chips(n.parents, "Valt onder")}${chips(n.children, "Bevat")}${chips(n.related, "Gerelateerd")}
+    ${(n.files || []).map(f => `<div class="section"><h3>📄 ${esc(f.path)}</h3><pre>${esc(f.content)}</pre></div>`).join("")}
+    <div class="section" style="color:var(--dim);font-size:12px">
+      gebruikt ${n.use_count ?? 0}× · door ${esc(n.created_by_model || "onbekend model")}</div>
+    <button class="ghost" onclick="expandNode('${uid}')">Buren uitklappen</button>`;
+}
+async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
+
+async function loadTopics() {
+  const data = await api("/graph/topics");
+  for (const t of data.topics) addNode({ uid: t.uid, title: t.title, type: "topic" });
+  for (const e of data.edges) addLink(e.parent, e.child);
+  document.getElementById("topicList").innerHTML = data.topics.map(t =>
+    `<div class="item" onclick="jumpTo('${t.uid}')">${esc(t.title)} <span class="t">${t.children} items</span></div>`).join("")
+    || `<div class="t" style="color:var(--dim)">Nog geen topics — de eerste hive_remember maakt ze.</div>`;
+}
+
+async function doSearch() {
+  const q = document.getElementById("q").value.trim();
+  if (!q) return;
+  const rs = await api("/graph/search?q=" + encodeURIComponent(q));
+  document.getElementById("results").innerHTML = rs.map(r =>
+    `<div class="item" onclick="jumpTo('${r.uid}')"><span class="dot" style="background:${COLORS[r.type]}"></span>
+     ${esc(r.title)}<div class="t">${esc(r.type)} · ${esc((r.topics || []).join(" › "))}</div></div>`).join("")
+    || `<div class="t" style="color:var(--dim)">Niets gevonden.</div>`;
+}
+
+/* ---------- chores ---------- */
+async function loadChores() {
+  const data = await api("/graph/chores");
+  const page = document.getElementById("choresPage");
+  const btns = c => ME.can_maintain && c.status === "ready"
+    ? `<button class="action" onclick="resolveChore('${c.uid}','apply')">Toepassen</button>
+       <button class="ghost" onclick="resolveChore('${c.uid}','reject')">Afwijzen</button>`
+    : (c.status === "ready" ? `<span class="t" style="color:var(--dim)">maintainer-rol nodig om af te handelen</span>` : "");
+  page.innerHTML = `<h2 style="margin-bottom:12px">Zwerm-klussen <span class="badge">${data.ready} ready</span></h2>` +
+    (data.chores.map(c => `<div class="card">
+      <div class="meta">${esc(c.type)} · ${esc(c.status)} · ${c.votes} stem(men)</div>
+      <div><strong>${esc(c.node_title || "")}</strong></div>
+      <pre>${esc(c.payload || "")}</pre>${btns(c)}</div>`).join("")
+     || `<p style="color:var(--dim)">Geen open klussen — de hive is bij. 🐝</p>`);
+}
+async function resolveChore(uid, action) {
+  try { await api(`/graph/chores/${uid}/resolve?action=${action}`, { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadChores();
+}
+
+/* ---------- review ---------- */
+async function loadReview() {
+  const page = document.getElementById("reviewPage");
+  const items = await api("/review/chores");
+  page.innerHTML = `<h2 style="margin-bottom:12px">Menselijke review — zichtbaarheid verbreden</h2>` +
+    (items.map(c => `<div class="card">
+      <div class="meta">${esc(c.type)} · huidige scope: ${esc(c.node_scope)}</div>
+      <div><strong>${esc(c.node_title || "")}</strong></div>
+      <pre>${esc(c.payload || "")}</pre>
+      <div class="meta">${(c.votes || []).map(v => esc((v.account || "?") + " (" + (v.model || "?") + "): " + (v.rationale || ""))).join("<br>")}</div>
+      <button class="action" onclick="reviewAct('${c.uid}','approve')">Goedkeuren</button>
+      <button class="ghost" onclick="reviewAct('${c.uid}','reject')">Afwijzen</button></div>`).join("")
+     || `<p style="color:var(--dim)">Niets te reviewen.</p>`);
+}
+async function reviewAct(uid, act) {
+  try { await api(`/review/chores/${uid}/${act}`, { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadReview();
+}
+
+/* ---------- beheer ---------- */
+function renderBeheer() {
+  const page = document.getElementById("beheerPage");
+  page.innerHTML = `
+    <h2 style="margin-bottom:6px">Beheer</h2>
+    <p style="color:var(--dim);margin-bottom:14px">Accounts en tokens aanmaken vereist het infra-admin-token (uit .env).</p>
+    <input id="admTok" type="password" placeholder="admin token" value="${esc(sessionStorage.getItem("hive_admin") || "")}">
+    <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
+      <input id="accName" placeholder="naam">
+      <input id="accTeam" placeholder="team uid (leeg = geen team)">
+      <select id="accRole"><option value="member">member — lezen &amp; schrijven</option>
+        <option value="maintainer">maintainer — + onderhoud</option>
+        <option value="org_admin">org_admin — + reviewen</option></select>
+      <button class="action" onclick="createAccount()">Aanmaken</button><span id="accOut" class="ok"></span></div>
+    <div class="card"><h3 style="margin-bottom:8px">Nieuw token voor account</h3>
+      <input id="tokAcc" placeholder="account uid">
+      <input id="tokLabel" placeholder="label (bv. laptop)">
+      <button class="action" onclick="createToken()">Token maken</button>
+      <pre id="tokOut" style="display:none"></pre></div>`;
+}
+async function adminApi(path, body) {
+  const tok = document.getElementById("admTok").value.trim();
+  sessionStorage.setItem("hive_admin", tok);
+  const r = await fetch(path, { method: "POST", headers: { "Authorization": "Bearer " + tok, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+async function createAccount() {
+  try {
+    const out = await adminApi("/admin/accounts", { org_uid: ME.org_uid, name: document.getElementById("accName").value.trim(),
+      team_uid: document.getElementById("accTeam").value.trim() || null, role: document.getElementById("accRole").value });
+    document.getElementById("accOut").textContent = " ✓ uid: " + out.uid;
+  } catch (e) { alert(e.message); }
+}
+async function createToken() {
+  try {
+    const out = await adminApi("/admin/tokens", { account_uid: document.getElementById("tokAcc").value.trim(),
+      label: document.getElementById("tokLabel").value.trim() || null });
+    const el = document.getElementById("tokOut");
+    el.style.display = "block";
+    el.textContent = "Token (eenmalig zichtbaar!): " + out.token;
+  } catch (e) { alert(e.message); }
+}
+
+/* ---------- boot ---------- */
+function boot() {
+  document.getElementById("who").textContent = ME.name + " · " + ME.role;
+  document.getElementById("choreBadge").innerHTML = ME.ready_chores ? `<span class="badge">${ME.ready_chores}</span>` : "";
+  if (ME.can_review) document.getElementById("reviewTab").style.display = "";
+  document.getElementById("legend").innerHTML = Object.entries(COLORS).map(([t, c]) =>
+    `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("");
+  loadTopics();
+  requestAnimationFrame(tick);
+}
+
+(async () => {
+  if (TOKEN) {
+    try { ME = await api("/graph/me"); document.getElementById("overlay").style.display = "none"; boot(); return; }
+    catch (e) { /* fall through to login */ }
+  }
+  document.getElementById("overlay").style.display = "flex";
+})();
+</script>
+</body>
+</html>

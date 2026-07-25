@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
-from src.authentication.deps import require_admin
+from src.authentication.deps import ROLES, require_admin
 from src.db.neo4j import get_graph
 from src.repository import governance_repo, tenancy_repo, vault_repo
 from src.schemas.core import (
@@ -39,6 +39,8 @@ def create_team(body: TeamCreate, session: Session = Depends(get_graph)):
 
 @router.post("/accounts", response_model=AccountOut)
 def create_account(body: AccountCreate, session: Session = Depends(get_graph)):
+    if body.role not in ROLES:
+        raise HTTPException(status_code=400, detail=f"role must be one of: {', '.join(ROLES)}")
     account = tenancy_repo.create_account(session, body.org_uid, body.name, body.team_uid, body.role)
     if account is None:
         raise HTTPException(status_code=404, detail="Org or team not found")

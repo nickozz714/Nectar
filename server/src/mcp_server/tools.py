@@ -166,8 +166,10 @@ def hive_chores(limit: int = 5) -> list[dict]:
 @mcp.tool
 def hive_resolve_chore(chore_uid: str, action: str, note: str = "") -> dict:
     """Resolve a 'ready' chore: action 'apply' executes the suggested mutation, 'reject'
-    dismisses it. Judge the suggestion on its merits first — you are the reviewing bee.
-    scope_widening chores are excluded (human review only)."""
+    dismisses it. Requires the maintainer role on your account — members can suggest and
+    vote, but resolving is delegated deliberately. Judge the suggestion on its merits
+    first — you are the reviewing bee. scope_widening chores are excluded (human review
+    only)."""
     with _authed() as (session, account):
         return governance_service.resolve(session, account, chore_uid, action, note)
 

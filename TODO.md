@@ -27,7 +27,9 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 - [ ] **Full-text index** in Neo4j voor de fallback-zoekweg (nu woord-CONTAINS-scan).
 
 ## Later / ideeën
-- [ ] Web-UI (Neo4j Browser volstaat voorlopig als venster op de mind).
+- [x] Web-UI: hive GUI op `/ui` (2026-07-25) — graph-verkenner, zoeken, chores, review, beheer.
+      Nog uit te breiden: nodes bewerken via suggesties vanuit de GUI, audit-inzage, teams/secrets-overzicht.
+- [x] Rollen: member → maintainer → org_admin (2026-07-25) — onderhoud en review zijn rol-gebonden.
 - [ ] Skill-versionering.
 - [ ] Decay-parameters tunen op basis van echt gebruik (half-lifes, gewichten, dedup-drempel).
 - [ ] Meerdere orgs op één deployment actief gebruiken (datamodel ondersteunt het al).

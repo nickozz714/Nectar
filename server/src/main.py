@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 from src.db.neo4j import close_driver, init_db
 from src.mcp_server.tools import mcp
-from src.routers import admin, recall, secrets
+from src.routers import admin, graph_api, recall, review, secrets
 from src.services.embeddings import warmup
+
+_STATIC = Path(__file__).parent / "static"
 
 mcp_app = mcp.http_app(path="/mcp")
 
@@ -26,11 +30,19 @@ app = FastAPI(title="HiveMind", lifespan=lifespan)
 app.include_router(admin.router)
 app.include_router(recall.router)
 app.include_router(secrets.router)
+app.include_router(graph_api.router)
+app.include_router(review.router)
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ui", response_class=HTMLResponse)
+def ui():
+    """The hive GUI: click through the mind, handle chores, review, manage accounts."""
+    return (_STATIC / "index.html").read_text()
 
 
 # Mounted last so named routes win; the MCP endpoint lives at /mcp.

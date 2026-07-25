@@ -4,7 +4,7 @@ import json
 
 from neo4j import Session
 
-from src.authentication.deps import AuthedAccount
+from src.authentication.deps import AuthedAccount, assert_role
 from src.config import get_settings
 from src.repository import audit_repo, governance_repo, graph_repo
 from src.services.embeddings import embed
@@ -35,8 +35,10 @@ def suggest(
 def resolve(
     session: Session, account: AuthedAccount, chore_uid: str, action: str, note: str
 ) -> dict:
-    """A bee resolves a 'ready' chore. scope_widening never passes through here —
-    that is the one mutation reserved for a human (admin API)."""
+    """A bee resolves a 'ready' chore — maintainer role required, so upkeep is
+    delegated deliberately instead of open to everyone. scope_widening never passes
+    through here — that is the one mutation reserved for a human reviewer."""
+    assert_role(account, "maintainer", "Resolving chores")
     chore = governance_repo.get_chore(session, account.org_uid, chore_uid)
     if chore is None:
         raise ValueError("Chore not found")
@@ -84,7 +86,9 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
     raise ValueError(f"Unknown chore type {kind}")
 
 
-def approve_scope_widening(session: Session, chore_uid: str, org_uid: str, note: str) -> dict:
+def approve_scope_widening(
+    session: Session, chore_uid: str, org_uid: str, note: str, reviewed_by: str = "human-admin"
+) -> dict:
     """Human decision: widen a node's visibility (e.g. team -> org)."""
     chore = governance_repo.get_chore(session, org_uid, chore_uid)
     if chore is None or chore["status"] != "awaiting_human":
@@ -94,7 +98,7 @@ def approve_scope_widening(session: Session, chore_uid: str, org_uid: str, note:
     if target_scope not in ("org", "team"):
         raise ValueError("target_scope must be org or team")
     graph_repo.set_scope(session, chore["node_uid"], target_scope)
-    governance_repo.close_chore(session, chore_uid, "resolved", "human-admin", note)
+    governance_repo.close_chore(session, chore_uid, "resolved", reviewed_by, note)
     audit_repo.log(session, org_uid, None, "approve_scope_widening", chore["node_uid"],
-                   {"chore": chore_uid, "target_scope": target_scope})
+                   {"chore": chore_uid, "target_scope": target_scope, "reviewed_by": reviewed_by})
     return {"status": "resolved", "node_uid": chore["node_uid"], "scope": target_scope}

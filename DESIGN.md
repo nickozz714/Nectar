@@ -22,6 +22,11 @@ K3YVAULT-style vault thinking) — no code coupling.
 1. **Accounts & auth** — org → teams → accounts, each account has opaque tokens
    (SHA-256 hashed at rest, revocable, optional expiry). Token scope defines which
    memories/skills/secrets are visible. Full hierarchy from day one.
+   **Roles** (decided 2026-07-25): `member` (read, write, suggest/vote) →
+   `maintainer` (also resolve swarm chores) → `org_admin` (also human review of
+   scope-widening, with their own token via `/review`). Suggesting stays open to all —
+   votes are the signal; *executing* mutations is delegated deliberately. The infra
+   `ADMIN_TOKEN` remains for provisioning only.
 2. **The Mind** — a knowledge graph with vector recall (GraphRAG).
 3. **Skill registry** — skills as shareable units in the Claude Code skill format.
 4. **Secrets vault** — fresh component (not K3YVAULT), per-secret grants, audit on every read.
@@ -165,8 +170,13 @@ tokens (plaintext shown once), grant secrets, and the **human review queue** for
 
 ## 12. v1 scope & open items
 
-**In v1**: everything above.
-**Deliberately later**: web UI (Neo4j Browser suffices for looking at the mind), rate
+**In v1**: everything above, plus the **hive GUI** at `/ui` (2026-07-25): a dependency-free
+single page (works offline) with an interactive force-directed graph of the mind
+(click = detail, double-click = expand neighborhood), semantic search, the swarm chore
+queue (resolve buttons for maintainers), the human review queue (org_admins) and basic
+account/token administration. Browsing the GUI does not rejuvenate memories — only
+actual use does.
+**Deliberately later**: rate
 limiting, full-text index for fallback search, backup automation (volume snapshots for
 now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking
 (v1 relies on `ready` → first-resolver-wins; races are benign at current scale).

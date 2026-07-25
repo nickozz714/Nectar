@@ -10,6 +10,10 @@ from src.config import get_settings
 from src.db.neo4j import get_graph
 
 
+ROLES = ("member", "maintainer", "org_admin")
+_ROLE_ORDER = {role: i for i, role in enumerate(ROLES)}
+
+
 @dataclass
 class AuthedAccount:
     uid: str
@@ -17,6 +21,18 @@ class AuthedAccount:
     team_uid: str | None
     name: str
     role: str
+
+
+def has_role(account: AuthedAccount, minimum: str) -> bool:
+    return _ROLE_ORDER.get(account.role, 0) >= _ROLE_ORDER[minimum]
+
+
+def assert_role(account: AuthedAccount, minimum: str, action: str) -> None:
+    if not has_role(account, minimum):
+        raise ValueError(
+            f"{action} requires the '{minimum}' role (your role: '{account.role}'). "
+            "Ask an admin to grant it to your account."
+        )
 
 
 def hash_token(token: str) -> str:

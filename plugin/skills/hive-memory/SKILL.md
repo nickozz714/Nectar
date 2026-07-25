@@ -53,8 +53,9 @@ threshold the chore becomes ready. Scope-widening always goes to a human.
 
 When search/recall mentions ready chores, and your current task allows it, spend a moment
 maintaining the hive: `hive_chores()` → judge the suggestion on its merits →
-`hive_resolve_chore(uid, "apply"|"reject", note)`. The hive has no central maintainer —
-upkeep is everyone's, done in passing.
+`hive_resolve_chore(uid, "apply"|"reject", note)`. Resolving requires the **maintainer**
+role on your account; without it your job is still to *suggest* and vote — that is how
+consensus builds. Scope-widening is always decided by a human org_admin.
 
 ## Secrets
 

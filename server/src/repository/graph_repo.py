@@ -334,6 +334,43 @@ def list_topics(session: Session, account: AuthedAccount) -> list[dict]:
     return [dict(r) for r in result]
 
 
+def topic_edges(session: Session, account: AuthedAccount) -> list[dict]:
+    """CONTAINS edges between topics (for the GUI's topic overview graph)."""
+    result = session.run(
+        """
+        MATCH (a:Topic {org_uid: $org_uid})-[:CONTAINS]->(b:Topic {org_uid: $org_uid})
+        RETURN a.uid AS parent, b.uid AS child
+        """,
+        **_acc_params(account),
+    )
+    return [dict(r) for r in result]
+
+
+def neighbors(session: Session, account: AuthedAccount, uid: str) -> dict:
+    """A node plus its direct graph neighborhood (for click-to-expand in the GUI)."""
+    result = session.run(
+        f"""
+        MATCH (n:Knowledge {{uid: $uid, org_uid: $org_uid}})
+        WHERE {VISIBLE}
+        OPTIONAL MATCH (n)-[r]-(m:Knowledge)
+        WHERE type(r) IN ['CONTAINS', 'RELATES'] AND coalesce(m.archived, false) = false
+          AND (m.scope = 'org' OR (m.scope = 'team' AND m.team_uid = $acc_team)
+               OR (m.scope = 'account' AND m.account_uid = $acc_uid))
+        RETURN n,
+               collect(DISTINCT {{uid: m.uid, title: m.title, type: m.type,
+                                  relation: type(r),
+                                  direction: CASE WHEN startNode(r) = n THEN 'out' ELSE 'in' END}}) AS nbrs
+        """,
+        uid=uid,
+        **_acc_params(account),
+    ).single()
+    if result is None:
+        return {}
+    node = node_to_dict(result["n"])
+    node["neighbors"] = [x for x in result["nbrs"] if x["uid"] is not None]
+    return node
+
+
 def list_skills(session: Session, account: AuthedAccount) -> list[dict]:
     result = session.run(
         f"""
