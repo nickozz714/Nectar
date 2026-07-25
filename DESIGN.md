@@ -96,13 +96,21 @@ Packaging: one **Claude Code plugin** = MCP server config + hooks + skills. Inst
 ## 7. Write path
 
 `hive_remember` writes **directly** (no human review) through a deterministic write-gate:
+- **Quality gate**: minimum title and content length — a memory must be specific,
+  searchable and self-contained, or it is rejected with instructions to improve it.
 - **PII filter**: e-mail, phone, IBAN, BSN-like patterns → rejected with explanation
   (the bee rephrases without the personal data).
-- **Dedup**: embedding similarity ≥ threshold against visible nodes → not created; the
-  existing node is touched and returned instead.
+- **Dedup, two bands**: similarity ≥ `DEDUP_SIMILARITY_THRESHOLD` (0.92) → not created,
+  the existing node is touched and returned. Grey zone ≥ `DEDUP_REVIEW_THRESHOLD`
+  (0.80) → created, **but a dedup chore is auto-filed** so the swarm judges whether it
+  is really new. Nothing similar slips in silently.
+- **Topic-sprawl prevention**: parent topics are matched semantically against existing
+  topics first (`TOPIC_SIMILARITY_THRESHOLD`, 0.85) — "Fabric werkwijze" links under the
+  existing "Fabric werkwijzen" instead of creating a near-duplicate topic. Only a
+  genuinely new subject creates a topic (reported back to the caller).
+- **Provenance**: every node records `created_by` (account) and `created_by_model`.
 - Default scope: **team** (falls back to org when the account has no team). Topics are
   org-scoped structure.
-- Parent topics are found-or-created; new-topic creation is reported back to the caller.
 
 ## 8. Governance — the swarm maintains the hive
 
@@ -124,7 +132,10 @@ Creation is direct; **mutation is consensus-gated**:
 ## 9. Skills registry
 
 Skills are `:Skill` nodes plus attached `:SkillFile` nodes (`SKILL.md` + resources) in the
-Claude Code skill format. `skill_list` / `skill_get` let any client fetch and use them.
+Claude Code skill format. `skill_list` / `skill_get` let any client fetch and use them;
+`skill_put` publishes one (a `SKILL.md` file is required, the PII filter covers all file
+contents). **The creator may update their own skill directly; anyone else goes through
+`hive_suggest`** — skills are knowledge, so mutations stay consensus-gated.
 
 ## 10. Secrets vault
 

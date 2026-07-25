@@ -21,10 +21,19 @@ gotcha with a system. Not: session details, personal data, one-off trivia.
   OBO auth for queries".
 - **Content**: self-contained; a colleague's model must be able to apply it cold.
 - **Parent topics**: link under the subjects/projects/systems it belongs to (e.g.
-  `Swinkels`, `Fabric werkwijzen`). Missing topics are created — check `topic_list()`
-  first to avoid near-duplicate topics.
+  `Swinkels`, `Fabric werkwijzen`). The hive reuses semantically similar existing topics
+  automatically; only a genuinely new subject creates a topic.
 - **Scope**: default `team`. Choose deliberately; widening later requires human review.
-- PII is rejected by the write-gate: rephrase without personal data.
+- Always pass `model_name` (your model id) — every memory records its provenance.
+- The write-gate enforces quality: too-short titles/content and PII are rejected; hard
+  duplicates are returned instead of created; close lookalikes are created but flagged
+  as a dedup chore for the swarm.
+
+## Publishing skills (`skill_put`)
+
+Package reusable working instructions as a skill: `files` = list of `{path, content}`
+including a `SKILL.md` (Claude Code skill format). You can update your own skills
+directly; propose changes to someone else's skill via `hive_suggest`.
 
 ## Knowledge transfer & promotion
 

@@ -9,8 +9,8 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 - [ ] **Server-deploy in huisstijl** (compose op de server + Caddy-sidecar HTTPS) zodra gewenst.
 
 ## Ontbrekende functionaliteit
-- [ ] **Skills schrijven naar de hive**: `skill_list`/`skill_get` bestaan, maar er is nog geen
-      upload-pad (MCP-tool of REST) om een skill + bestanden (`SKILL.md` + resources) in de hive te zetten.
+- [x] **Skills schrijven naar de hive**: `skill_put` (2026-07-25) — SKILL.md verplicht,
+      PII-filter over alle bestanden, maker mag eigen skill bijwerken, anderen via `hive_suggest`.
 - [ ] **Audit-inzage**: elke secret-read en mutatie wordt gelogd, maar er is nog geen
       admin-endpoint om de audit-trail te bekijken.
 - [ ] **Token-beheer**: tokens listen per account (nu alleen aanmaken + revoke op hash),

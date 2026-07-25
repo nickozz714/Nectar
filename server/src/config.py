@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     SEMANTIC_WEIGHT: float = 0.7
     FRESHNESS_WEIGHT: float = 0.3
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
+    # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
+    # chore so the swarm reviews them.
+    DEDUP_REVIEW_THRESHOLD: float = 0.80
+    # New parent topics are matched semantically against existing topics first, to
+    # prevent near-duplicate topic sprawl ("Fabric" vs "Fabric werkwijzen").
+    TOPIC_SIMILARITY_THRESHOLD: float = 0.85
+    MIN_TITLE_LENGTH: int = 8
+    MIN_CONTENT_LENGTH: int = 40
 
     # Governance: distinct votes (account+model) before a mutation chore is actionable
     CONSENSUS_THRESHOLD: int = 2

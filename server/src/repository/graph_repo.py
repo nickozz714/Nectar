@@ -147,14 +147,16 @@ def parent_titles(session: Session, uids: list[str]) -> dict[str, list[str]]:
     return {r["uid"]: r["parents"] for r in result}
 
 
-def find_or_create_topic(session: Session, org_uid: str, title: str, account_uid: str) -> dict:
+def find_or_create_topic(
+    session: Session, org_uid: str, title: str, account_uid: str, embedding: list[float] | None = None
+) -> dict:
     record = session.run(
         """
         MERGE (t:Topic:Knowledge {org_uid: $org_uid, title_key: toLower($title)})
         ON CREATE SET t.uid = randomUUID(), t.title = $title, t.type = 'topic',
                       t.scope = 'org', t.content = '', t.archived = false,
                       t.created = timestamp(), t.last_used = timestamp(), t.use_count = 0,
-                      t.created_by = $account_uid, t.was_created = true
+                      t.created_by = $account_uid, t.embedding = $embedding, t.was_created = true
         WITH t, coalesce(t.was_created, false) AS created_now
         REMOVE t.was_created
         RETURN t.uid AS uid, t.title AS title, created_now
@@ -162,8 +164,59 @@ def find_or_create_topic(session: Session, org_uid: str, title: str, account_uid
         org_uid=org_uid,
         title=title.strip(),
         account_uid=account_uid,
+        embedding=embedding,
     ).single()
     return {"uid": record["uid"], "title": record["title"], "created": record["created_now"]}
+
+
+def find_similar_topic(
+    session: Session, account: AuthedAccount, embedding: list[float], threshold: float
+) -> dict | None:
+    """Semantic near-match against existing topic titles — prevents topic sprawl."""
+    record = session.run(
+        f"""
+        CALL db.index.vector.queryNodes('knowledge_embedding', 5, $qvec)
+        YIELD node AS n, score
+        WHERE n:Topic AND n.org_uid = $org_uid AND coalesce(n.archived, false) = false
+          AND {VISIBLE} AND score >= $threshold
+        RETURN n.uid AS uid, n.title AS title, score
+        ORDER BY score DESC LIMIT 1
+        """,
+        qvec=embedding,
+        threshold=threshold,
+        **_acc_params(account),
+    ).single()
+    return dict(record) if record else None
+
+
+def get_skill_by_title(session: Session, account: AuthedAccount, title: str) -> dict | None:
+    record = session.run(
+        f"""
+        MATCH (n:Skill {{org_uid: $org_uid}})
+        WHERE toLower(n.title) = toLower($title) AND coalesce(n.archived, false) = false
+          AND {VISIBLE}
+        RETURN n.uid AS uid, n.title AS title, n.created_by AS created_by
+        """,
+        title=title.strip(),
+        **_acc_params(account),
+    ).single()
+    return dict(record) if record else None
+
+
+def replace_skill_files(session: Session, node_uid: str, files: list[dict]) -> None:
+    session.run(
+        "MATCH (:Knowledge {uid: $uid})-[:HAS_FILE]->(f:SkillFile) DETACH DELETE f",
+        uid=node_uid,
+    )
+    session.run(
+        """
+        MATCH (n:Knowledge {uid: $uid})
+        UNWIND $files AS file
+        CREATE (n)-[:HAS_FILE]->(:SkillFile {path: file.path, content: file.content})
+        """,
+        uid=node_uid,
+        files=files,
+    )
 
 
 def create_knowledge(
@@ -174,6 +227,7 @@ def create_knowledge(
     content: str,
     scope: str,
     embedding: list[float] | None,
+    created_by_model: str = "",
 ) -> dict:
     label = KNOWLEDGE_TYPES[type_]
     record = session.run(
@@ -184,7 +238,7 @@ def create_knowledge(
             team_uid: CASE WHEN $scope = 'team' THEN $acc_team ELSE NULL END,
             account_uid: CASE WHEN $scope = 'account' THEN $acc_uid ELSE NULL END,
             archived: false, created: timestamp(), last_used: timestamp(),
-            use_count: 0, created_by: $acc_uid
+            use_count: 0, created_by: $acc_uid, created_by_model: $created_by_model
         }})
         SET n.embedding = $embedding
         RETURN n.uid AS uid
@@ -194,6 +248,7 @@ def create_knowledge(
         content=content,
         scope=scope,
         embedding=embedding,
+        created_by_model=created_by_model,
         **_acc_params(account),
     ).single()
     return {"uid": record["uid"]}

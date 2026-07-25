@@ -6,7 +6,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
 from src.config import get_settings
-from src.repository import audit_repo, graph_repo
+from src.repository import audit_repo, governance_repo, graph_repo
 from src.services.embeddings import embed
 
 # Deterministic write-gate: the server holds no judgement, only hard checks.
@@ -22,6 +22,53 @@ def detect_pii(text: str) -> list[str]:
     return [kind for kind, pattern in _PII_PATTERNS if pattern.search(text)]
 
 
+def assert_no_pii(text: str) -> None:
+    pii = detect_pii(text)
+    if pii:
+        raise ValueError(
+            f"Rejected by the PII filter ({', '.join(pii)}). "
+            "Rephrase without personal data and try again."
+        )
+
+
+def link_topics(
+    session: Session, account: AuthedAccount, node_uid: str, parent_topics: list[str]
+) -> tuple[list[str], list[str]]:
+    """Link a node under parent topics. Exact matches merge; semantically similar
+    existing topics are reused instead of creating near-duplicates; only then is a
+    new topic created."""
+    settings = get_settings()
+    linked: list[str] = []
+    notes: list[str] = []
+    for title in parent_topics or []:
+        title = title.strip()
+        if not title:
+            continue
+        title_embedding = embed(title)
+        topic_uid = None
+        if title_embedding is not None:
+            similar = graph_repo.find_similar_topic(
+                session, account, title_embedding, settings.TOPIC_SIMILARITY_THRESHOLD
+            )
+            if similar is not None and similar["title"].lower() != title.lower():
+                topic_uid = similar["uid"]
+                notes.append(
+                    f"linked under existing topic '{similar['title']}' instead of creating "
+                    f"near-duplicate topic '{title}'"
+                )
+                linked.append(similar["title"])
+        if topic_uid is None:
+            topic = graph_repo.find_or_create_topic(
+                session, account.org_uid, title, account.uid, embedding=title_embedding
+            )
+            topic_uid = topic["uid"]
+            linked.append(topic["title"])
+            if topic["created"]:
+                notes.append(f"new topic created: {topic['title']}")
+        graph_repo.link(session, account, topic_uid, node_uid, "contains")
+    return linked, notes
+
+
 def remember(
     session: Session,
     account: AuthedAccount,
@@ -30,12 +77,16 @@ def remember(
     content: str,
     parent_topics: list[str],
     scope: str = "team",
+    model_name: str = "",
 ) -> dict:
-    """Direct write through the write-gate: PII filter + embedding dedup.
-    Default scope is team (org when the account has no team). Topics are org-scoped
-    structure and are found-or-created."""
+    """Direct write through the write-gate: quality checks + PII filter + dedup.
+    Hard duplicates are rejected; grey-zone lookalikes are created but flagged as a
+    dedup chore for the swarm. Default scope is team (org when the account has no
+    team). Topics are semantically matched before anything new is created."""
     settings = get_settings()
     notes: list[str] = []
+    title = title.strip()
+    content = content.strip()
 
     if type_ not in graph_repo.KNOWLEDGE_TYPES or type_ == "topic":
         raise ValueError(
@@ -46,42 +97,60 @@ def remember(
     if scope == "team" and account.team_uid is None:
         scope = "org"
         notes.append("account has no team; scope fell back to org")
-
-    pii = detect_pii(f"{title}\n{content}")
-    if pii:
+    if len(title) < settings.MIN_TITLE_LENGTH:
         raise ValueError(
-            f"Rejected by the PII filter ({', '.join(pii)}). "
-            "Rephrase without personal data and try again."
+            "Title too short — make it specific and searchable "
+            "(e.g. 'Fabric Data Agents require OBO auth', not 'Fabric issue')."
         )
+    if len(content) < settings.MIN_CONTENT_LENGTH:
+        raise ValueError(
+            "Content too short — a memory must be self-contained so a colleague's model "
+            "can apply it cold. Add the what, the why and the how."
+        )
+    assert_no_pii(f"{title}\n{content}")
 
     embedding = embed(f"{title}\n{content}")
+    grey_zone_of: dict | None = None
     if embedding is not None:
         nearest = graph_repo.vector_candidates(session, account, embedding, k=1, allowed=None)
-        if nearest and nearest[0][1] >= settings.DEDUP_SIMILARITY_THRESHOLD:
+        if nearest:
             existing, sim = nearest[0]
-            graph_repo.touch_nodes(session, [existing["uid"]])
-            return {
-                "created": False,
-                "existing_uid": existing["uid"],
-                "existing_title": existing["title"],
-                "note": f"Near-duplicate (similarity {sim:.2f}) of an existing node; "
-                "it was touched instead. Use hive_suggest to propose an edit if it is outdated.",
-            }
+            if sim >= settings.DEDUP_SIMILARITY_THRESHOLD:
+                graph_repo.touch_nodes(session, [existing["uid"]])
+                return {
+                    "created": False,
+                    "existing_uid": existing["uid"],
+                    "existing_title": existing["title"],
+                    "note": f"Near-duplicate (similarity {sim:.2f}) of an existing node; "
+                    "it was touched instead. Use hive_suggest to propose an edit if it is outdated.",
+                }
+            if sim >= settings.DEDUP_REVIEW_THRESHOLD and existing.get("type") != "topic":
+                grey_zone_of = {"uid": existing["uid"], "title": existing["title"], "sim": sim}
 
-    node = graph_repo.create_knowledge(session, account, type_, title, content, scope, embedding)
+    node = graph_repo.create_knowledge(
+        session, account, type_, title, content, scope, embedding, created_by_model=model_name
+    )
 
-    linked = []
-    for topic_title in parent_topics or []:
-        topic = graph_repo.find_or_create_topic(session, account.org_uid, topic_title, account.uid)
-        graph_repo.link(session, account, topic["uid"], node["uid"], "contains")
-        linked.append(topic["title"])
-        if topic["created"]:
-            notes.append(f"new topic created: {topic['title']}")
+    if grey_zone_of is not None:
+        governance_repo.suggest(
+            session, account, "dedup_merge", grey_zone_of["uid"],
+            {"duplicate_uid": node["uid"]},
+            rationale=f"Write-gate: new node '{title}' is {grey_zone_of['sim']:.2f} similar "
+            f"to '{grey_zone_of['title']}' — swarm should judge whether it is a duplicate.",
+            model_name="write-gate", threshold=settings.CONSENSUS_THRESHOLD,
+        )
+        notes.append(
+            f"similar to existing '{grey_zone_of['title']}' "
+            f"(similarity {grey_zone_of['sim']:.2f}); a dedup chore was filed for the swarm"
+        )
+
+    linked, topic_notes = link_topics(session, account, node["uid"], parent_topics)
+    notes.extend(topic_notes)
     if not linked:
         notes.append("no parent topics given — link it later with hive_relate")
 
     audit_repo.log(
         session, account.org_uid, account.uid, "remember", node["uid"],
-        {"type": type_, "title": title, "scope": scope, "topics": linked},
+        {"type": type_, "title": title, "scope": scope, "topics": linked, "model": model_name},
     )
     return {"created": True, "uid": node["uid"], "topics": linked, "notes": notes}

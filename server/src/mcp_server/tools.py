@@ -8,7 +8,7 @@ from fastmcp.server.dependencies import get_http_request
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
 from src.repository import governance_repo, graph_repo
-from src.services import governance_service, memory_service, search_service
+from src.services import governance_service, memory_service, search_service, skill_service
 
 mcp = FastMCP(
     "HiveMind",
@@ -64,16 +64,39 @@ def hive_remember(
     content: str,
     parent_topics: list[str],
     scope: str = "team",
+    model_name: str = "",
 ) -> dict:
-    """Write reusable knowledge into the hive. type: memory | process | skill |
-    convention | decision | glossary. Link it under parent topics (subjects, projects or
-    systems — e.g. 'Data Modelling', 'Swinkels'); missing topics are created. scope:
-    team (default), org, or account. Personal data (PII) is rejected; near-duplicates
-    are deduplicated automatically. Only store knowledge that is reusable for the
+    """Write reusable knowledge into the hive. type: memory | process | convention |
+    decision | glossary (for skills use skill_put). Link it under parent topics
+    (subjects, projects or systems — e.g. 'Data Modelling', 'Swinkels'); semantically
+    similar existing topics are reused, only then is a new topic created. scope: team
+    (default), org, or account. The write-gate enforces: specific title, self-contained
+    content, no personal data (PII), and dedup — hard duplicates are rejected, close
+    lookalikes are created but flagged as a dedup chore for the swarm. Pass model_name
+    (your model id) for provenance. Only store knowledge that is reusable for the
     organization — no session noise."""
     with _authed() as (session, account):
         return memory_service.remember(
-            session, account, type, title, content, parent_topics, scope
+            session, account, type, title, content, parent_topics, scope, model_name
+        )
+
+
+@mcp.tool
+def skill_put(
+    title: str,
+    description: str,
+    files: list[dict],
+    parent_topics: list[str] | None = None,
+    scope: str = "team",
+    model_name: str = "",
+) -> dict:
+    """Publish or update a shared skill in the hive, in the Claude Code skill format:
+    files must be a list of {path, content} and include a SKILL.md. The creator may
+    update their own skill directly; someone else's skill is changed via hive_suggest
+    (mutations stay consensus-gated). The PII filter applies to all file contents."""
+    with _authed() as (session, account):
+        return skill_service.put_skill(
+            session, account, title, description, files, parent_topics or [], scope, model_name
         )
 
 
