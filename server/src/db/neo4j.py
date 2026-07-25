@@ -43,7 +43,7 @@ def get_graph():
         yield session
 
 
-def init_db(retries: int = 30, delay: float = 2.0) -> None:
+def init_db(retries: int = 90, delay: float = 2.0) -> None:
     """Wait for Neo4j, then ensure constraints and the vector index exist."""
     settings = get_settings()
     last_err: Exception | None = None

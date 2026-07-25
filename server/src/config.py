@@ -15,11 +15,13 @@ class Settings(BaseSettings):
     ADMIN_TOKEN: str = "change-me-admin-token"
     SECRET_MASTER_KEY: str = ""  # Fernet key; vault is disabled when empty
 
-    # OpenAI-compatible embeddings endpoint (OpenAI, Ollama, ...). Never hardcode a model.
+    # Embeddings: local in-process by default (fastembed) — the stack runs autonomously,
+    # no cloud. An OpenAI-compatible EMBEDDINGS_BASE_URL overrides local mode.
+    EMBEDDINGS_LOCAL: bool = True
     EMBEDDINGS_BASE_URL: str = ""
     EMBEDDINGS_API_KEY: str = ""
-    EMBEDDINGS_MODEL: str = ""
-    EMBEDDINGS_DIM: int = 768
+    EMBEDDINGS_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    EMBEDDINGS_DIM: int = 384
 
     # Freshness / decay
     FRESHNESS_HALF_LIFE_DAYS: float = 30.0
@@ -33,7 +35,7 @@ class Settings(BaseSettings):
 
     @property
     def embeddings_enabled(self) -> bool:
-        return bool(self.EMBEDDINGS_BASE_URL and self.EMBEDDINGS_MODEL)
+        return bool(self.EMBEDDINGS_MODEL) and (bool(self.EMBEDDINGS_BASE_URL) or self.EMBEDDINGS_LOCAL)
 
 
 @lru_cache

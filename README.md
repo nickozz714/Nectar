@@ -14,8 +14,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Semantic recall works out of the box: the bundled `embedder` service runs a local
-multilingual model (fastembed, baked into the image at build time). No cloud, no
+Everything runs in **one container**: Neo4j, the API and local embeddings (a
+multilingual fastembed model baked into the image at build time). No cloud, no
 runtime internet — the stack runs fully autonomously inside an organization.
 
 Generate a vault master key:
@@ -67,5 +67,5 @@ literal window into the hive.
 ```bash
 cd server
 pip install -r requirements.txt
-uvicorn src.main:app --reload  # needs a running Neo4j (docker compose up neo4j)
+uvicorn src.main:app --reload  # needs a reachable Neo4j (e.g. the container, bolt://localhost:7687)
 ```

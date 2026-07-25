@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from src.db.neo4j import close_driver, init_db
 from src.mcp_server.tools import mcp
 from src.routers import admin, recall, secrets
+from src.services.embeddings import warmup
 
 mcp_app = mcp.http_app(path="/mcp")
 
@@ -14,6 +15,7 @@ mcp_app = mcp.http_app(path="/mcp")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    warmup()
     async with mcp_app.lifespan(app):
         yield
     close_driver()

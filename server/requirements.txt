@@ -6,3 +6,4 @@ pydantic-settings
 fastmcp
 cryptography
 httpx
+fastembed

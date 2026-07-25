@@ -34,9 +34,9 @@ K3YVAULT-style vault thinking) — no code coupling.
 | Database | **Neo4j 5 (community)** — one store for graph, vectors, tenancy, vault, audit, chores | Cypher makes DAG traversal & promotion natural; native vector index; Neo4j Browser = visual window into the mind |
 | API | Python, FastAPI, layered `routers → services → repository` | house convention |
 | MCP | fastmcp mounted in the FastAPI app, bearer-gated per call | house convention |
-| Embeddings | **local-only by default** (decided 2026-07-25): bundled `embedder` container — fastembed (ONNX, no torch), multilingual MiniLM (384d), model baked into the image at build time. Speaks the OpenAI-compatible `/v1/embeddings` interface, so the server just points `EMBEDDINGS_BASE_URL` at it; the endpoint stays configurable but **no cloud model is ever required** — the whole stack runs autonomously/offline inside an organization | org knowledge must not leak to a cloud API; graceful degradation to word-based search when unset |
+| Embeddings | **local-only by default** (decided 2026-07-25): in-process fastembed (ONNX, no torch), multilingual MiniLM (384d), model baked into the image at build time — **no cloud model is ever required**, the stack runs autonomously/offline inside an organization. An OpenAI-compatible `EMBEDDINGS_BASE_URL` can override local mode | org knowledge must not leak to a cloud API; graceful degradation to word-based search when disabled |
 | Secrets crypto | Fernet (symmetric), master key from env | simple, rotatable |
-| Deploy | self-hosted Docker Compose (Neo4j + API) | house style |
+| Deploy | **one container** (decided 2026-07-25): a single image bundling Neo4j + API + embeddings (`Dockerfile` at repo root, `start.sh` runs both), data on one volume | house style (cf. SerieTracker); one thing to deploy, back up and move |
 
 **Server is deterministic ("dumb"); all judgement lives in the bees.** The server does
 storage, ranking, thresholds and queues. The write-gate performs only deterministic checks
