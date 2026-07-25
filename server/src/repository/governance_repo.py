@@ -131,10 +131,10 @@ def chores_by_status(session: Session, org_uid: str | None, status: str) -> list
         WHERE $org_uid IS NULL OR c.org_uid = $org_uid
         OPTIONAL MATCH (c)-[:ABOUT]->(n:Knowledge)
         OPTIONAL MATCH (a)-[v:VOTED]->(c)
-        RETURN c.uid AS uid, c.type AS type, c.payload AS payload, c.org_uid AS org_uid,
-               n.uid AS node_uid, n.title AS node_title, n.scope AS node_scope,
-               collect({account: a.name, model: v.model, rationale: v.rationale}) AS votes
+        WITH c, n, collect({account: a.name, model: v.model, rationale: v.rationale}) AS votes
         ORDER BY c.created
+        RETURN c.uid AS uid, c.type AS type, c.payload AS payload, c.org_uid AS org_uid,
+               n.uid AS node_uid, n.title AS node_title, n.scope AS node_scope, votes
         """,
         org_uid=org_uid,
         status=status,

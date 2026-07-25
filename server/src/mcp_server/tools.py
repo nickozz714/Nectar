@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 
 from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_http_headers
+from fastmcp.server.dependencies import get_http_request
 
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
@@ -21,8 +21,8 @@ mcp = FastMCP(
 
 @contextmanager
 def _authed():
-    headers = get_http_headers()
-    auth = headers.get("authorization", "")
+    request = get_http_request()
+    auth = request.headers.get("authorization", "")
     if not auth.lower().startswith("bearer "):
         raise ValueError("Missing Bearer token (HIVE_TOKEN)")
     with graph_session() as session:

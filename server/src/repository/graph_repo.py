@@ -71,20 +71,27 @@ def vector_candidates(
 def text_candidates(
     session: Session, account: AuthedAccount, query: str, allowed: list[str] | None, limit: int = 50
 ) -> list[tuple[dict, float]]:
+    """Fallback when embeddings are off: word-based matching, ranked by hit ratio."""
+    words = [w for w in query.lower().split() if len(w) > 2]
+    if not words:
+        words = [query.lower()]
     result = session.run(
         f"""
         MATCH (n:Knowledge {{org_uid: $org_uid}})
         WHERE coalesce(n.archived, false) = false AND {VISIBLE}
-          AND (toLower(n.title) CONTAINS $q OR toLower(n.content) CONTAINS $q)
           AND ($allowed IS NULL OR n.uid IN $allowed)
-        RETURN n LIMIT $limit
+        WITH n, size([w IN $words WHERE toLower(n.title) CONTAINS w
+                                     OR toLower(n.content) CONTAINS w]) AS hits
+        WHERE hits > 0
+        RETURN n, toFloat(hits) / size($words) AS score
+        ORDER BY score DESC LIMIT $limit
         """,
-        q=query.lower(),
+        words=words,
         allowed=allowed,
         limit=limit,
         **_acc_params(account),
     )
-    return [(node_to_dict(r["n"]), 0.5) for r in result]
+    return [(node_to_dict(r["n"]), float(r["score"])) for r in result]
 
 
 def touch_nodes(session: Session, uids: list[str]) -> None:
