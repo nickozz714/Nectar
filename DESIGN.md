@@ -1,0 +1,151 @@
+# HiveMind — Design
+
+> The shared mind of an organization. Claude models are the **bees**; HiveMind is the **hive**
+> they collectively maintain. At the same time it is a *hive mind* in the Stranger Things
+> sense: one shared memory all connected minds draw from.
+
+## 1. Vision
+
+Organizations do a lot of the same work but have no way to share, frame and organize
+**work processes, experiences (memories) and skills** org-wide. HiveMind is a standalone
+product: a shared "company mind" that a Claude Code CLI (or any client) logs into with an
+**account token**. The token gives scoped access to the org's memories, processes, skills
+and account-bound secrets. It must genuinely *work* as a memory — like a human brain, not
+like a document dump.
+
+Explicitly **not** part of ND3X or any other backend; clients connect outbound with token
+auth. Reuses house *patterns* only (layered FastAPI, fastmcp behind a bearer gate,
+K3YVAULT-style vault thinking) — no code coupling.
+
+## 2. Architecture — five blocks
+
+1. **Accounts & auth** — org → teams → accounts, each account has opaque tokens
+   (SHA-256 hashed at rest, revocable, optional expiry). Token scope defines which
+   memories/skills/secrets are visible. Full hierarchy from day one.
+2. **The Mind** — a knowledge graph with vector recall (GraphRAG).
+3. **Skill registry** — skills as shareable units in the Claude Code skill format.
+4. **Secrets vault** — fresh component (not K3YVAULT), per-secret grants, audit on every read.
+5. **MCP gateway** — the only surface the CLI sees.
+
+## 3. Stack (decided)
+
+| Concern | Choice | Why |
+|---|---|---|
+| Database | **Neo4j 5 (community)** — one store for graph, vectors, tenancy, vault, audit, chores | Cypher makes DAG traversal & promotion natural; native vector index; Neo4j Browser = visual window into the mind |
+| API | Python, FastAPI, layered `routers → services → repository` | house convention |
+| MCP | fastmcp mounted in the FastAPI app, bearer-gated per call | house convention |
+| Embeddings | configurable **OpenAI-compatible endpoint** (`EMBEDDINGS_BASE_URL/MODEL`) — works with OpenAI *and* Ollama; **never hardcode a model** | house rule; graceful degradation to graph+recency search when unset |
+| Secrets crypto | Fernet (symmetric), master key from env | simple, rotatable |
+| Deploy | self-hosted Docker Compose (Neo4j + API) | house style |
+
+**Server is deterministic ("dumb"); all judgement lives in the bees.** The server does
+storage, ranking, thresholds and queues. The write-gate performs only deterministic checks
+(PII regexes, embedding-similarity dedup). Curation judgement ("is this reusable company
+knowledge?") is client-side via skill instructions, corrected over time by swarm consensus.
+
+## 4. The Mind — graph model
+
+- Every knowledge item is a node with label `:Knowledge` plus a type label:
+  `Topic, Memory, Process, Skill, Convention, Decision, Glossary`.
+- **Top-down structure**: topics sit at the top (subjects like *Data Modelling*, but
+  projects like *Swinkels* or systems like *IntelligentHive* are equally valid top-level
+  topics). Memories link **under** topics via `[:CONTAINS]`; free association via
+  `[:RELATES]`.
+- **Topics form a DAG, not a tree — a node can have multiple parents.** A Fabric-werkwijze
+  learned at Swinkels lives under `Swinkels → Fabric`; when generic enough it is
+  **promoted = re-linked** under the generic `Fabric werkwijzen` topic *while keeping its
+  origin link*. No moves, no copies — extra edges. Knowledge transfers across contexts the
+  way a human applies Process A from topic X to topic Y.
+- **Scoping/tenancy on every node**: `scope ∈ {org, team, account}` + `team_uid`/`account_uid`.
+  Visibility filter is applied in every query. Nodes are never hard-deleted by the swarm;
+  invalidation sets `archived = true`.
+
+### Project anchoring
+A local project (its `.claude` config) declares which hive topics it leans on via
+`HIVE_ANCHORS` (comma-separated topic titles, e.g. `Swinkels,Fabric werkwijzen`). The
+recall hook starts retrieval from those anchor topics (`CONTAINS*` descendants) and then
+fills up with global results — each project automatically gets *its* slice of the mind first.
+
+## 5. Freshness & decay
+
+Memories **age when unused and rejuvenate when used** (touch-on-read: every retrieval
+updates `last_used` and `use_count`). Ranking = semantic similarity × W_sem + freshness ×
+W_fresh, where freshness = `0.5 ^ (days_since_last_use / half_life)`.
+
+Guardrails (decided):
+- Decay affects **ranking, not findability** — old ≠ unfindable, only sorted lower.
+- `Convention` and `Decision` nodes get a much longer half-life (stable knowledge).
+
+Goal: faster retrieval **and lower token cost** — the client receives the small,
+currently-relevant set first, not the whole mind.
+
+## 6. Retrieval — how "always consult the hive" is enforced
+
+Skills are model-invoked and therefore optional — the wrong layer for "always". Layering:
+
+1. **Read side = deterministic hook.** The plugin ships a `UserPromptSubmit` hook that
+   POSTs the prompt to `/recall` and injects the returned context block. Harness-executed;
+   the model cannot skip it. This is also where a pending governance chore piggybacks.
+2. **Write side = standing instructions** (plugin skill + CLAUDE.md guidance): write back
+   to the hive when something is reusable, suggest promotions when knowledge crosses contexts.
+3. **Skills teach the *how*** (good memory writing, when to relate/promote) — never the *whether*.
+
+Packaging: one **Claude Code plugin** = MCP server config + hooks + skills. Install, set
+`HIVE_URL`/`HIVE_TOKEN`, done.
+
+## 7. Write path
+
+`hive_remember` writes **directly** (no human review) through a deterministic write-gate:
+- **PII filter**: e-mail, phone, IBAN, BSN-like patterns → rejected with explanation
+  (the bee rephrases without the personal data).
+- **Dedup**: embedding similarity ≥ threshold against visible nodes → not created; the
+  existing node is touched and returned instead.
+- Default scope: **team** (falls back to org when the account has no team). Topics are
+  org-scoped structure.
+- Parent topics are found-or-created; new-topic creation is reported back to the caller.
+
+## 8. Governance — the swarm maintains the hive
+
+Creation is direct; **mutation is consensus-gated**:
+- A bee that thinks a memory is stale/wrong/generic files a **suggestion**
+  (`hive_suggest`): edit, invalidate, dedup-merge, promotion, or scope-widening.
+  Identical suggestions (same `suggestion_key`) accumulate **votes**; one vote per
+  account+model combination.
+- At `CONSENSUS_THRESHOLD` distinct votes the chore becomes **ready** — except
+  **scope-widening (team → org), the one mutation the swarm may NOT resolve**: it becomes
+  `awaiting_human` and is decided in the admin API. Swarm handles structure; humans decide
+  visibility boundaries. (Prevents client-specific knowledge leaking org-wide via promotion.)
+- **Distributed upkeep**: there is no central maintenance process. `/recall` and
+  `hive_search` mention how many chores are ready; a bee that is reading/writing anyway
+  calls `hive_chores` and resolves one (`hive_resolve_chore`). Piggybacked maintenance —
+  the hive maintains itself.
+- Promotion keeps the node's original scope (visibility never widens silently).
+
+## 9. Skills registry
+
+Skills are `:Skill` nodes plus attached `:SkillFile` nodes (`SKILL.md` + resources) in the
+Claude Code skill format. `skill_list` / `skill_get` let any client fetch and use them.
+
+## 10. Secrets vault
+
+- Fresh component. `:Secret` nodes: Fernet-encrypted value, owner account, per-secret
+  grants (`[:GRANTED]`), **audit node on every read**.
+- **Secrets never enter chat context**: there is deliberately **no MCP `secret_get` tool**.
+  Retrieval is REST (`GET /secrets/{name}`) via the plugin's `hive-secret` script, intended
+  for env injection: `export X=$(hive-secret NAME)`.
+- Highest-risk block: tokens are short-lived/rotatable, grants are per-secret, audit is
+  append-only.
+
+## 11. Admin surface
+
+Bearer `ADMIN_TOKEN` (env) on `/admin/*`: manage orgs/teams/accounts, issue/revoke account
+tokens (plaintext shown once), grant secrets, and the **human review queue** for
+`awaiting_human` chores (approve/reject scope-widening).
+
+## 12. v1 scope & open items
+
+**In v1**: everything above.
+**Deliberately later**: web UI (Neo4j Browser suffices for looking at the mind), rate
+limiting, full-text index for fallback search, backup automation (volume snapshots for
+now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking
+(v1 relies on `ready` → first-resolver-wins; races are benign at current scale).
