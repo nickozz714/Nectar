@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     STABLE_HALF_LIFE_DAYS: float = 365.0  # Convention/Decision decay much slower
     SEMANTIC_WEIGHT: float = 0.7
     FRESHNESS_WEIGHT: float = 0.3
+    # Anchors are a preference, not a filter: nodes inside the project's anchored topic
+    # subtree get a ranking bonus, everything else stays findable.
+    ANCHOR_BOOST: float = 0.15
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
     # chore so the swarm reviews them.

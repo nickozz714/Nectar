@@ -8,6 +8,7 @@ KNOWLEDGE_TYPES = {
     "topic": "Topic",
     "memory": "Memory",
     "process": "Process",
+    "workflow": "Workflow",
     "skill": "Skill",
     "convention": "Convention",
     "decision": "Decision",
@@ -189,10 +190,13 @@ def find_similar_topic(
     return dict(record) if record else None
 
 
-def get_skill_by_title(session: Session, account: AuthedAccount, title: str) -> dict | None:
+def get_artifact_by_title(
+    session: Session, account: AuthedAccount, type_: str, title: str
+) -> dict | None:
+    label = KNOWLEDGE_TYPES[type_]
     record = session.run(
         f"""
-        MATCH (n:Skill {{org_uid: $org_uid}})
+        MATCH (n:{label} {{org_uid: $org_uid}})
         WHERE toLower(n.title) = toLower($title) AND coalesce(n.archived, false) = false
           AND {VISIBLE}
         RETURN n.uid AS uid, n.title AS title, n.created_by AS created_by
@@ -343,15 +347,16 @@ def list_skills(session: Session, account: AuthedAccount) -> list[dict]:
     return [dict(r) for r in result]
 
 
-def skill_files(session: Session, account: AuthedAccount, skill_uid: str) -> list[dict]:
+def node_files(session: Session, account: AuthedAccount, node_uid: str) -> list[dict]:
+    """Attached files of any knowledge node (skills, workflows, ...)."""
     result = session.run(
         f"""
-        MATCH (n:Skill {{uid: $uid, org_uid: $org_uid}})
+        MATCH (n:Knowledge {{uid: $uid, org_uid: $org_uid}})
         WHERE {VISIBLE}
         MATCH (n)-[:HAS_FILE]->(f:SkillFile)
         RETURN f.path AS path, f.content AS content
         """,
-        uid=skill_uid,
+        uid=node_uid,
         **_acc_params(account),
     )
     return [dict(r) for r in result]

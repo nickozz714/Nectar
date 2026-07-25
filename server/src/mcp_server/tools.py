@@ -34,8 +34,9 @@ def _authed():
 def hive_search(query: str, anchors: list[str] | None = None, limit: int = 8) -> str:
     """Search the hive's shared memory. Results are ranked by semantic relevance and
     freshness (recently-used knowledge first). Pass `anchors` (topic titles, e.g. your
-    project's topics) to search that slice of the mind first. Reading a memory
-    rejuvenates it."""
+    project's topics from HIVE_ANCHORS) to boost that slice of the mind in the ranking —
+    a preference, not a filter: knowledge from other contexts stays findable and may
+    still be the answer. Reading a memory rejuvenates it."""
     with _authed() as (session, account):
         results = search_service.search(session, account, query, anchors=anchors, limit=limit)
         text = search_service.render_results(results)
@@ -47,12 +48,16 @@ def hive_search(query: str, anchors: list[str] | None = None, limit: int = 8) ->
 
 @mcp.tool
 def hive_get(node_uid: str) -> dict:
-    """Fetch one knowledge node in full, including its parent topics, children and
-    related nodes. Use after hive_search to read the complete content."""
+    """Fetch one knowledge node in full, including its parent topics, children, related
+    nodes and attached files (skills/workflows). Use after hive_search to read the
+    complete content."""
     with _authed() as (session, account):
         node = graph_repo.get_node(session, account, node_uid)
         if node is None:
             raise ValueError("Node not found or not visible to this account")
+        files = graph_repo.node_files(session, account, node_uid)
+        if files:
+            node["files"] = files
         graph_repo.touch_nodes(session, [node_uid])
         return node
 
@@ -66,8 +71,9 @@ def hive_remember(
     scope: str = "team",
     model_name: str = "",
 ) -> dict:
-    """Write reusable knowledge into the hive. type: memory | process | convention |
-    decision | glossary (for skills use skill_put). Link it under parent topics
+    """Write reusable knowledge into the hive. type: memory | process | workflow |
+    convention | decision | glossary (for file-backed skills/workflows use skill_put /
+    workflow_put). Link it under parent topics
     (subjects, projects or systems — e.g. 'Data Modelling', 'Swinkels'); semantically
     similar existing topics are reused, only then is a new topic created. scope: team
     (default), org, or account. The write-gate enforces: specific title, self-contained
@@ -96,6 +102,27 @@ def skill_put(
     (mutations stay consensus-gated). The PII filter applies to all file contents."""
     with _authed() as (session, account):
         return skill_service.put_skill(
+            session, account, title, description, files, parent_topics or [], scope, model_name
+        )
+
+
+@mcp.tool
+def workflow_put(
+    title: str,
+    description: str,
+    files: list[dict],
+    parent_topics: list[str] | None = None,
+    scope: str = "team",
+    model_name: str = "",
+) -> dict:
+    """Publish or update a shared workflow: a step-by-step or executable working
+    procedure, with files ({path, content} — e.g. workflow.md or a script). Workflows
+    can stand alone under a topic or be linked under a skill with hive_relate. The
+    creator may update their own workflow directly; someone else's goes through
+    hive_suggest. For a purely textual workflow without files, hive_remember with
+    type='workflow' also works."""
+    with _authed() as (session, account):
+        return skill_service.put_workflow(
             session, account, title, description, files, parent_topics or [], scope, model_name
         )
 
@@ -171,5 +198,5 @@ def skill_get(skill_uid: str) -> dict:
         node = graph_repo.get_node(session, account, skill_uid)
         if node is None or node.get("type") != "skill":
             raise ValueError("Skill not found or not visible")
-        node["files"] = graph_repo.skill_files(session, account, skill_uid)
+        node["files"] = graph_repo.node_files(session, account, skill_uid)
         return node

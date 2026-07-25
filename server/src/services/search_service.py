@@ -29,28 +29,29 @@ def search(
     touch: bool = True,
 ) -> list[dict]:
     """Ranked recall: semantic similarity (when embeddings are on) combined with
-    freshness. Anchors restrict to descendants of the given topic titles."""
+    freshness. Anchors are a preference, not a filter: nodes inside the anchored topic
+    subtree (the project's slice of the mind) get a ranking boost, the rest of the org's
+    knowledge stays findable — knowledge from other contexts may still be the answer."""
     settings = get_settings()
-    allowed: list[str] | None = None
+    anchor_uids: set[str] = set()
     if anchors:
-        uids = graph_repo.anchor_descendant_uids(session, account, anchors)
-        if not uids:
-            return []
-        allowed = list(uids)
+        anchor_uids = graph_repo.anchor_descendant_uids(session, account, anchors)
 
     qvec = embed(query)
     if qvec is not None:
         candidates = graph_repo.vector_candidates(
-            session, account, qvec, k=max(50, limit * 5), allowed=allowed
+            session, account, qvec, k=max(50, limit * 5), allowed=None
         )
     else:
-        candidates = graph_repo.text_candidates(session, account, query, allowed=allowed)
+        candidates = graph_repo.text_candidates(session, account, query, allowed=None)
 
     now_ms = time.time() * 1000
     scored = [
         (
             node,
-            sim * settings.SEMANTIC_WEIGHT + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT,
+            sim * settings.SEMANTIC_WEIGHT
+            + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT
+            + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0),
         )
         for node, sim in candidates
     ]

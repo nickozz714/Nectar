@@ -19,19 +19,12 @@ def recall(
     session: Session = Depends(get_graph),
 ):
     """Deterministic read side: called by the plugin's UserPromptSubmit hook on every
-    prompt. Anchored results first (the project's slice of the mind), then global fill.
-    Ready governance chores piggyback so a bee that is here anyway can pick one up."""
-    results = []
-    if body.anchors:
-        results = search_service.search(
-            session, account, body.query, anchors=body.anchors, limit=body.limit
-        )
-    if len(results) < body.limit:
-        seen = {n["uid"] for n in results}
-        extra = search_service.search(
-            session, account, body.query, anchors=None, limit=body.limit
-        )
-        results += [n for n in extra if n["uid"] not in seen][: body.limit - len(results)]
+    prompt. Anchors (the project's topics, via HIVE_ANCHORS) boost the project's slice
+    of the mind in the ranking without hiding the rest of the org's knowledge. Ready
+    governance chores piggyback so a bee that is here anyway can pick one up."""
+    results = search_service.search(
+        session, account, body.query, anchors=body.anchors or None, limit=body.limit
+    )
 
     ready = governance_repo.ready_count(session, account)
     parts = []

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Anchor the current project directory to hive topics:
+#   cd ~/projects/swinkels && hive-init "Swinkels,Fabric werkwijzen"
+#
+# Writes/merges HIVE_ANCHORS into .claude/settings.json (env applies to every Claude
+# Code session started in this directory; the recall hook reads it) and prints a
+# CLAUDE.md block to guide the model.
+set -euo pipefail
+
+ANCHORS="${1:?usage: hive-init \"Topic A,Topic B\"}"
+
+mkdir -p .claude
+python3 - "$ANCHORS" << 'EOF'
+import json
+import os
+import sys
+
+anchors = sys.argv[1]
+path = ".claude/settings.json"
+data = {}
+if os.path.exists(path):
+    with open(path) as f:
+        data = json.load(f)
+data.setdefault("env", {})["HIVE_ANCHORS"] = anchors
+with open(path, "w") as f:
+    json.dump(data, f, indent=2)
+    f.write("\n")
+print(f"HIVE_ANCHORS={anchors!r} -> {path}")
+EOF
+
+cat << EOF
+
+Suggested CLAUDE.md block for this project:
+
+## HiveMind
+This project is anchored to the hive topics: $ANCHORS.
+Relevant hive memories are injected automatically on every prompt (ranked with a
+preference for these topics; knowledge from other contexts stays available). When
+searching manually, pass anchors=["${ANCHORS//,/\", \"}"] to hive_search. Write
+reusable knowledge back with hive_remember under these topics; publish shared
+skills/workflows with skill_put / workflow_put.
+EOF

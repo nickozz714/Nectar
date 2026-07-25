@@ -10,6 +10,11 @@ One package that turns any Claude Code CLI into a bee:
   knowledge across contexts and pick up governance chores.
 - **`scripts/hive-secret`** — env-injection for vault secrets:
   `export MY_KEY=$(hive-secret MY_KEY)`.
+- **`scripts/hive-init`** — anchor a project directory to hive topics:
+  `cd ~/projects/swinkels && hive-init "Swinkels,Fabric werkwijzen"` writes
+  `HIVE_ANCHORS` into the project's `.claude/settings.json` (every session in that
+  directory inherits it) and suggests a CLAUDE.md block. Anchors boost the project's
+  slice of the mind in recall ranking without hiding the rest.
 
 ## Setup
 

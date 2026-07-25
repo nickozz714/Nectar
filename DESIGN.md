@@ -46,7 +46,10 @@ knowledge?") is client-side via skill instructions, corrected over time by swarm
 ## 4. The Mind — graph model
 
 - Every knowledge item is a node with label `:Knowledge` plus a type label:
-  `Topic, Memory, Process, Skill, Convention, Decision, Glossary`.
+  `Topic, Memory, Process, Workflow, Skill, Convention, Decision, Glossary`.
+  Workflows (step-by-step or executable procedures, optionally file-backed via
+  `workflow_put`) can stand alone under a topic or be linked under a skill — the graph
+  handles both.
 - **Top-down structure**: topics sit at the top (subjects like *Data Modelling*, but
   projects like *Swinkels* or systems like *IntelligentHive* are equally valid top-level
   topics). Memories link **under** topics via `[:CONTAINS]`; free association via
@@ -61,10 +64,17 @@ knowledge?") is client-side via skill instructions, corrected over time by swarm
   invalidation sets `archived = true`.
 
 ### Project anchoring
-A local project (its `.claude` config) declares which hive topics it leans on via
-`HIVE_ANCHORS` (comma-separated topic titles, e.g. `Swinkels,Fabric werkwijzen`). The
-recall hook starts retrieval from those anchor topics (`CONTAINS*` descendants) and then
-fills up with global results — each project automatically gets *its* slice of the mind first.
+A local project declares which hive topics it leans on via `HIVE_ANCHORS`
+(comma-separated topic titles, e.g. `Swinkels,Fabric werkwijzen`), set per project in
+`.claude/settings.json` `env` — the plugin's `hive-init` script writes it and suggests a
+CLAUDE.md block. Every Claude Code session started in that directory inherits it; the
+recall hook passes it on every prompt.
+
+**Anchors are a preference, not a filter** (decided 2026-07-25): nodes inside the
+anchored topic subtree (`CONTAINS*` descendants) get a ranking boost (`ANCHOR_BOOST`);
+everything else stays findable, just ranked lower. Working on Swinkels you see
+Swinkels/Fabric knowledge first, but a relevant Gemeente Krimpenerwaard memory can still
+surface — cross-context transfer must never be blocked by scoping.
 
 ## 5. Freshness & decay
 
