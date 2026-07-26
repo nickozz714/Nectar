@@ -22,8 +22,8 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 ## Ontbrekende functionaliteit
 - [x] **Skills schrijven naar de hive**: `skill_put` (2026-07-25) — SKILL.md verplicht,
       PII-filter over alle bestanden, maker mag eigen skill bijwerken, anderen via `hive_suggest`.
-- [ ] **Audit-inzage**: elke secret-read en mutatie wordt gelogd, maar er is nog geen
-      admin-endpoint om de audit-trail te bekijken.
+- [x] **Audit-inzage** (2026-07-26): /graph/audit (org_admin) + Governance-tab tonen de
+      append-only trail van elke write/mutatie/secret-read.
 - [ ] **Token-beheer**: tokens listen per account (nu alleen aanmaken + revoke op hash),
       rotatie-flow, opschonen van verlopen tokens.
 - [ ] **Re-embedding job**: bij een modelwissel (of embeddings later aanzetten) hebben
