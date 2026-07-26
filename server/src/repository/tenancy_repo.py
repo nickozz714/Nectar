@@ -34,8 +34,11 @@ def create_team(session: Session, org_uid: str, name: str) -> dict | None:
 
 
 def create_account(
-    session: Session, org_uid: str, name: str, team_uid: str | None, role: str
+    session: Session, org_uid: str, name: str, team_uid: str | None, role: str,
+    person: str | None = None,
 ) -> dict | None:
+    """An account always belongs to a PERSON (the human accountable for it) — also when
+    the account is used by a model: tokens -> account -> person is the lineage chain."""
     record = session.run(
         """
         MATCH (o:Org {uid: $org_uid})
@@ -44,16 +47,18 @@ def create_account(
         WHERE $team_uid IS NULL OR tm IS NOT NULL
         MERGE (a:Account {org_uid: $org_uid, name: $name})
         ON CREATE SET a.uid = randomUUID(), a.created = timestamp()
-        SET a.role = $role, a.team_uid = CASE WHEN tm IS NULL THEN NULL ELSE tm.uid END
+        SET a.role = $role, a.team_uid = CASE WHEN tm IS NULL THEN NULL ELSE tm.uid END,
+            a.person = coalesce($person, a.person)
         MERGE (a)-[:IN_ORG]->(o)
         FOREACH (_ IN CASE WHEN tm IS NULL THEN [] ELSE [1] END | MERGE (a)-[:IN_TEAM]->(tm))
         RETURN a.uid AS uid, a.name AS name, a.org_uid AS org_uid,
-               a.team_uid AS team_uid, a.role AS role
+               a.team_uid AS team_uid, a.role AS role, a.person AS person
         """,
         org_uid=org_uid,
         team_uid=team_uid,
         name=name,
         role=role,
+        person=person,
     ).single()
     return dict(record) if record else None
 

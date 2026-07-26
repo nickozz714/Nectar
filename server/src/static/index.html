@@ -68,6 +68,7 @@
     <button data-tab="mind" class="active" onclick="showTab('mind')">Mind</button>
     <button data-tab="chores" onclick="showTab('chores')">Chores <span id="choreBadge"></span></button>
     <button data-tab="review" id="reviewTab" style="display:none" onclick="showTab('review')">Review</button>
+    <button data-tab="governance" onclick="showTab('governance')">Governance</button>
     <button data-tab="beheer" onclick="showTab('beheer')">Beheer</button>
   </div>
   <div class="spacer"></div>
@@ -95,6 +96,7 @@
 </main>
 
 <main id="tab-chores" style="display:none"><div class="page" id="choresPage"></div></main>
+<main id="tab-governance" style="display:none"><div class="page" id="govPage"></div></main>
 <main id="tab-review" style="display:none"><div class="page" id="reviewPage"></div></main>
 <main id="tab-beheer" style="display:none"><div class="page" id="beheerPage"></div></main>
 
@@ -131,6 +133,7 @@ function showTab(name) {
   for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === name);
   if (name === "chores") loadChores();
   if (name === "review") loadReview();
+  if (name === "governance") loadGovernance();
   if (name === "beheer") renderBeheer();
 }
 
@@ -253,8 +256,11 @@ async function selectNode(uid) {
     ${chips(n.parents, "Valt onder")}${chips(n.children, "Bevat")}${chips(n.related, "Gerelateerd")}
     ${(n.files || []).map(f => `<div class="section"><h3>📄 ${esc(f.path)}</h3><pre>${esc(f.content)}</pre></div>`).join("")}
     <div class="section" style="color:var(--dim);font-size:12px">
+      ${n.sensitivity === "gevoelig" ? '<span class="badge" style="background:var(--red);color:#fff">gevoelig</span> ' : ""}
       gebruikt ${n.use_count ?? 0}× · door ${esc(n.created_by_model || "onbekend model")}</div>
-    <button class="ghost" onclick="expandNode('${uid}')">Buren uitklappen</button>`;
+    <button class="ghost" onclick="expandNode('${uid}')">Buren uitklappen</button>
+    <button class="ghost" onclick="showLineage('${uid}')">Lineage</button>
+    <div id="lineage"></div>`;
 }
 async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
 
@@ -275,6 +281,46 @@ async function doSearch() {
     `<div class="item" onclick="jumpTo('${r.uid}')"><span class="dot" style="background:${COLORS[r.type]}"></span>
      ${esc(r.title)}<div class="t">${esc(r.type)} · ${esc((r.topics || []).join(" › "))}</div></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Niets gevonden.</div>`;
+}
+
+async function showLineage(uid) {
+  const l = await api("/graph/lineage/" + uid);
+  const fmt = ms => ms ? new Date(ms).toLocaleString("nl-NL") : "?";
+  document.getElementById("lineage").innerHTML = `<div class="section"><h3>Lineage</h3>
+    <div class="card"><div class="meta">Oorsprong</div>
+      ${esc(l.created_by_person || "onbekende persoon")} · account ${esc(l.created_by_account || "?")}
+      · model ${esc(l.created_by_model)}<br>
+      <span class="t" style="color:var(--dim)">${fmt(l.created_at)} · scope ${esc(l.scope)} ·
+      ${esc(l.sensitivity)} · ${l.use_count}× gebruikt</span></div>
+    ${(l.events || []).map(e => `<div class="card"><div class="meta">${fmt(e.at)} — ${esc(e.action)}</div>
+      ${esc(e.person || e.account || "systeem")}<pre>${esc(e.detail || "")}</pre></div>`).join("")
+      || '<p style="color:var(--dim)">Geen gebeurtenissen na creatie.</p>'}</div>`;
+}
+
+/* ---------- governance ---------- */
+async function loadGovernance() {
+  const g = await api("/graph/governance");
+  const table = (obj, label) => `<div class="card"><div class="meta">${label}</div>` +
+    Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+      `<div style="display:flex;justify-content:space-between"><span>${esc(k)}</span><strong>${v}</strong></div>`).join("") + "</div>";
+  let html = `<h2 style="margin-bottom:12px">Governance <span class="badge">${g.nodes_total} items</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+    ${table(g.by_scope, "Zichtbaarheid (scope)")}${table(g.by_sensitivity, "Gevoeligheid")}
+    ${table(g.by_type, "Kennistype")}${table(g.by_model, "Herkomst (model)")}
+    ${table(g.chores, "Governance-klussen")}</div>`;
+  if ((g.sensitive_nodes || []).length) {
+    html += `<h3 style="margin:16px 0 8px;color:var(--dim)">Als gevoelig geclassificeerd — controleer of dit klopt</h3>` +
+      g.sensitive_nodes.map(n => `<div class="item" onclick="showTab('mind');jumpTo('${n.uid}')">
+        <span class="dot" style="background:var(--red)"></span> ${esc(n.title)} <span class="t">${esc(n.type)}</span></div>`).join("");
+  }
+  if (ME.can_review) {
+    const audit = await api("/graph/audit?limit=60");
+    const fmt = ms => new Date(ms).toLocaleString("nl-NL");
+    html += `<h3 style="margin:16px 0 8px;color:var(--dim)">Audit-trail (laatste ${audit.length})</h3>` +
+      audit.map(e => `<div class="card"><div class="meta">${fmt(e.at)} — ${esc(e.action)} — ${esc(e.account || "systeem")}</div>
+        <span class="t">${esc(e.target)}</span><pre>${esc(e.detail || "")}</pre></div>`).join("");
+  }
+  document.getElementById("govPage").innerHTML = html;
 }
 
 /* ---------- chores ---------- */
@@ -326,7 +372,8 @@ function renderBeheer() {
     <p style="color:var(--dim);margin-bottom:14px">Accounts en tokens aanmaken vereist het infra-admin-token (uit .env).</p>
     <input id="admTok" type="password" placeholder="admin token" value="${esc(sessionStorage.getItem("hive_admin") || "")}">
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
-      <input id="accName" placeholder="naam">
+      <input id="accName" placeholder="accountnaam">
+      <input id="accPerson" placeholder="persoon (de mens achter dit account)">
       <input id="accTeam" placeholder="team uid (leeg = geen team)">
       <select id="accRole"><option value="member">member — lezen &amp; schrijven</option>
         <option value="maintainer">maintainer — + onderhoud</option>
@@ -348,6 +395,7 @@ async function adminApi(path, body) {
 async function createAccount() {
   try {
     const out = await adminApi("/admin/accounts", { org_uid: ME.org_uid, name: document.getElementById("accName").value.trim(),
+      person: document.getElementById("accPerson").value.trim() || null,
       team_uid: document.getElementById("accTeam").value.trim() || null, role: document.getElementById("accRole").value });
     document.getElementById("accOut").textContent = " ✓ uid: " + out.uid;
   } catch (e) { alert(e.message); }

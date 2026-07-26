@@ -22,6 +22,21 @@ def detect_pii(text: str) -> list[str]:
     return [kind for kind, pattern in _PII_PATTERNS if pattern.search(text)]
 
 
+# Purview-style sensitivity classification — deterministic and transparent. PII is
+# hard-blocked; credential-shaped content is allowed but labeled 'gevoelig' so the
+# governance dashboard surfaces it for review.
+_SENSITIVE_PATTERNS = [
+    re.compile(r"(?i)\b(wachtwoord|password|passphrase|api[-_ ]?key|secret|token|bearer|"
+               r"credential|client[-_ ]?secret|private[-_ ]?key|\bPAT)\b"),
+    re.compile(r"eyJ[A-Za-z0-9_-]{20,}"),  # JWT-shaped
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+]
+
+
+def classify_sensitivity(text: str) -> str:
+    return "gevoelig" if any(p.search(text) for p in _SENSITIVE_PATTERNS) else "intern"
+
+
 def assert_no_pii(text: str) -> None:
     pii = detect_pii(text)
     if pii:
@@ -128,7 +143,8 @@ def remember(
                 grey_zone_of = {"uid": existing["uid"], "title": existing["title"], "sim": sim}
 
     node = graph_repo.create_knowledge(
-        session, account, type_, title, content, scope, embedding, created_by_model=model_name
+        session, account, type_, title, content, scope, embedding, created_by_model=model_name,
+        sensitivity=classify_sensitivity(f"{title}\n{content}"),
     )
 
     if grey_zone_of is not None:

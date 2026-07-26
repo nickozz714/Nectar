@@ -5,7 +5,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository import audit_repo, graph_repo
 from src.services.embeddings import embed
-from src.services.memory_service import assert_no_pii, link_topics
+from src.services.memory_service import assert_no_pii, classify_sensitivity, link_topics
 
 
 def put_artifact(
@@ -56,6 +56,9 @@ def put_artifact(
     node = graph_repo.create_knowledge(
         session, account, type_, title, description, scope, embedding,
         created_by_model=model_name,
+        sensitivity=classify_sensitivity(
+            description + "\n" + "\n".join(f["content"] for f in files)
+        ),
     )
     graph_repo.replace_skill_files(session, node["uid"], files)
     linked, topic_notes = link_topics(session, account, node["uid"], parent_topics)

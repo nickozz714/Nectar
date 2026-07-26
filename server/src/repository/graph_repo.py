@@ -232,6 +232,7 @@ def create_knowledge(
     scope: str,
     embedding: list[float] | None,
     created_by_model: str = "",
+    sensitivity: str = "intern",
 ) -> dict:
     label = KNOWLEDGE_TYPES[type_]
     record = session.run(
@@ -242,7 +243,8 @@ def create_knowledge(
             team_uid: CASE WHEN $scope = 'team' THEN $acc_team ELSE NULL END,
             account_uid: CASE WHEN $scope = 'account' THEN $acc_uid ELSE NULL END,
             archived: false, created: timestamp(), last_used: timestamp(),
-            use_count: 0, created_by: $acc_uid, created_by_model: $created_by_model
+            use_count: 0, created_by: $acc_uid, created_by_model: $created_by_model,
+            sensitivity: $sensitivity
         }})
         SET n.embedding = $embedding
         RETURN n.uid AS uid
@@ -253,6 +255,7 @@ def create_knowledge(
         scope=scope,
         embedding=embedding,
         created_by_model=created_by_model,
+        sensitivity=sensitivity,
         **_acc_params(account),
     ).single()
     return {"uid": record["uid"]}
@@ -369,6 +372,38 @@ def neighbors(session: Session, account: AuthedAccount, uid: str) -> dict:
     node = node_to_dict(result["n"])
     node["neighbors"] = [x for x in result["nbrs"] if x["uid"] is not None]
     return node
+
+
+def account_info(session: Session, uid: str | None) -> dict:
+    if not uid:
+        return {"name": None, "person": None}
+    record = session.run(
+        "MATCH (a:Account {uid: $uid}) RETURN a.name AS name, a.person AS person", uid=uid
+    ).single()
+    return dict(record) if record else {"name": None, "person": None}
+
+
+def governance_rows(session: Session, account: AuthedAccount) -> list[dict]:
+    """Per visible node: the classification facets for the governance dashboard."""
+    result = session.run(
+        f"""
+        MATCH (n:Knowledge {{org_uid: $org_uid}})
+        WHERE coalesce(n.archived, false) = false AND {VISIBLE}
+        RETURN n.uid AS uid, n.title AS title, n.type AS type, n.scope AS scope,
+               coalesce(n.sensitivity, 'intern') AS sensitivity,
+               coalesce(n.created_by_model, '') AS model
+        """,
+        **_acc_params(account),
+    )
+    return [dict(r) for r in result]
+
+
+def chore_status_counts(session: Session, org_uid: str) -> dict:
+    result = session.run(
+        "MATCH (c:Chore {org_uid: $org_uid}) RETURN c.status AS status, count(c) AS n",
+        org_uid=org_uid,
+    )
+    return {r["status"]: r["n"] for r in result}
 
 
 def list_skills(session: Session, account: AuthedAccount) -> list[dict]:

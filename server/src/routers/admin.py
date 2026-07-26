@@ -41,7 +41,9 @@ def create_team(body: TeamCreate, session: Session = Depends(get_graph)):
 def create_account(body: AccountCreate, session: Session = Depends(get_graph)):
     if body.role not in ROLES:
         raise HTTPException(status_code=400, detail=f"role must be one of: {', '.join(ROLES)}")
-    account = tenancy_repo.create_account(session, body.org_uid, body.name, body.team_uid, body.role)
+    account = tenancy_repo.create_account(
+        session, body.org_uid, body.name, body.team_uid, body.role, body.person
+    )
     if account is None:
         raise HTTPException(status_code=404, detail="Org or team not found")
     return account

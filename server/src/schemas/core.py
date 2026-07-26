@@ -28,6 +28,7 @@ class AccountCreate(BaseModel):
     name: str
     team_uid: str | None = None
     role: str = "member"
+    person: str | None = None  # the human accountable for this account
 
 
 class AccountOut(BaseModel):
@@ -36,6 +37,7 @@ class AccountOut(BaseModel):
     org_uid: str
     team_uid: str | None
     role: str
+    person: str | None = None
 
 
 class TokenCreate(BaseModel):
