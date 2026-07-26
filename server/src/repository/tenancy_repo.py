@@ -35,7 +35,7 @@ def create_team(session: Session, org_uid: str, name: str) -> dict | None:
 
 def create_account(
     session: Session, org_uid: str, name: str, team_uid: str | None, role: str,
-    person: str | None = None,
+    person: str | None = None, email: str | None = None,
 ) -> dict | None:
     """An account always belongs to a PERSON (the human accountable for it) — also when
     the account is used by a model: tokens -> account -> person is the lineage chain."""
@@ -48,30 +48,33 @@ def create_account(
         MERGE (a:Account {org_uid: $org_uid, name: $name})
         ON CREATE SET a.uid = randomUUID(), a.created = timestamp()
         SET a.role = $role, a.team_uid = CASE WHEN tm IS NULL THEN NULL ELSE tm.uid END,
-            a.person = coalesce($person, a.person)
+            a.person = coalesce($person, a.person), a.email = coalesce($email, a.email)
         MERGE (a)-[:IN_ORG]->(o)
         FOREACH (_ IN CASE WHEN tm IS NULL THEN [] ELSE [1] END | MERGE (a)-[:IN_TEAM]->(tm))
         RETURN a.uid AS uid, a.name AS name, a.org_uid AS org_uid,
-               a.team_uid AS team_uid, a.role AS role, a.person AS person
+               a.team_uid AS team_uid, a.role AS role, a.person AS person, a.email AS email
         """,
         org_uid=org_uid,
         team_uid=team_uid,
         name=name,
         role=role,
         person=person,
+        email=email,
     ).single()
     return dict(record) if record else None
 
 
 def create_token(
-    session: Session, account_uid: str, label: str | None, expires_days: int | None
+    session: Session, account_uid: str, label: str | None, expires_days: int | None,
+    role: str | None = None,
 ) -> dict | None:
-    """Create an account token; the plaintext is returned once and only its hash stored."""
+    """Create an account token; the plaintext is returned once and only its hash stored.
+    The role is bound to the TOKEN (falls back to the account role when null)."""
     plaintext = pysecrets.token_urlsafe(32)
     record = session.run(
         """
         MATCH (a:Account {uid: $account_uid})
-        CREATE (t:Token {hash: $hash, label: $label, revoked: false,
+        CREATE (t:Token {hash: $hash, label: $label, revoked: false, role: $role,
                          created: timestamp(),
                          expires_at: CASE WHEN $expires_days IS NULL THEN NULL
                                      ELSE timestamp() + $expires_days * 86400000 END})
@@ -82,10 +85,20 @@ def create_token(
         hash=hash_token(plaintext),
         label=label,
         expires_days=expires_days,
+        role=role,
     ).single()
     if record is None:
         return None
-    return {"token": plaintext, "label": label}
+    return {"token": plaintext, "label": label, "role": role}
+
+
+def set_token_role(session: Session, token_hash: str, role: str) -> bool:
+    record = session.run(
+        "MATCH (t:Token {hash: $hash}) SET t.role = $role RETURN t.hash AS hash",
+        hash=token_hash,
+        role=role,
+    ).single()
+    return record is not None
 
 
 def revoke_token(session: Session, token_hash: str) -> bool:

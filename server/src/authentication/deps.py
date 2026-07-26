@@ -46,7 +46,7 @@ def account_from_token(session: Session, token: str) -> AuthedAccount:
         WHERE t.revoked = false AND (t.expires_at IS NULL OR t.expires_at > timestamp())
         SET t.last_used = timestamp()
         RETURN a.uid AS uid, a.org_uid AS org_uid, a.team_uid AS team_uid,
-               a.name AS name, a.role AS role
+               a.name AS name, coalesce(t.role, a.role, 'member') AS role
         """,
         hash=hash_token(token),
     ).single()
@@ -73,6 +73,26 @@ def require_account(
     return account_from_token(session, _bearer(authorization))
 
 
+def require_role(minimum: str):
+    """FastAPI dependency factory: gate an endpoint on a token role (not the admin token)."""
+    def _dep(account: AuthedAccount = Depends(require_account)) -> AuthedAccount:
+        if not has_role(account, minimum):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"'{minimum}' role required (your role: '{account.role}')",
+            )
+        return account
+    return _dep
+
+
 def require_admin(authorization: str = Header(...)) -> None:
-    if _bearer(authorization) != get_settings().ADMIN_TOKEN:
+    """Operator break-glass via ADMIN_TOKEN. Optional: when ADMIN_TOKEN is unset the
+    /admin API is disabled and everything runs through org_admin tokens + registration."""
+    admin_token = get_settings().ADMIN_TOKEN
+    if not admin_token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin API disabled (no ADMIN_TOKEN). Use an org_admin account token via /manage.",
+        )
+    if _bearer(authorization) != admin_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin token required")

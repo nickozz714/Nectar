@@ -26,8 +26,17 @@ K3YVAULT-style vault thinking) — no code coupling.
    **Roles** (decided 2026-07-25): `member` (read, write, suggest/vote) →
    `maintainer` (also resolve swarm chores) → `org_admin` (also human review of
    scope-widening, with their own token via `/review`). Suggesting stays open to all —
-   votes are the signal; *executing* mutations is delegated deliberately. The infra
-   `ADMIN_TOKEN` remains for provisioning only.
+   votes are the signal; *executing* mutations is delegated deliberately.
+   **The role is bound to the TOKEN** (falls back to the account role), so a client
+   needs only its token.
+   **Self-registration** (decided 2026-07-26): `POST /register` — the first user of a
+   fresh hive creates the org and becomes `org_admin` with no token needed; everyone
+   after needs an **invite code** minted by an org_admin (`/manage/invites`) — so it is
+   never open registration. Org administration (invites, accounts, token roles/rotation/
+   cleanup) runs through org_admin **account tokens** at `/manage`; the operator
+   `ADMIN_TOKEN` is **optional** (disables `/admin` when unset) and only needed for
+   multi-org / break-glass. The vault key auto-generates, so the hive runs with zero
+   required configuration.
 2. **The Mind** — a knowledge graph with vector recall (GraphRAG).
 3. **Skill registry** — skills as shareable units in the Claude Code skill format.
 4. **Secrets vault** — fresh component (not K3YVAULT), per-secret grants, audit on every read.

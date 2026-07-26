@@ -4,6 +4,9 @@ Status: v0.1 werkt end-to-end (27/27 smoke-checks, alles-in-één container, lok
 embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid.
 
 ## Naar echt gebruik
+- [x] **Zelf-registratie + rol-op-token + zero-config** (2026-07-26): `/register` (eerste user =
+      org_admin, daarna invite-only via `/manage/invites`), rol gebonden aan token, ADMIN_TOKEN
+      optioneel, vault-key auto-gegenereerd. `hive-init --register` registreert en slaat token op.
 - [ ] **Plugin in Claude Code installeren en er echt mee werken** (per project via `hive-init`,
       opt-in) — de skill-instructies, recall-ranking en decay-parameters slijpen zich pas in de praktijk bij.
 - [ ] **Server-deploy in huisstijl** (compose op de server + Caddy-sidecar HTTPS) zodra gewenst.

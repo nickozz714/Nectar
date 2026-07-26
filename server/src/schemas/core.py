@@ -29,6 +29,7 @@ class AccountCreate(BaseModel):
     team_uid: str | None = None
     role: str = "member"
     person: str | None = None  # the human accountable for this account
+    email: str | None = None
 
 
 class AccountOut(BaseModel):
@@ -38,17 +39,36 @@ class AccountOut(BaseModel):
     team_uid: str | None
     role: str
     person: str | None = None
+    email: str | None = None
+
+
+class RegisterBody(BaseModel):
+    name: str
+    email: str | None = None
+    invite_code: str | None = None
+
+
+class InviteCreate(BaseModel):
+    role: str = "member"
+    uses: int = 1
+    expires_days: int | None = 14
+
+
+class TokenRoleBody(BaseModel):
+    role: str
 
 
 class TokenCreate(BaseModel):
     account_uid: str
     label: str | None = None
     expires_days: int | None = None
+    role: str | None = None
 
 
 class TokenOut(BaseModel):
     token: str
-    label: str | None
+    label: str | None = None
+    role: str | None = None
 
 
 class SecretGrantCreate(BaseModel):

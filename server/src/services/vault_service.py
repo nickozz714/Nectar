@@ -4,15 +4,12 @@ from cryptography.fernet import Fernet
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
-from src.config import get_settings
 from src.repository import audit_repo, vault_repo
+from src.services.keyring import get_master_key
 
 
 def _fernet() -> Fernet:
-    key = get_settings().SECRET_MASTER_KEY
-    if not key:
-        raise RuntimeError("Vault disabled: SECRET_MASTER_KEY is not configured")
-    return Fernet(key.encode())
+    return Fernet(get_master_key().encode())
 
 
 def set_secret(session: Session, account: AuthedAccount, name: str, value: str) -> dict:

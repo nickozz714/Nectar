@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "change-me-neo4j"
 
-    ADMIN_TOKEN: str = "change-me-admin-token"
-    SECRET_MASTER_KEY: str = ""  # Fernet key; vault is disabled when empty
+    ADMIN_TOKEN: str = ""  # operator break-glass; when empty the /admin API is disabled
+    SECRET_MASTER_KEY: str = ""  # Fernet key; auto-generated + persisted when empty
+    HIVE_ORG_NAME: str = "HiveMind"  # name of the org created by the first self-registration
 
     # Embeddings: local in-process by default (fastembed) — the stack runs autonomously,
     # no cloud. An OpenAI-compatible EMBEDDINGS_BASE_URL overrides local mode.

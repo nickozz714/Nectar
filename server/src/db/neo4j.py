@@ -18,6 +18,7 @@ CONSTRAINTS = [
     "CREATE CONSTRAINT knowledge_uid IF NOT EXISTS FOR (n:Knowledge) REQUIRE n.uid IS UNIQUE",
     "CREATE CONSTRAINT chore_uid IF NOT EXISTS FOR (c:Chore) REQUIRE c.uid IS UNIQUE",
     "CREATE CONSTRAINT secret_uid IF NOT EXISTS FOR (s:Secret) REQUIRE s.uid IS UNIQUE",
+    "CREATE CONSTRAINT invite_hash IF NOT EXISTS FOR (i:Invite) REQUIRE i.code_hash IS UNIQUE",
 ]
 
 

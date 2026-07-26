@@ -4,85 +4,73 @@ From zero to a working, connected hive. Assumes Docker and a recent Claude Code 
 
 ---
 
-## 1. Run the hive (one container)
+## 1. Run the hive (one container, zero config)
 
 ```bash
 git clone https://github.com/nickozz714/HiveMind.git
 cd HiveMind
-cp .env.example .env
+docker compose up -d --build           # first build bakes in the embedding model (a few min)
+curl -s localhost:8642/health          # -> {"status":"ok"}
 ```
 
-Edit `.env` and set three values:
+That's it — no `.env` needed to start. Everything runs in one container: API + MCP on
+**8642**, the Neo4j Browser on **7474**, local embeddings in-process. Nothing talks to the
+cloud. (Optional hardening — Neo4j password, vault key, a super-admin token — is in
+`.env.example`; the vault key auto-generates and persists on the data volume.)
 
-```ini
-ADMIN_TOKEN=<paste: openssl rand -hex 24>
-NEO4J_PASSWORD=<paste: openssl rand -hex 12>
-SECRET_MASTER_KEY=<paste the output of the command below>
-```
+## 2. Register — the first user becomes admin, no token needed
 
-Generate the vault key:
+Registration is self-service. The **very first** person to register creates the org and
+becomes `org_admin`; **everyone after** needs an invite code from an org_admin. A role
+(`member` → `maintainer` → `org_admin`) is bound to the returned token, so from then on a
+client needs **only that token**.
+
+The easiest path is to let `hive-init` do it (step 3). By hand it's one call:
 
 ```bash
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-Start it (first build downloads the embedding model into the image; a few minutes once):
-
-```bash
-docker compose up -d --build
-curl -s localhost:8642/health   # -> {"status":"ok"}
-```
-
-Everything is now running in one container: the API + MCP on **8642**, the Neo4j Browser on
-**7474**, and local embeddings in-process. Nothing talks to the cloud.
-
-## 2. Create an org, an account and a token
-
-An account belongs to a **person** and has a **role**: `member` (read/write/suggest) →
-`maintainer` (also resolves swarm chores) → `org_admin` (also reviews scope-widening).
-
-```bash
-export ADMIN=<your ADMIN_TOKEN>
 API=http://localhost:8642
-H="Authorization: Bearer $ADMIN"; CT="Content-Type: application/json"
 
-ORG=$(curl -s -X POST $API/admin/orgs -H "$H" -H "$CT" \
-  -d '{"name":"MyCompany"}' | python3 -c 'import json,sys;print(json.load(sys.stdin)["uid"])')
-
-ACC=$(curl -s -X POST $API/admin/accounts -H "$H" -H "$CT" \
-  -d "{\"org_uid\":\"$ORG\",\"name\":\"nick\",\"person\":\"The Nectar authors\",\"role\":\"org_admin\"}" \
-  | python3 -c 'import json,sys;print(json.load(sys.stdin)["uid"])')
-
-curl -s -X POST $API/admin/tokens -H "$H" -H "$CT" \
-  -d "{\"account_uid\":\"$ACC\",\"label\":\"laptop\"}"
-# -> {"token":"..."}   <-- shown ONCE; store it as your HIVE_TOKEN
+# first user of a fresh hive -> org_admin, no invite:
+curl -s -X POST $API/register -H "Content-Type: application/json" \
+  -d '{"name":"The Nectar authors","email":"you@example.com"}'
+# -> {"token":"...","role":"org_admin", ...}   <-- store the token
 ```
 
-Teams are optional (`POST /admin/teams` then pass `team_uid` when creating accounts) and
-give you team-scoped knowledge; a single org works fine to start.
+To add colleagues later, an org_admin mints an invite **with their own token** (no admin
+token involved):
 
-You can also do all of this in the **GUI** — open `http://localhost:8642/ui`, log in with a
-token, and use the **Beheer** tab (it asks for the admin token) to add accounts and mint,
-rotate or clean up tokens.
+```bash
+curl -s -X POST $API/manage/invites -H "Authorization: Bearer $ORG_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" -d '{"role":"member","uses":1}'
+# -> {"code":"..."}   share this; the colleague registers with "invite_code":"..."
+```
+
+Roles are managed the same way (`POST /manage/tokens/{hash}/role`), and everything above is
+also in the GUI **Beheer** tab. Teams are optional (`/admin/teams`, needs the operator
+`ADMIN_TOKEN`) for team-scoped knowledge; a single org is fine to start.
 
 ## 3. Connect a project (opt-in, per directory)
 
 HiveMind does **nothing** until a project opts in — so other projects and ad-hoc Claude
 sessions stay hive-free.
 
-Install the plugin (`plugin/`) in Claude Code, set the connection, then anchor the project:
+Install the plugin (`plugin/`) in Claude Code, then from the project directory either
+register on the spot or pass an existing token:
 
 ```bash
 export HIVE_URL=http://localhost:8642
-export HIVE_TOKEN=<the account token from step 2>
-
 cd ~/projects/mycompany-dataplatform
-/path/to/HiveMind/plugin/scripts/hive-init "Data Modelling,MyCompany"
+
+# register a user and store the token in one go (first user needs no invite):
+/path/to/HiveMind/plugin/scripts/hive-init "Data Modelling,MyCompany" \
+    --register "The Nectar authors" you@example.com [invite-code-if-not-first]
+
+# ...or, if you already have a token:
+#   HIVE_TOKEN=<token> /path/to/HiveMind/plugin/scripts/hive-init "Data Modelling,MyCompany"
 ```
 
-`hive-init` writes `HIVE_ENABLED`, your anchor topics, and (optionally, as a 2nd argument) a
-project-specific token into this project's `.claude/settings.json`. Every Claude Code
-session started in this directory now:
+`hive-init` writes `HIVE_ENABLED`, your anchor topics and the token into this project's
+`.claude/settings.json`. Every Claude Code session started in this directory now:
 
 - gets relevant hive memories injected on **every prompt** (ranked toward your anchor
   topics — a preference, not a filter), via a deterministic hook;

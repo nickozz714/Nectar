@@ -42,7 +42,7 @@ def create_account(body: AccountCreate, session: Session = Depends(get_graph)):
     if body.role not in ROLES:
         raise HTTPException(status_code=400, detail=f"role must be one of: {', '.join(ROLES)}")
     account = tenancy_repo.create_account(
-        session, body.org_uid, body.name, body.team_uid, body.role, body.person
+        session, body.org_uid, body.name, body.team_uid, body.role, body.person, body.email
     )
     if account is None:
         raise HTTPException(status_code=404, detail="Org or team not found")
@@ -51,7 +51,8 @@ def create_account(body: AccountCreate, session: Session = Depends(get_graph)):
 
 @router.post("/tokens", response_model=TokenOut)
 def create_token(body: TokenCreate, session: Session = Depends(get_graph)):
-    token = tenancy_repo.create_token(session, body.account_uid, body.label, body.expires_days)
+    token = tenancy_repo.create_token(session, body.account_uid, body.label,
+                                      body.expires_days, body.role)
     if token is None:
         raise HTTPException(status_code=404, detail="Account not found")
     return token

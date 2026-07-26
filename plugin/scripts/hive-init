@@ -1,23 +1,52 @@
 #!/usr/bin/env bash
-# Connect the current project directory to the hive (OPT-IN per project):
-#   cd ~/projects/swinkels && hive-init "Swinkels,Fabric werkwijzen" [account-token]
+# Connect the current project directory to the hive (OPT-IN per project).
 #
-# Without hive-init, a project stays hive-free: the recall hook checks HIVE_ENABLED and
-# exits silently. The optional second argument stores a project-specific account token
-# (preferential treatment: e.g. a client-scoped account) — it overrides the global
-# HIVE_TOKEN for sessions in this directory.
+# Usage:
+#   hive-init "Topic A,Topic B"                       # use $HIVE_TOKEN from the env
+#   hive-init "Topic A,Topic B" <account-token>       # use an explicit token
+#   hive-init "Topic A,Topic B" --register "Naam" [email] [invite-code]
+#                                                     # register a user and fetch a token
+#
+# Registration: the FIRST user of a fresh hive becomes org_admin with no invite; later
+# users need an invite code from an org_admin. The role is bound to the returned token,
+# so from then on the project only needs that token. Requires $HIVE_URL.
+#
+# Without hive-init a project stays hive-free: the recall hook checks HIVE_ENABLED and
+# exits silently, so other projects and ad-hoc Claude sessions never use the hive.
 set -euo pipefail
 
-ANCHORS="${1:?usage: hive-init \"Topic A,Topic B\" [account-token]}"
-PROJECT_TOKEN="${2:-}"
+ANCHORS="${1:?usage: hive-init \"Topic A,Topic B\" [token | --register \"Naam\" [email] [invite]]}"
+shift || true
+
+TOKEN=""
+if [ "${1:-}" = "--register" ]; then
+  : "${HIVE_URL:?set HIVE_URL to register}"
+  NAME="${2:?--register needs a name}"
+  EMAIL="${3:-}"
+  INVITE="${4:-}"
+  BODY=$(NAME="$NAME" EMAIL="$EMAIL" INVITE="$INVITE" python3 -c '
+import json, os
+b = {"name": os.environ["NAME"]}
+if os.environ.get("EMAIL"): b["email"] = os.environ["EMAIL"]
+if os.environ.get("INVITE"): b["invite_code"] = os.environ["INVITE"]
+print(json.dumps(b))')
+  RESP=$(curl -sf -X POST "$HIVE_URL/register" -H "Content-Type: application/json" -d "$BODY") || {
+    echo "Registratie mislukt. Eerste gebruiker? Dan geen invite nodig. Anders: vraag een org_admin om een invite-code." >&2
+    exit 1
+  }
+  TOKEN=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+  ROLE=$(printf '%s' "$RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("role","member"))')
+  echo "Geregistreerd als '$NAME' (rol: $ROLE)."
+elif [ -n "${1:-}" ]; then
+  TOKEN="$1"
+else
+  TOKEN="${HIVE_TOKEN:-}"
+fi
 
 mkdir -p .claude
-python3 - "$ANCHORS" "$PROJECT_TOKEN" << 'EOF'
-import json
-import os
-import sys
+ANCHORS="$ANCHORS" TOKEN="$TOKEN" python3 - << 'EOF'
+import json, os
 
-anchors, token = sys.argv[1], sys.argv[2]
 path = ".claude/settings.json"
 data = {}
 if os.path.exists(path):
@@ -25,14 +54,15 @@ if os.path.exists(path):
         data = json.load(f)
 env = data.setdefault("env", {})
 env["HIVE_ENABLED"] = "1"
-env["HIVE_ANCHORS"] = anchors
-if token:
-    env["HIVE_TOKEN"] = token
+env["HIVE_ANCHORS"] = os.environ["ANCHORS"]
+if os.environ.get("TOKEN"):
+    env["HIVE_TOKEN"] = os.environ["TOKEN"]
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
-print(f"HIVE_ENABLED=1, HIVE_ANCHORS={anchors!r}"
-      + (", project token set" if token else "") + f" -> {path}")
+print(f"HIVE_ENABLED=1, HIVE_ANCHORS={os.environ['ANCHORS']!r}"
+      + (", token opgeslagen" if os.environ.get("TOKEN") else " (nog geen token — zet HIVE_TOKEN of gebruik --register)")
+      + f" -> {path}")
 EOF
 
 cat << EOF
@@ -43,8 +73,6 @@ Suggested CLAUDE.md block for this project:
 This project is anchored to the hive topics: $ANCHORS.
 Relevant hive memories are injected automatically on every prompt (ranked with a
 preference for these topics and for explicit decisions; knowledge from other contexts
-stays available). When searching manually, pass anchors=["${ANCHORS//,/\", \"}"] to
-hive_search. Write reusable knowledge back with hive_remember under these topics —
-record explicit decisions as separate 'decision' nodes. Publish shared skills/workflows
-with skill_put / workflow_put.
+stays available). Record explicit decisions as their own 'decision' node. Publish shared
+skills/workflows with skill_put / workflow_put.
 EOF
