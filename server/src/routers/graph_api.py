@@ -123,6 +123,19 @@ def lineage(
     }
 
 
+@router.delete("/node/{uid}")
+def delete_node(
+    uid: str,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """org_admin: permanently delete a knowledge node (escape hatch from consensus)."""
+    try:
+        return governance_service.admin_delete(session, account, uid)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.get("/governance")
 def governance(
     account: AuthedAccount = Depends(require_account),

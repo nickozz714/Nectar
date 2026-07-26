@@ -86,6 +86,19 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
     raise ValueError(f"Unknown chore type {kind}")
 
 
+def admin_delete(session: Session, account: AuthedAccount, uid: str) -> dict:
+    """org_admin escape hatch: permanently delete a knowledge node. Bypasses the
+    consensus gate on purpose (humans prune), and is audited."""
+    assert_role(account, "org_admin", "Deleting memories")
+    node = graph_repo.get_node(session, account, uid)
+    if node is None:
+        raise ValueError("Node not found or not visible")
+    graph_repo.hard_delete(session, account.org_uid, uid)
+    audit_repo.log(session, account.org_uid, account.uid, "delete", uid,
+                   {"title": node.get("title"), "type": node.get("type")})
+    return {"deleted": True, "uid": uid, "title": node.get("title")}
+
+
 def approve_scope_widening(
     session: Session, chore_uid: str, org_uid: str, note: str, reviewed_by: str = "human-admin"
 ) -> dict:

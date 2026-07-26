@@ -27,6 +27,8 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
       PII-filter over alle bestanden, maker mag eigen skill bijwerken, anderen via `hive_suggest`.
 - [x] **Audit-inzage** (2026-07-26): /graph/audit (org_admin) + Governance-tab tonen de
       append-only trail van elke write/mutatie/secret-read.
+- [x] **Admin hard-delete** (2026-07-26): org_admin kan een memory permanent verwijderen
+      (hive_delete / DELETE /graph/node/{uid} / GUI-knop) — escape-hatch buiten de consensus, audited.
 - [x] **Token-beheer** (2026-07-26): /admin/accounts (+ token-tellingen), /admin/accounts/{uid}/tokens,
       /admin/tokens/{hash}/rotate (revoke+nieuw), /admin/tokens/cleanup (verlopen/ingetrokken weg);
       Beheer-tab toont accounts + tokens met roteren/opruimen.

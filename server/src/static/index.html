@@ -261,6 +261,7 @@ async function selectNode(uid) {
     <button class="ghost" onclick="expandNode('${uid}')">Buren uitklappen</button>
     <button class="ghost" onclick="showLineage('${uid}')">Lineage</button>
     <button class="ghost" onclick="showSuggest('${uid}','${esc((n.type||'').replace(/'/g,''))}')">Wijziging voorstellen</button>
+    ${ME.can_review ? `<button class="ghost" style="border-color:var(--red);color:var(--red)" onclick="deleteNode('${uid}','${esc((n.title||'').replace(/'/g,''))}')">Verwijderen</button>` : ""}
     <div id="suggestBox"></div>
     <div id="lineage"></div>`;
 }
@@ -283,6 +284,17 @@ async function doSearch() {
     `<div class="item" onclick="jumpTo('${r.uid}')"><span class="dot" style="background:${COLORS[r.type]}"></span>
      ${esc(r.title)}<div class="t">${esc(r.type)} · ${esc((r.topics || []).join(" › "))}</div></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Niets gevonden.</div>`;
+}
+
+async function deleteNode(uid, title) {
+  if (!confirm(`Permanent verwijderen?\n\n"${title}"\n\nDit kan niet ongedaan worden gemaakt.`)) return;
+  try {
+    await api("/graph/node/" + uid, { method: "DELETE" });
+    document.getElementById("right").style.display = "none";
+    nodes.delete(uid); linkKeys.clear();
+    for (let i = links.length - 1; i >= 0; i--) if (links[i].a === uid || links[i].b === uid) links.splice(i, 1);
+    selected = null;
+  } catch (e) { alert(e.message); }
 }
 
 function showSuggest(uid, type) {

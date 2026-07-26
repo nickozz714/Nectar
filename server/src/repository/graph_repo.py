@@ -314,6 +314,26 @@ def archive_node(session: Session, uid: str) -> bool:
     return record is not None
 
 
+def hard_delete(session: Session, org_uid: str, uid: str) -> bool:
+    """Permanently remove a node plus its attached files and any chores about it. The
+    org_admin escape hatch from consensus-gated mutation."""
+    record = session.run(
+        """
+        MATCH (n:Knowledge {uid: $uid, org_uid: $org_uid})
+        OPTIONAL MATCH (n)-[:HAS_FILE]->(f:SkillFile)
+        OPTIONAL MATCH (c:Chore)-[:ABOUT]->(n)
+        WITH n, collect(DISTINCT f) AS files, collect(DISTINCT c) AS chores
+        FOREACH (x IN files | DETACH DELETE x)
+        FOREACH (x IN chores | DETACH DELETE x)
+        DETACH DELETE n
+        RETURN 1 AS ok
+        """,
+        uid=uid,
+        org_uid=org_uid,
+    ).single()
+    return record is not None
+
+
 def set_scope(session: Session, uid: str, target_scope: str) -> bool:
     record = session.run(
         "MATCH (n:Knowledge {uid: $uid}) SET n.scope = $scope RETURN n.uid AS uid",

@@ -180,6 +180,11 @@ Creation is direct; **mutation is consensus-gated**:
   calls `hive_chores` and resolves one (`hive_resolve_chore`). Piggybacked maintenance —
   the hive maintains itself.
 - Promotion keeps the node's original scope (visibility never widens silently).
+- **Admin hard-delete** (decided 2026-07-26): an `org_admin` can permanently delete a node
+  (its files and any chores about it too) via `hive_delete` / `DELETE /graph/node/{uid}` /
+  the GUI's Verwijderen button. This is the deliberate human escape hatch from the
+  consensus gate — pruning wrong or obsolete memories is a human call, not a swarm vote —
+  and it is audited. Everything else stays consensus-gated.
 
 ## 9. Skills registry
 

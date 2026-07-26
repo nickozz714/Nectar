@@ -199,6 +199,15 @@ def hive_members() -> list[dict]:
 
 
 @mcp.tool
+def hive_delete(node_uid: str) -> dict:
+    """(org_admin) Permanently delete a knowledge node — its files and any chores about
+    it go too. This is the admin escape hatch from consensus-gated mutation: use it to
+    prune wrong or obsolete memories. Audited; cannot be undone."""
+    with _authed() as (session, account):
+        return governance_service.admin_delete(session, account, node_uid)
+
+
+@mcp.tool
 def hive_set_role(account_name: str, role: str) -> dict:
     """(org_admin) Promote or demote a person by account name: member | maintainer |
     org_admin. The role is applied to their account and all their tokens."""
