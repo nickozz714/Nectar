@@ -1,71 +1,71 @@
 # HiveMind 🐝
 
-The shared mind of an organization. Claude models are the **bees**; HiveMind is the
-**hive** they collectively maintain — one shared, scoped, self-curating memory with
-skills and an account-bound secrets vault, exposed over MCP.
+**The shared mind of an organization.** Claude models are the **bees**; HiveMind is the
+**hive** they collectively maintain — one shared, scoped, self-curating memory with skills,
+workflows and an account-bound secrets vault, exposed over MCP. Every Claude Code CLI logs
+in with an account token and gets the org's knowledge, ranked toward whatever project it is
+working on, injected automatically on every prompt.
 
-See [DESIGN.md](DESIGN.md) for the full design.
+It runs **fully offline in one container** (Neo4j + API + local embeddings) — no cloud, no
+data leaving your network.
+
+- **New here? → [INSTALL.md](INSTALL.md)** gets you from zero to a working hive in ~5 minutes.
+- **How it works & why → [DESIGN.md](DESIGN.md)**
+- **What's next → [TODO.md](TODO.md)**
+
+---
+
+## What you get
+
+| | |
+|---|---|
+| 🧠 **Graph memory** | Topics at the top (subjects, projects, systems), knowledge linked underneath as a multi-parent graph. Retrieval traverses the graph *and* ranks semantically. |
+| ⏳ **Recency decay** | Memories age when unused and rejuvenate when read — the current, relevant set surfaces first, so recall is fast and cheap. Decisions & conventions decay slowly. |
+| ✍️ **Guarded writes** | A deterministic write-gate: quality checks, PII block, two-band dedup, automatic topic reuse, sensitivity classification. |
+| 🐝 **Swarm governance** | Nobody edits a memory casually — mutations need consensus from multiple models; the swarm resolves the queue in passing. Scope-widening is the one thing a human decides. |
+| 🔐 **Secrets vault** | Per-account, encrypted, grant-based, audited — fetched into env vars, never into chat context. |
+| 🛡️ **Governance & lineage** | Purview-style dashboard: classification, provenance (person → account → model), full audit trail, per-node lineage. |
+| 🖥️ **Web GUI** | Click through the mind, search, handle chores, review, manage accounts — at `/ui`. |
+| 🔌 **One plugin** | Per-project opt-in for any Claude Code CLI: recall hook + skill + secret helper. |
 
 ## Quick start
 
 ```bash
-cp .env.example .env
-# edit .env: set ADMIN_TOKEN, NEO4J_PASSWORD and SECRET_MASTER_KEY (see below)
-docker compose up -d --build
+cp .env.example .env          # then set ADMIN_TOKEN, NEO4J_PASSWORD, SECRET_MASTER_KEY
+docker compose up -d --build  # Neo4j + API + embeddings, one container
 ```
 
-Everything runs in **one container**: Neo4j, the API and local embeddings (a
-multilingual fastembed model baked into the image at build time). No cloud, no
-runtime internet — the stack runs fully autonomously inside an organization.
+Bootstrap an org and a token, connect a project, done — the full walkthrough is in
+**[INSTALL.md](INSTALL.md)**. The GUI is then at `http://localhost:8642/ui`, the Neo4j
+Browser (a literal window into the mind) at `http://localhost:7474`.
 
-Generate a vault master key:
+## Remote access
 
-```bash
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
+`deploy/VPN/` is a hardened VPN container so you can reach the hive from
+anywhere on your own encrypted network — see [INSTALL.md](INSTALL.md#remote-access).
 
-### Bootstrap an org + account + token
-
-```bash
-H="Authorization: Bearer $ADMIN_TOKEN"
-API=http://localhost:8642
-
-ORG=$(curl -s -X POST $API/admin/orgs -H "$H" -H 'Content-Type: application/json' -d '{"name": "MyCompany"}' | jq -r .uid)
-TEAM=$(curl -s -X POST $API/admin/teams -H "$H" -H 'Content-Type: application/json' -d "{\"org_uid\": \"$ORG\", \"name\": \"Data\"}" | jq -r .uid)
-ACC=$(curl -s -X POST $API/admin/accounts -H "$H" -H 'Content-Type: application/json' -d "{\"org_uid\": \"$ORG\", \"team_uid\": \"$TEAM\", \"name\": \"nick\"}" | jq -r .uid)
-curl -s -X POST $API/admin/tokens -H "$H" -H 'Content-Type: application/json' -d "{\"account_uid\": \"$ACC\", \"label\": \"laptop\"}"
-# → { "token": "..." }  (shown once — store it)
-```
-
-### Connect a Claude Code client
-
-Install the plugin in `plugin/` (or add it as a marketplace entry), then set in your env:
-
-```bash
-export HIVE_URL=http://localhost:8642
-export HIVE_TOKEN=<account token>
-export HIVE_ANCHORS="Swinkels,Fabric werkwijzen"   # optional, per project
-```
-
-The plugin gives you:
-- **`UserPromptSubmit` hook** — every prompt is answered with relevant hive memories
-  injected as context (anchored to your project's topics first).
-- **MCP tools** — `hive_search`, `hive_get`, `hive_remember`, `hive_relate`,
-  `hive_suggest`, `hive_chores`, `hive_resolve_chore`, `skill_list`, `skill_get`, `topic_list`.
-- **`hive-secret` script** — `export X=$(plugin/scripts/hive-secret NAME)`; secrets go
-  into env, never into chat context.
-- **Skill** — teaches the model how to write good memories, relate/promote knowledge and
-  pick up governance chores.
-
-### Looking at the mind
-
-Neo4j Browser runs at http://localhost:7474 (user `neo4j`, password from `.env`) — a
-literal window into the hive.
-
-## Development
+## Tests
 
 ```bash
 cd server
-pip install -r requirements.txt
-uvicorn src.main:app --reload  # needs a reachable Neo4j (e.g. the container, bolt://localhost:7687)
+pip install -r requirements.txt pytest
+NEO4J_URI=bolt://localhost:7688 NEO4J_PASSWORD=test python -m pytest
 ```
+
+Tests need their **own throwaway Neo4j** (they wipe the database each run — never point them
+at a populated hive):
+
+```bash
+docker run -d --name hive-test -p 7688:7687 -e NEO4J_AUTH=neo4j/test neo4j:5-community
+```
+
+CI runs the same suite on every push (`.github/workflows/ci.yml`).
+
+## Backups
+
+```bash
+./scripts/backup.sh   # stops briefly, tars the data volume, restarts -> backups/*.tgz
+```
+
+Your data lives on the `hive-data` Docker volume and survives restarts and rebuilds; only
+`docker compose down -v` erases it.

@@ -30,7 +30,11 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 - [x] **Re-embedding job** (2026-07-26): /admin/reembed?org_uid= — batch-herindexering na modelwissel.
 
 ## Robuustheid
-- [ ] **Testsuite + CI** (pytest; de smoke-test leeft nu buiten de repo — omzetten naar echte tests).
+- [x] **Testsuite + CI** (2026-07-26): 20 pytest-tests (`server/tests/`) tegen echte Neo4j met
+      deterministische fake-embedder; dekt tenancy/rollen/tokens, write-gate (kwaliteit/PII/dedup-banden/
+      sensitivity/topic-hergebruik), multi-parent + promotie-consensus + scope-widening-gate, ranking
+      (anchor/decision/touch) en vault. GitHub Actions `.github/workflows/ci.yml` (Neo4j-service).
+      README + INSTALL.md geschreven voor directe ingebruikname.
 - [ ] **Chore claiming/locking**: nu wint de eerste resolver (races zijn onschuldig op deze
       schaal); netjes claimen bij meer bijen.
 - [ ] **Backups**: volume-snapshot of `neo4j-admin database dump` periodiek.
