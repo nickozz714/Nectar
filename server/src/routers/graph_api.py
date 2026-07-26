@@ -5,6 +5,8 @@ from neo4j import Session
 
 from collections import Counter
 
+from pydantic import BaseModel
+
 from src.authentication.deps import AuthedAccount, has_role, require_account
 from src.db.neo4j import get_graph
 from src.repository import audit_repo, governance_repo, graph_repo
@@ -154,6 +156,30 @@ def audit(
     if not has_role(account, "org_admin"):
         raise HTTPException(status_code=403, detail="org_admin role required")
     return audit_repo.recent(session, account.org_uid, min(limit, 500))
+
+
+class SuggestBody(BaseModel):
+    kind: str
+    node_uid: str
+    payload: dict = {}
+    rationale: str = ""
+    model_name: str = ""
+
+
+@router.post("/suggest")
+def suggest(
+    body: SuggestBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """File a mutation suggestion from the GUI (same consensus path as the MCP tool)."""
+    try:
+        return governance_service.suggest(
+            session, account, body.kind, body.node_uid, body.payload,
+            body.rationale, body.model_name,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/chores/{chore_uid}/resolve")

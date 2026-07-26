@@ -19,7 +19,7 @@ from src.schemas.core import (
     TokenCreate,
     TokenOut,
 )
-from src.services import governance_service
+from src.services import governance_service, reindex_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -62,6 +62,42 @@ def revoke_token(token_hash: str, session: Session = Depends(get_graph)):
     if not tenancy_repo.revoke_token(session, token_hash):
         raise HTTPException(status_code=404, detail="Token not found")
     return {"revoked": True}
+
+
+@router.post("/tokens/{token_hash}/rotate", response_model=TokenOut)
+def rotate_token(
+    token_hash: str, expires_days: int | None = None, session: Session = Depends(get_graph)
+):
+    fresh = tenancy_repo.rotate_token(session, token_hash, expires_days)
+    if fresh is None:
+        raise HTTPException(status_code=404, detail="Token not found")
+    return fresh
+
+
+@router.get("/accounts/{account_uid}/tokens")
+def list_tokens(account_uid: str, session: Session = Depends(get_graph)):
+    return tenancy_repo.list_tokens(session, account_uid)
+
+
+@router.get("/accounts")
+def list_accounts(org_uid: str, session: Session = Depends(get_graph)):
+    return tenancy_repo.list_accounts(session, org_uid)
+
+
+@router.post("/tokens/cleanup")
+def cleanup_tokens(org_uid: str, session: Session = Depends(get_graph)):
+    return {"removed": tenancy_repo.cleanup_tokens(session, org_uid)}
+
+
+@router.get("/orgs")
+def list_orgs(session: Session = Depends(get_graph)):
+    return tenancy_repo.list_orgs(session)
+
+
+@router.post("/reembed")
+def reembed(org_uid: str | None = None, session: Session = Depends(get_graph)):
+    """Recompute embeddings for the corpus (after an embedding-model change)."""
+    return reindex_service.reembed(session, org_uid)
 
 
 @router.post("/secret-grants")

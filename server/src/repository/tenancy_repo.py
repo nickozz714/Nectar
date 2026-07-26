@@ -94,3 +94,81 @@ def revoke_token(session: Session, token_hash: str) -> bool:
         hash=token_hash,
     ).single()
     return record is not None
+
+
+def list_accounts(session: Session, org_uid: str) -> list[dict]:
+    result = session.run(
+        """
+        MATCH (a:Account {org_uid: $org_uid})
+        OPTIONAL MATCH (a)-[:HAS_TOKEN]->(t:Token)
+        WITH a, count(t) AS tokens,
+             sum(CASE WHEN t.revoked = false AND
+                 (t.expires_at IS NULL OR t.expires_at > timestamp()) THEN 1 ELSE 0 END) AS active
+        RETURN a.uid AS uid, a.name AS name, a.person AS person, a.role AS role,
+               a.team_uid AS team_uid, tokens, active
+        ORDER BY a.name
+        """,
+        org_uid=org_uid,
+    )
+    return [dict(r) for r in result]
+
+
+def list_tokens(session: Session, account_uid: str) -> list[dict]:
+    """Token metadata only — the plaintext is never stored, so it can't be listed."""
+    result = session.run(
+        """
+        MATCH (:Account {uid: $account_uid})-[:HAS_TOKEN]->(t:Token)
+        RETURN t.hash AS hash, t.label AS label, t.revoked AS revoked,
+               t.created AS created, t.expires_at AS expires_at, t.last_used AS last_used,
+               (t.revoked = false AND (t.expires_at IS NULL OR t.expires_at > timestamp())) AS active
+        ORDER BY t.created DESC
+        """,
+        account_uid=account_uid,
+    )
+    return [dict(r) for r in result]
+
+
+def rotate_token(
+    session: Session, token_hash: str, expires_days: int | None
+) -> dict | None:
+    """Revoke an existing token and mint a fresh one for the same account + label."""
+    account = session.run(
+        """
+        MATCH (a:Account)-[:HAS_TOKEN]->(t:Token {hash: $hash})
+        SET t.revoked = true
+        RETURN a.uid AS uid, t.label AS label
+        """,
+        hash=token_hash,
+    ).single()
+    if account is None:
+        return None
+    return create_token(session, account["uid"], account["label"], expires_days)
+
+
+def cleanup_tokens(session: Session, org_uid: str) -> int:
+    """Delete revoked and expired tokens org-wide. Returns how many were removed."""
+    record = session.run(
+        """
+        MATCH (a:Account {org_uid: $org_uid})-[:HAS_TOKEN]->(t:Token)
+        WHERE t.revoked = true OR (t.expires_at IS NOT NULL AND t.expires_at <= timestamp())
+        WITH t, count(t) AS _
+        DETACH DELETE t
+        RETURN count(*) AS removed
+        """,
+        org_uid=org_uid,
+    ).single()
+    return record["removed"] if record else 0
+
+
+def list_orgs(session: Session) -> list[dict]:
+    result = session.run(
+        """
+        MATCH (o:Org)
+        OPTIONAL MATCH (a:Account {org_uid: o.uid})
+        OPTIONAL MATCH (n:Knowledge {org_uid: o.uid})
+        RETURN o.uid AS uid, o.name AS name,
+               count(DISTINCT a) AS accounts, count(DISTINCT n) AS nodes
+        ORDER BY o.name
+        """
+    )
+    return [dict(r) for r in result]

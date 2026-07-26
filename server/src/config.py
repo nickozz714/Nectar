@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
     # chore so the swarm reviews them.
-    DEDUP_REVIEW_THRESHOLD: float = 0.80
+    DEDUP_REVIEW_THRESHOLD: float = 0.85
     # New parent topics are matched semantically against existing topics first, to
     # prevent near-duplicate topic sprawl ("Fabric" vs "Fabric werkwijzen").
     TOPIC_SIMILARITY_THRESHOLD: float = 0.85

@@ -24,10 +24,10 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
       PII-filter over alle bestanden, maker mag eigen skill bijwerken, anderen via `hive_suggest`.
 - [x] **Audit-inzage** (2026-07-26): /graph/audit (org_admin) + Governance-tab tonen de
       append-only trail van elke write/mutatie/secret-read.
-- [ ] **Token-beheer**: tokens listen per account (nu alleen aanmaken + revoke op hash),
-      rotatie-flow, opschonen van verlopen tokens.
-- [ ] **Re-embedding job**: bij een modelwissel (of embeddings later aanzetten) hebben
-      bestaande nodes geen/verkeerde vectors — batch-herindexering nodig.
+- [x] **Token-beheer** (2026-07-26): /admin/accounts (+ token-tellingen), /admin/accounts/{uid}/tokens,
+      /admin/tokens/{hash}/rotate (revoke+nieuw), /admin/tokens/cleanup (verlopen/ingetrokken weg);
+      Beheer-tab toont accounts + tokens met roteren/opruimen.
+- [x] **Re-embedding job** (2026-07-26): /admin/reembed?org_uid= — batch-herindexering na modelwissel.
 
 ## Robuustheid
 - [ ] **Testsuite + CI** (pytest; de smoke-test leeft nu buiten de repo — omzetten naar echte tests).
@@ -42,10 +42,11 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
       Nog uit te breiden: nodes bewerken via suggesties vanuit de GUI, audit-inzage, teams/secrets-overzicht.
 - [x] Rollen: member → maintainer → org_admin (2026-07-25) — onderhoud en review zijn rol-gebonden.
 - [ ] Skill-versionering.
-- [ ] Decay-parameters tunen op basis van echt gebruik (half-lifes, gewichten; DEDUP_REVIEW_THRESHOLD
-      0.80 bleek bij de werk-import aan de lage kant voor dichte corpora — 16 grey-zone chores).
-- [ ] GUI verder aanscherpen (relatie-labels + pijlen zijn er sinds 2026-07-26; design-polish,
-      node-bewerking via suggesties, audit-inzage nog open).
+- [x] Dedup-drempel bijgesteld (2026-07-26): DEDUP_REVIEW_THRESHOLD 0.80 → 0.85 (dichte
+      werk-corpora gaven te veel grey-zone chores). Half-lifes/gewichten: verder tunen op echt gebruik.
+- [x] GUI node-bewerking via suggesties (2026-07-26): "Wijziging voorstellen" in het detailpaneel
+      (edit/invalidate/promotion/scope_widening) → /graph/suggest, consensus-gated.
+- [x] Meerdere orgs zichtbaar/beheerbaar (2026-07-26): /admin/orgs met account/node-tellingen
+      (datamodel ondersteunde het al; nu ook in beheer inzichtelijk).
 - [ ] Decision-extractie voortzetten: bees leggen expliciete besluiten voortaan apart vast
-      (skill-instructie); bestaande corpus verder nalopen op impliciete besluiten.
-- [ ] Meerdere orgs op één deployment actief gebruiken (datamodel ondersteunt het al).
+      (skill-instructie staat); bestaande corpus periodiek nalopen op impliciete besluiten.

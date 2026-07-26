@@ -260,6 +260,8 @@ async function selectNode(uid) {
       gebruikt ${n.use_count ?? 0}× · door ${esc(n.created_by_model || "onbekend model")}</div>
     <button class="ghost" onclick="expandNode('${uid}')">Buren uitklappen</button>
     <button class="ghost" onclick="showLineage('${uid}')">Lineage</button>
+    <button class="ghost" onclick="showSuggest('${uid}','${esc((n.type||'').replace(/'/g,''))}')">Wijziging voorstellen</button>
+    <div id="suggestBox"></div>
     <div id="lineage"></div>`;
 }
 async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
@@ -281,6 +283,56 @@ async function doSearch() {
     `<div class="item" onclick="jumpTo('${r.uid}')"><span class="dot" style="background:${COLORS[r.type]}"></span>
      ${esc(r.title)}<div class="t">${esc(r.type)} · ${esc((r.topics || []).join(" › "))}</div></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Niets gevonden.</div>`;
+}
+
+function showSuggest(uid, type) {
+  const box = document.getElementById("suggestBox");
+  box.innerHTML = `<div class="card"><div class="meta">Mutaties zijn consensus-gated —
+    dit legt je stem vast; bij genoeg stemmen handelt de zwerm het af.</div>
+    <select id="sgKind" onchange="sgFields()">
+      <option value="edit">Inhoud bijwerken</option>
+      <option value="invalidate">Ongeldig verklaren (archiveren)</option>
+      <option value="promotion">Promoveren naar generiek topic</option>
+      <option value="scope_widening">Zichtbaarheid verbreden (mens beslist)</option>
+    </select>
+    <div id="sgExtra"></div>
+    <input id="sgRationale" placeholder="waarom? (onderbouwing)">
+    <button class="action" onclick="submitSuggest('${uid}')">Voorstel indienen</button>
+    <span id="sgOut" class="ok"></span></div>`;
+  sgFields();
+}
+function sgFields() {
+  const kind = document.getElementById("sgKind").value;
+  const extra = document.getElementById("sgExtra");
+  if (kind === "edit")
+    extra.innerHTML = `<input id="sgTitle" placeholder="nieuwe titel (leeg = ongewijzigd)">
+      <textarea id="sgContent" rows="4" placeholder="nieuwe inhoud (leeg = ongewijzigd)"></textarea>`;
+  else if (kind === "promotion")
+    extra.innerHTML = `<input id="sgTopic" placeholder="generiek doel-topic (bv. Fabric werkwijzen)">`;
+  else if (kind === "scope_widening")
+    extra.innerHTML = `<select id="sgScope"><option value="org">org-breed</option><option value="team">team</option></select>`;
+  else extra.innerHTML = "";
+}
+async function submitSuggest(uid) {
+  const kind = document.getElementById("sgKind").value;
+  const payload = {};
+  if (kind === "edit") {
+    const t = document.getElementById("sgTitle").value.trim();
+    const c = document.getElementById("sgContent").value.trim();
+    if (t) payload.title = t;
+    if (c) payload.content = c;
+  } else if (kind === "promotion") {
+    payload.target_topic = document.getElementById("sgTopic").value.trim();
+  } else if (kind === "scope_widening") {
+    payload.target_scope = document.getElementById("sgScope").value;
+  }
+  try {
+    const r = await api("/graph/suggest", { method: "POST", body: JSON.stringify({
+      kind, node_uid: uid, payload, rationale: document.getElementById("sgRationale").value.trim(),
+      model_name: "gui:" + ME.name }) });
+    document.getElementById("sgOut").textContent =
+      ` ✓ ${r.status} (${r.votes} stem${r.votes === 1 ? "" : "men"})`;
+  } catch (e) { alert(e.message); }
 }
 
 async function showLineage(uid) {
@@ -383,7 +435,52 @@ function renderBeheer() {
       <input id="tokAcc" placeholder="account uid">
       <input id="tokLabel" placeholder="label (bv. laptop)">
       <button class="action" onclick="createToken()">Token maken</button>
-      <pre id="tokOut" style="display:none"></pre></div>`;
+      <pre id="tokOut" style="display:none"></pre></div>
+    <div class="card"><h3 style="margin-bottom:8px">Accounts &amp; tokens</h3>
+      <button class="ghost" onclick="loadAccounts()">Laden</button>
+      <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
+      <div id="accList"></div></div>`;
+}
+async function loadAccounts() {
+  const tok = document.getElementById("admTok").value.trim();
+  sessionStorage.setItem("hive_admin", tok);
+  const r = await fetch("/admin/accounts?org_uid=" + encodeURIComponent(ME.org_uid),
+    { headers: { "Authorization": "Bearer " + tok } });
+  if (!r.ok) { alert("admin token?"); return; }
+  const accs = await r.json();
+  document.getElementById("accList").innerHTML = accs.map(a => `<div class="item">
+    <strong>${esc(a.name)}</strong> <span class="t">${esc(a.role)} · ${esc(a.person || "geen persoon")}
+    · ${a.active}/${a.tokens} tokens actief</span>
+    <button class="ghost" style="float:right" onclick="loadTokens('${a.uid}','${esc(a.name)}')">tokens</button>
+    <div id="tk-${a.uid}"></div></div>`).join("");
+}
+async function loadTokens(accUid, name) {
+  const tok = document.getElementById("admTok").value.trim();
+  const r = await fetch("/admin/accounts/" + accUid + "/tokens", { headers: { "Authorization": "Bearer " + tok } });
+  const tks = await r.json();
+  const fmt = ms => ms ? new Date(ms).toLocaleDateString("nl-NL") : "—";
+  document.getElementById("tk-" + accUid).innerHTML = tks.map(t => `<div class="t"
+    style="padding:4px 0;border-top:1px solid var(--line)">
+    ${t.active ? "🟢" : "⚪"} ${esc(t.label || "(geen label)")} · aangemaakt ${fmt(t.created)}
+    · laatst ${fmt(t.last_used)}
+    ${t.active ? `<button class="ghost" style="float:right" onclick="rotateToken('${t.hash}')">roteren</button>` : ""}
+    </div>`).join("") || `<div class="t">geen tokens</div>`;
+}
+async function rotateToken(hash) {
+  const tok = document.getElementById("admTok").value.trim();
+  const r = await fetch("/admin/tokens/" + hash + "/rotate", { method: "POST", headers: { "Authorization": "Bearer " + tok } });
+  if (!r.ok) { alert("mislukt"); return; }
+  const out = await r.json();
+  alert("Nieuw token (eenmalig!): " + out.token);
+  loadAccounts();
+}
+async function cleanupTokens() {
+  const tok = document.getElementById("admTok").value.trim();
+  const r = await fetch("/admin/tokens/cleanup?org_uid=" + encodeURIComponent(ME.org_uid),
+    { method: "POST", headers: { "Authorization": "Bearer " + tok } });
+  const out = await r.json();
+  alert(`${out.removed} token(s) opgeruimd`);
+  loadAccounts();
 }
 async function adminApi(path, body) {
   const tok = document.getElementById("admTok").value.trim();
