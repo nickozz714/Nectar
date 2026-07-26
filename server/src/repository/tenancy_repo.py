@@ -101,6 +101,25 @@ def set_token_role(session: Session, token_hash: str, role: str) -> bool:
     return record is not None
 
 
+def set_account_role(session: Session, org_uid: str, account_name: str, role: str) -> bool:
+    """Promote/demote a person: set the role on their account AND all its tokens (role is
+    token-bound, so both must move)."""
+    record = session.run(
+        """
+        MATCH (a:Account {org_uid: $org_uid, name: $name})
+        SET a.role = $role
+        WITH a
+        OPTIONAL MATCH (a)-[:HAS_TOKEN]->(t:Token)
+        SET t.role = $role
+        RETURN a.uid AS uid
+        """,
+        org_uid=org_uid,
+        name=account_name,
+        role=role,
+    ).single()
+    return record is not None
+
+
 def revoke_token(session: Session, token_hash: str) -> bool:
     record = session.run(
         "MATCH (t:Token {hash: $hash}) SET t.revoked = true RETURN t.hash AS hash",

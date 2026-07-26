@@ -8,7 +8,13 @@ from fastmcp.server.dependencies import get_http_request
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
 from src.repository import governance_repo, graph_repo
-from src.services import governance_service, memory_service, search_service, skill_service
+from src.services import (
+    governance_service,
+    memory_service,
+    org_service,
+    search_service,
+    skill_service,
+)
 
 mcp = FastMCP(
     "HiveMind",
@@ -172,6 +178,32 @@ def hive_resolve_chore(chore_uid: str, action: str, note: str = "") -> dict:
     only)."""
     with _authed() as (session, account):
         return governance_service.resolve(session, account, chore_uid, action, note)
+
+
+@mcp.tool
+def hive_invite(role: str = "member", uses: int = 1, expires_days: int = 14) -> dict:
+    """(org_admin) Mint an invite code so a new person can self-register. role:
+    member | maintainer | org_admin. Returns the code — share it; the invitee registers
+    with it and gets a token carrying that role. This is how the first admin onboards
+    everyone else, straight from Claude."""
+    with _authed() as (session, account):
+        return org_service.create_invite(session, account, role, uses, expires_days)
+
+
+@mcp.tool
+def hive_members() -> list[dict]:
+    """(org_admin) List the people in your org with their role and active token count —
+    use it to decide who to promote or demote."""
+    with _authed() as (session, account):
+        return org_service.list_members(session, account)
+
+
+@mcp.tool
+def hive_set_role(account_name: str, role: str) -> dict:
+    """(org_admin) Promote or demote a person by account name: member | maintainer |
+    org_admin. The role is applied to their account and all their tokens."""
+    with _authed() as (session, account):
+        return org_service.set_role(session, account, account_name, role)
 
 
 @mcp.tool
