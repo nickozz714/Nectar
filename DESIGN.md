@@ -81,6 +81,18 @@ everything else stays findable, just ranked lower. Working on Swinkels you see
 Swinkels/Fabric knowledge first, but a relevant Gemeente Krimpenerwaard memory can still
 surface — cross-context transfer must never be blocked by scoping.
 
+**Hive participation is OPT-IN per project** (decided 2026-07-26): the recall hook does
+nothing unless `HIVE_ENABLED` is set — written into the project's `.claude/settings.json`
+by `hive-init`. Starting Claude elsewhere, or in a project that never ran `hive-init`,
+stays completely hive-free. `hive-init` optionally stores a **project-specific account
+token** (`HIVE_TOKEN` in project env, overriding any global one) so a project can log in
+as e.g. a client-scoped account for preferential treatment.
+
+**Decisions surface faster** (decided 2026-07-26): explicit decisions are recorded as
+their own `decision` nodes (linked to their context) and get a `DECISION_BOOST` in
+ranking on top of their slow decay — a choice the user made must beat ordinary memories
+to the surface.
+
 ## 5. Freshness & decay
 
 Memories **age when unused and rejuvenate when used** (touch-on-read: every retrieval

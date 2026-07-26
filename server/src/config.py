@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # Anchors are a preference, not a filter: nodes inside the project's anchored topic
     # subtree get a ranking bonus, everything else stays findable.
     ANCHOR_BOOST: float = 0.15
+    # Explicit decisions must surface faster than ordinary memories.
+    DECISION_BOOST: float = 0.1
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
     # chore so the swarm reviews them.

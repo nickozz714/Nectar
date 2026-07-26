@@ -1,31 +1,38 @@
 #!/usr/bin/env bash
-# Anchor the current project directory to hive topics:
-#   cd ~/projects/swinkels && hive-init "Swinkels,Fabric werkwijzen"
+# Connect the current project directory to the hive (OPT-IN per project):
+#   cd ~/projects/swinkels && hive-init "Swinkels,Fabric werkwijzen" [account-token]
 #
-# Writes/merges HIVE_ANCHORS into .claude/settings.json (env applies to every Claude
-# Code session started in this directory; the recall hook reads it) and prints a
-# CLAUDE.md block to guide the model.
+# Without hive-init, a project stays hive-free: the recall hook checks HIVE_ENABLED and
+# exits silently. The optional second argument stores a project-specific account token
+# (preferential treatment: e.g. a client-scoped account) — it overrides the global
+# HIVE_TOKEN for sessions in this directory.
 set -euo pipefail
 
-ANCHORS="${1:?usage: hive-init \"Topic A,Topic B\"}"
+ANCHORS="${1:?usage: hive-init \"Topic A,Topic B\" [account-token]}"
+PROJECT_TOKEN="${2:-}"
 
 mkdir -p .claude
-python3 - "$ANCHORS" << 'EOF'
+python3 - "$ANCHORS" "$PROJECT_TOKEN" << 'EOF'
 import json
 import os
 import sys
 
-anchors = sys.argv[1]
+anchors, token = sys.argv[1], sys.argv[2]
 path = ".claude/settings.json"
 data = {}
 if os.path.exists(path):
     with open(path) as f:
         data = json.load(f)
-data.setdefault("env", {})["HIVE_ANCHORS"] = anchors
+env = data.setdefault("env", {})
+env["HIVE_ENABLED"] = "1"
+env["HIVE_ANCHORS"] = anchors
+if token:
+    env["HIVE_TOKEN"] = token
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
     f.write("\n")
-print(f"HIVE_ANCHORS={anchors!r} -> {path}")
+print(f"HIVE_ENABLED=1, HIVE_ANCHORS={anchors!r}"
+      + (", project token set" if token else "") + f" -> {path}")
 EOF
 
 cat << EOF
@@ -35,8 +42,9 @@ Suggested CLAUDE.md block for this project:
 ## HiveMind
 This project is anchored to the hive topics: $ANCHORS.
 Relevant hive memories are injected automatically on every prompt (ranked with a
-preference for these topics; knowledge from other contexts stays available). When
-searching manually, pass anchors=["${ANCHORS//,/\", \"}"] to hive_search. Write
-reusable knowledge back with hive_remember under these topics; publish shared
-skills/workflows with skill_put / workflow_put.
+preference for these topics and for explicit decisions; knowledge from other contexts
+stays available). When searching manually, pass anchors=["${ANCHORS//,/\", \"}"] to
+hive_search. Write reusable knowledge back with hive_remember under these topics —
+record explicit decisions as separate 'decision' nodes. Publish shared skills/workflows
+with skill_put / workflow_put.
 EOF

@@ -146,10 +146,10 @@ function addNode(n) {
   const node = { ...n, x: (Math.random()-.5)*400, y: (Math.random()-.5)*300, vx:0, vy:0 };
   nodes.set(n.uid, node); return node;
 }
-function addLink(a, b) {
+function addLink(a, b, rel) {
   const k = a < b ? a+"|"+b : b+"|"+a;
   if (linkKeys.has(k) || a === b) return;
-  linkKeys.add(k); links.push({ a, b });
+  linkKeys.add(k); links.push({ a, b, rel: rel || "contains" });
 }
 
 function tick() {
@@ -178,17 +178,26 @@ function tick() {
 
 function render() {
   svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
-  let out = "";
+  const showEdgeLabels = vb.w < 1600;  // hide relation labels when zoomed far out
+  let out = `<defs><marker id="arw" viewBox="0 0 10 10" refX="19" refY="5"
+    markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,0L10,5L0,10z" fill="#5c523f"/></marker></defs>`;
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
-    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3a342a" stroke-width="1.2"/>`;
+    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4" marker-end="url(#arw)"/>`;
+    if (showEdgeLabels) {
+      const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+      out += `<text x="${mx}" y="${my - 4}" text-anchor="middle" font-size="9"
+        fill="#8d8471" paint-order="stroke" stroke="#14120e" stroke-width="3">${l.rel}</text>`;
+    }
   }
   for (const n of nodes.values()) {
     const r = n.type === "topic" ? 16 : 10;
     const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
     out += `<g data-uid="${n.uid}" style="cursor:pointer">
       <circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${COLORS[n.type] || "#8d99ae"}" ${sel}/>
-      <text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="11" fill="#c9c0ae">${esc(n.title.length > 26 ? n.title.slice(0,25)+"…" : n.title)}</text></g>`;
+      <text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="11" fill="#ded6c4"
+        paint-order="stroke" stroke="#14120e" stroke-width="3">${esc(n.title.length > 26 ? n.title.slice(0,25)+"…" : n.title)}</text></g>`;
   }
   svg.innerHTML = out;
 }
@@ -223,7 +232,8 @@ async function expandNode(uid) {
   addNode(data);
   for (const nb of data.neighbors) {
     addNode(nb);
-    nb.direction === "out" ? addLink(uid, nb.uid) : addLink(nb.uid, uid);
+    const rel = (nb.relation || "CONTAINS").toLowerCase();
+    nb.direction === "out" ? addLink(uid, nb.uid, rel) : addLink(nb.uid, uid, rel);
   }
 }
 
@@ -251,7 +261,7 @@ async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
 async function loadTopics() {
   const data = await api("/graph/topics");
   for (const t of data.topics) addNode({ uid: t.uid, title: t.title, type: "topic" });
-  for (const e of data.edges) addLink(e.parent, e.child);
+  for (const e of data.edges) addLink(e.parent, e.child, "contains");
   document.getElementById("topicList").innerHTML = data.topics.map(t =>
     `<div class="item" onclick="jumpTo('${t.uid}')">${esc(t.title)} <span class="t">${t.children} items</span></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Nog geen topics — de eerste hive_remember maakt ze.</div>`;

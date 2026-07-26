@@ -51,7 +51,8 @@ def search(
             node,
             sim * settings.SEMANTIC_WEIGHT
             + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT
-            + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0),
+            + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0)
+            + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0),
         )
         for node, sim in candidates
     ]

@@ -16,7 +16,11 @@ organization**: a work process that worked, a decision and its why, a convention
 gotcha with a system. Not: session details, personal data, one-off trivia.
 
 - **Type**: `memory` (experience/fact), `process` (how we do X), `decision` (+ the why),
-  `convention` (agreed style), `glossary` (term), `skill` (packaged instructions).
+  `convention` (agreed style), `glossary` (term), `workflow` (step-by-step procedure).
+- **Decisions are first-class**: when the user makes or confirms an explicit choice
+  ("we kiezen X", "niet Y", "definitief"), record it as its OWN `decision` node — even
+  if the surrounding context is already stored as a memory — and hive_relate it to that
+  context. Decisions get a ranking boost and decay slowly: they must surface fast.
 - **Title**: specific and searchable. Not "Fabric issue" but "Fabric Data Agents require
   OBO auth for queries".
 - **Content**: self-contained; a colleague's model must be able to apply it cold.

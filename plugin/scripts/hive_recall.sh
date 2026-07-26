@@ -7,6 +7,10 @@
 # topic titles the current project leans on, e.g. "Swinkels,Fabric werkwijzen").
 set -uo pipefail
 
+# HiveMind is opt-in PER PROJECT: without HIVE_ENABLED (written into the project's
+# .claude/settings.json by hive-init) this hook does nothing — other projects and
+# ad-hoc Claude sessions stay hive-free by default.
+case "${HIVE_ENABLED:-}" in 1|true|yes) ;; *) exit 0 ;; esac
 [ -z "${HIVE_URL:-}" ] && exit 0
 [ -z "${HIVE_TOKEN:-}" ] && exit 0
 
