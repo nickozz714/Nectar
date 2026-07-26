@@ -7,10 +7,13 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 - [ ] **Plugin in Claude Code installeren en er echt mee werken** (per project via `hive-init`,
       opt-in) — de skill-instructies, recall-ranking en decay-parameters slijpen zich pas in de praktijk bij.
 - [ ] **Server-deploy in huisstijl** (compose op de server + Caddy-sidecar HTTPS) zodra gewenst.
-- [ ] **Remote toegang via VPN** (2026-07-26): de Tritium-H5 met OpenVPN is volledig van het
-      netwerk verdwenen (geen ping/ARP/SSH — fysiek nakijken: voeding/SD-kaart). Beslissen:
-      board herstellen óf VPN (VPN/OpenVPN) op de server draaien; daarna wijst
-      HIVE_URL remote naar de hive.
+- [x] **Remote toegang via VPN** (2026-07-26): `deploy/VPN/` — één container,
+      alleen UDP 51820, per-device keys, split tunnel, geen web-UI. Boot-gevalideerd.
+      Resteert: op de server draaien + KPN-router port-forward (handmatige stap, zie README).
+      (Tritium-H5/OpenVPN bleek dood op het netwerk — vervangen i.p.v. herstellen.)
+- [x] **Governance & datagevoeligheid à la Purview** (2026-07-26): sensitivity-classificatie,
+      /graph/governance-dashboard, /graph/audit, persoon-koppeling, /graph/lineage + GUI-tab.
+- [x] **Tokens aan personen + lineage** (2026-07-26): account → persoon; lineage per node.
 - [ ] **Mind export/import & sync**: export van (een deel van) de graph, import in een andere
       hive, en eventueel sync tussen hives — nodig zodra er meer dan één omgeving is.
 - [ ] **Backups automatiseren**: `scripts/backup.sh` bestaat (stop → tar volume → start);

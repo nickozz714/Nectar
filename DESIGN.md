@@ -19,9 +19,10 @@ K3YVAULT-style vault thinking) — no code coupling.
 
 ## 2. Architecture — five blocks
 
-1. **Accounts & auth** — org → teams → accounts, each account has opaque tokens
-   (SHA-256 hashed at rest, revocable, optional expiry). Token scope defines which
-   memories/skills/secrets are visible. Full hierarchy from day one.
+1. **Accounts & auth** — org → teams → accounts, each account belongs to a **person**
+   (the human accountable for it, also when a model uses it: tokens → account → person)
+   and has opaque tokens (SHA-256 hashed at rest, revocable, optional expiry). Token
+   scope defines which memories/skills/secrets are visible. Full hierarchy from day one.
    **Roles** (decided 2026-07-25): `member` (read, write, suggest/vote) →
    `maintainer` (also resolve swarm chores) → `org_admin` (also human review of
    scope-widening, with their own token via `/review`). Suggesting stays open to all —
@@ -42,6 +43,21 @@ K3YVAULT-style vault thinking) — no code coupling.
 | Embeddings | **local-only by default** (decided 2026-07-25): in-process fastembed (ONNX, no torch), multilingual MiniLM (384d), model baked into the image at build time — **no cloud model is ever required**, the stack runs autonomously/offline inside an organization. An OpenAI-compatible `EMBEDDINGS_BASE_URL` can override local mode | org knowledge must not leak to a cloud API; graceful degradation to word-based search when disabled |
 | Secrets crypto | Fernet (symmetric), master key from env | simple, rotatable |
 | Deploy | **one container** (decided 2026-07-25): a single image bundling Neo4j + API + embeddings (`Dockerfile` at repo root, `start.sh` runs both), data on one volume | house style (cf. SerieTracker); one thing to deploy, back up and move |
+
+## Governance & transparency (Purview-style, decided 2026-07-26)
+
+The hive must be **open and transparent about itself**. Every knowledge node carries a
+deterministic sensitivity classification (`intern` / `gevoelig` — credential-shaped
+content is flagged, PII stays hard-blocked at the gate) plus full provenance
+(`created_by` account → person, `created_by_model`). Transparency surfaces:
+- `/graph/governance` (every member): counts by scope, type, sensitivity and originating
+  model, the chore pipeline, and the list of nodes flagged sensitive for review.
+- `/graph/lineage/{uid}` (every member): a node's origin — person, account, model,
+  timestamp, scope, sensitivity, use-count — plus every audit event since.
+- `/graph/audit` (org_admin): the append-only trail of every write, mutation and secret
+  access.
+The GUI's **Governance** tab renders the dashboard, the sensitive-node list and (for
+org_admins) the audit trail; each node detail has a **Lineage** button.
 
 **Server is deterministic ("dumb"); all judgement lives in the bees.** The server does
 storage, ranking, thresholds and queues. The write-gate performs only deterministic checks
