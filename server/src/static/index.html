@@ -49,6 +49,11 @@
   .legend { position: absolute; bottom: 12px; left: 12px; background: rgba(30,27,21,.9); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--dim); }
   .legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .typefilter { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+  .typechip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--dim); cursor: pointer; user-select: none; }
+  .typechip input { accent-color: var(--accent, #e8a723); margin: 0; cursor: pointer; }
+  .typeall { flex-basis: 100%; font-size: 11px; color: var(--dim); margin-top: 4px; }
+  .typeall a { color: var(--dim); }
 </style>
 </head>
 <body>
@@ -114,6 +119,10 @@
       <div id="results"></div>
     </div>
     <div class="section">
+      <h3>Filter op type</h3>
+      <div id="typeFilter" class="typefilter"></div>
+    </div>
+    <div class="section">
       <h3>Topics</h3>
       <div id="topicList"></div>
     </div>
@@ -133,6 +142,23 @@
 <script>
 const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:"#3fc1c9",
                  skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae" };
+// Multiselect type filter: every type is visible until unchecked. Drives both the graph and search.
+const activeTypes = new Set(Object.keys(COLORS));
+const typeVisible = t => activeTypes.has(t);
+
+function renderTypeFilter() {
+  document.getElementById("typeFilter").innerHTML = Object.keys(COLORS).map(t =>
+    `<label class="typechip"><input type="checkbox" ${activeTypes.has(t) ? "checked" : ""}
+       onchange="toggleType('${t}', this.checked)">
+     <span class="dot" style="background:${COLORS[t]}"></span>${t}</label>`).join("") +
+    `<div class="typeall"><a href="#" onclick="setAllTypes(true);return false">alles</a> ·
+     <a href="#" onclick="setAllTypes(false);return false">niets</a></div>`;
+}
+function toggleType(t, on) { on ? activeTypes.add(t) : activeTypes.delete(t); render(); doSearch(); }
+function setAllTypes(on) {
+  Object.keys(COLORS).forEach(t => on ? activeTypes.add(t) : activeTypes.delete(t));
+  renderTypeFilter(); render(); doSearch();
+}
 let TOKEN = localStorage.getItem("hive_token") || "";
 let ME = null;
 
@@ -248,6 +274,7 @@ function render() {
     <path d="M0,0L10,5L0,10z" fill="#5c523f"/></marker></defs>`;
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
+    if (!typeVisible(p.type) || !typeVisible(q.type)) continue;
     out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4" marker-end="url(#arw)"/>`;
     if (showEdgeLabels) {
       const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
@@ -256,6 +283,7 @@ function render() {
     }
   }
   for (const n of nodes.values()) {
+    if (!typeVisible(n.type)) continue;
     const r = n.type === "topic" ? 16 : 10;
     const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
     out += `<g data-uid="${n.uid}" style="cursor:pointer">
@@ -339,12 +367,12 @@ async function loadTopics() {
 
 async function doSearch() {
   const q = document.getElementById("q").value.trim();
-  if (!q) return;
-  const rs = await api("/graph/search?q=" + encodeURIComponent(q));
+  if (!q) { document.getElementById("results").innerHTML = ""; return; }
+  const rs = (await api("/graph/search?q=" + encodeURIComponent(q))).filter(r => typeVisible(r.type));
   document.getElementById("results").innerHTML = rs.map(r =>
     `<div class="item" onclick="jumpTo('${r.uid}')"><span class="dot" style="background:${COLORS[r.type]}"></span>
      ${esc(r.title)}<div class="t">${esc(r.type)} · ${esc((r.topics || []).join(" › "))}</div></div>`).join("")
-    || `<div class="t" style="color:var(--dim)">Niets gevonden.</div>`;
+    || `<div class="t" style="color:var(--dim)">Niets gevonden${activeTypes.size < Object.keys(COLORS).length ? " (met dit typefilter)" : ""}.</div>`;
 }
 
 async function deleteNode(uid, title) {
@@ -492,13 +520,14 @@ async function reviewAct(uid, act) {
 /* ---------- beheer ---------- */
 function renderBeheer() {
   const page = document.getElementById("beheerPage");
+  const isAdmin = ME.role === "org_admin";
   page.innerHTML = `
     <h2 style="margin-bottom:6px">Beheer</h2>
     <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert HiveMind zelf in een project.</p>
       <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
-    <p style="color:var(--dim);margin-bottom:14px">Accounts en tokens aanmaken kan met het infra-admin-token (uit .env) of, als org_admin, via de tools/API.</p>
-    <input id="admTok" type="password" placeholder="admin token" value="${esc(sessionStorage.getItem("hive_admin") || "")}">
+    ${isAdmin ? `
+    <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
       <input id="accName" placeholder="accountnaam">
       <input id="accPerson" placeholder="persoon (de mens achter dit account)">
@@ -515,25 +544,21 @@ function renderBeheer() {
     <div class="card"><h3 style="margin-bottom:8px">Accounts &amp; tokens</h3>
       <button class="ghost" onclick="loadAccounts()">Laden</button>
       <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
-      <div id="accList"></div></div>`;
+      <div id="accList"></div></div>`
+    : `<p style="color:var(--dim)">Accountbeheer is voorbehouden aan org_admins. Vraag een org_admin om een account of token.</p>`}`;
 }
 async function loadAccounts() {
-  const tok = document.getElementById("admTok").value.trim();
-  sessionStorage.setItem("hive_admin", tok);
-  const r = await fetch("/admin/accounts?org_uid=" + encodeURIComponent(ME.org_uid),
-    { headers: { "Authorization": "Bearer " + tok } });
-  if (!r.ok) { alert("admin token?"); return; }
-  const accs = await r.json();
-  document.getElementById("accList").innerHTML = accs.map(a => `<div class="item">
-    <strong>${esc(a.name)}</strong> <span class="t">${esc(a.role)} · ${esc(a.person || "geen persoon")}
-    · ${a.active}/${a.tokens} tokens actief</span>
-    <button class="ghost" style="float:right" onclick="loadTokens('${a.uid}','${esc(a.name)}')">tokens</button>
-    <div id="tk-${a.uid}"></div></div>`).join("");
+  try {
+    const accs = await api("/manage/accounts");
+    document.getElementById("accList").innerHTML = accs.map(a => `<div class="item">
+      <strong>${esc(a.name)}</strong> <span class="t">${esc(a.role)} · ${esc(a.person || "geen persoon")}
+      · ${a.active}/${a.tokens} tokens actief</span>
+      <button class="ghost" style="float:right" onclick="loadTokens('${a.uid}','${esc(a.name)}')">tokens</button>
+      <div id="tk-${a.uid}"></div></div>`).join("");
+  } catch (e) { alert(e.message); }
 }
 async function loadTokens(accUid, name) {
-  const tok = document.getElementById("admTok").value.trim();
-  const r = await fetch("/admin/accounts/" + accUid + "/tokens", { headers: { "Authorization": "Bearer " + tok } });
-  const tks = await r.json();
+  const tks = await api("/manage/accounts/" + accUid + "/tokens");
   const fmt = ms => ms ? new Date(ms).toLocaleDateString("nl-NL") : "—";
   document.getElementById("tk-" + accUid).innerHTML = tks.map(t => `<div class="t"
     style="padding:4px 0;border-top:1px solid var(--line)">
@@ -543,40 +568,34 @@ async function loadTokens(accUid, name) {
     </div>`).join("") || `<div class="t">geen tokens</div>`;
 }
 async function rotateToken(hash) {
-  const tok = document.getElementById("admTok").value.trim();
-  const r = await fetch("/admin/tokens/" + hash + "/rotate", { method: "POST", headers: { "Authorization": "Bearer " + tok } });
-  if (!r.ok) { alert("mislukt"); return; }
-  const out = await r.json();
-  alert("Nieuw token (eenmalig!): " + out.token);
-  loadAccounts();
+  try {
+    const out = await api("/manage/tokens/" + hash + "/rotate", { method: "POST" });
+    alert("Nieuw token (eenmalig!): " + out.token);
+    loadAccounts();
+  } catch (e) { alert(e.message); }
 }
 async function cleanupTokens() {
-  const tok = document.getElementById("admTok").value.trim();
-  const r = await fetch("/admin/tokens/cleanup?org_uid=" + encodeURIComponent(ME.org_uid),
-    { method: "POST", headers: { "Authorization": "Bearer " + tok } });
-  const out = await r.json();
-  alert(`${out.removed} token(s) opgeruimd`);
-  loadAccounts();
-}
-async function adminApi(path, body) {
-  const tok = document.getElementById("admTok").value.trim();
-  sessionStorage.setItem("hive_admin", tok);
-  const r = await fetch(path, { method: "POST", headers: { "Authorization": "Bearer " + tok, "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-  return r.json();
+  try {
+    const out = await api("/manage/tokens/cleanup", { method: "POST" });
+    alert(`${out.removed} token(s) opgeruimd`);
+    loadAccounts();
+  } catch (e) { alert(e.message); }
 }
 async function createAccount() {
   try {
-    const out = await adminApi("/admin/accounts", { org_uid: ME.org_uid, name: document.getElementById("accName").value.trim(),
+    const out = await api("/manage/accounts", { method: "POST", body: JSON.stringify({
+      name: document.getElementById("accName").value.trim(),
       person: document.getElementById("accPerson").value.trim() || null,
-      team_uid: document.getElementById("accTeam").value.trim() || null, role: document.getElementById("accRole").value });
+      team_uid: document.getElementById("accTeam").value.trim() || null,
+      role: document.getElementById("accRole").value }) });
     document.getElementById("accOut").textContent = " ✓ uid: " + out.uid;
   } catch (e) { alert(e.message); }
 }
 async function createToken() {
   try {
-    const out = await adminApi("/admin/tokens", { account_uid: document.getElementById("tokAcc").value.trim(),
-      label: document.getElementById("tokLabel").value.trim() || null });
+    const out = await api("/manage/tokens", { method: "POST", body: JSON.stringify({
+      account_uid: document.getElementById("tokAcc").value.trim(),
+      label: document.getElementById("tokLabel").value.trim() || null }) });
     const el = document.getElementById("tokOut");
     el.style.display = "block";
     el.textContent = "Token (eenmalig zichtbaar!): " + out.token;
@@ -590,6 +609,7 @@ function boot() {
   if (ME.can_review) document.getElementById("reviewTab").style.display = "";
   document.getElementById("legend").innerHTML = Object.entries(COLORS).map(([t, c]) =>
     `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("");
+  renderTypeFilter();
   loadTopics();
   requestAnimationFrame(tick);
 }

@@ -32,6 +32,16 @@ class AccountCreate(BaseModel):
     email: str | None = None
 
 
+class OrgAccountCreate(BaseModel):
+    """Create an account inside the caller's OWN org (org_uid comes from the session token,
+    not the body) — used by org_admins via /manage, no operator admin token needed."""
+    name: str
+    team_uid: str | None = None
+    role: str = "member"
+    person: str | None = None
+    email: str | None = None
+
+
 class AccountOut(BaseModel):
     uid: str
     name: str

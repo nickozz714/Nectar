@@ -78,3 +78,26 @@ def test_set_token_role(client):
     client.post(f"/manage/tokens/{thash}/role", headers=ah, json={"role": "maintainer"})
     me = client.get("/graph/me", headers={"Authorization": f"Bearer {member['token']}"}).json()
     assert me["role"] == "maintainer"
+
+
+def test_org_admin_creates_account_via_manage_no_admin_token(client):
+    """An org_admin creates accounts + tokens with their OWN session token via /manage —
+    the operator admin token is not needed (the GUI Beheer tab relies on this)."""
+    admin = client.post("/register", json={"name": "Alice"}).json()
+    ah = {"Authorization": f"Bearer {admin['token']}"}
+
+    acc = client.post("/manage/accounts", headers=ah,
+                      json={"name": "Robot", "person": "Alice", "role": "member"})
+    assert acc.status_code == 200
+    uid = acc.json()["uid"]
+    assert acc.json()["role"] == "member"
+
+    tok = client.post("/manage/tokens", headers=ah, json={"account_uid": uid, "label": "laptop"})
+    assert tok.status_code == 200 and tok.json()["token"]
+
+    # a plain member cannot create accounts
+    inv = client.post("/manage/invites", headers=ah, json={"role": "member"}).json()
+    member = client.post("/register", json={"name": "Mila", "invite_code": inv["code"]}).json()
+    mh = {"Authorization": f"Bearer {member['token']}"}
+    assert client.post("/manage/accounts", headers=mh,
+                       json={"name": "X", "role": "member"}).status_code == 403

@@ -3,10 +3,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
-from src.authentication.deps import AuthedAccount, require_role
+from src.authentication.deps import ROLES, AuthedAccount, require_role
 from src.db.neo4j import get_graph
 from src.repository import registration_repo, tenancy_repo
-from src.schemas.core import InviteCreate, TokenCreate, TokenOut, TokenRoleBody
+from src.schemas.core import (
+    AccountOut,
+    InviteCreate,
+    OrgAccountCreate,
+    TokenCreate,
+    TokenOut,
+    TokenRoleBody,
+)
 
 # Everything here is done with an org_admin ACCOUNT TOKEN — no operator admin token.
 # All actions are scoped to the caller's own org.
@@ -44,6 +51,24 @@ def revoke_invite(
     if not registration_repo.revoke_invite(session, account.org_uid, code_hash):
         raise HTTPException(status_code=404, detail="Invite not found")
     return {"revoked": True}
+
+
+@router.post("/accounts", response_model=AccountOut)
+def create_account(
+    body: OrgAccountCreate,
+    account: AuthedAccount = Depends(require_role("org_admin")),
+    session: Session = Depends(get_graph),
+):
+    """Create an account in the caller's own org — the org is taken from the session token,
+    so an org_admin never needs the operator admin token for this."""
+    if body.role not in ROLES:
+        raise HTTPException(status_code=400, detail=f"role must be one of: {', '.join(ROLES)}")
+    created = tenancy_repo.create_account(
+        session, account.org_uid, body.name, body.team_uid, body.role, body.person, body.email
+    )
+    if created is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    return created
 
 
 @router.get("/accounts")
