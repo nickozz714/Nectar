@@ -27,9 +27,9 @@ def test_manifest_lists_scripts_with_content_and_hashes():
 
     files = {f["path"]: f for f in manifest["files"]}
 
-    # the recall hook + both helpers must be there, under the stable .hivemind path
-    for name in ("hive_recall.sh", "hive-skill-install.sh", "hive-update.sh"):
-        path = f".hivemind/scripts/{name}"
+    # the recall hook + helpers must be there, under the GLOBAL ~/.hivemind path
+    for name in ("hive_recall.sh", "hive-skill-install.sh", "hive-update.sh", "hive-enable.sh"):
+        path = f"~/.hivemind/scripts/{name}"
         assert path in files, f"{path} missing from manifest"
         entry = files[path]
         assert entry["mode"] == "0755"

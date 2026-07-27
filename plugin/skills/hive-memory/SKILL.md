@@ -45,8 +45,8 @@ When the user asks to load/install a skill from the hive ("laad skill X", "insta
 skill X"), pull it into the project's `.claude/skills/` so Claude Code picks it up:
 
 - **Preferred (no MCP needed):** run the bundled helper —
-  `.hivemind/scripts/hive-skill-install.sh --list` to see what's available, then
-  `.hivemind/scripts/hive-skill-install.sh "<name or uid>"`. It fetches over HTTP and
+  `~/.hivemind/scripts/hive-skill-install.sh --list` to see what's available, then
+  `~/.hivemind/scripts/hive-skill-install.sh "<name or uid>"`. It fetches over HTTP and
   writes `.claude/skills/<slug>/`. Tell the user to start a fresh session afterwards.
 - **Fallback (MCP up):** call `skill_get(uid)` and write each returned `{path, content}`
   file under `.claude/skills/<slug>/` yourself.
@@ -71,7 +71,7 @@ The three layers update differently — know which is which:
   wrong, and PRESERVE all secrets: HIVE_TOKEN, HIVE_URL, Authorization, the MCP url; never
   overwrite or print them). It does NOT manage CLAUDE.md. Report what you added/updated/left
   unchanged for both parts. Shell fallback when MCP is down (scripts only):
-  `.hivemind/scripts/hive-update.sh`.
+  `~/.hivemind/scripts/hive-update.sh`.
 
 When the user says "update HiveMind" / "haal de nieuwste versie", call `hive_update` and
 apply the manifest as above.

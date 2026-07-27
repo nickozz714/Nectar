@@ -20,20 +20,24 @@ def _zip_path() -> Path | None:
     return None
 
 
-# Where each kit file belongs in the project, and what it is. Anything in the zip's
-# scripts/ folder maps under .hivemind/scripts/ (the stable path the recall hook uses).
+# The helper scripts live GLOBALLY in ~/.hivemind/scripts/ (installed once per machine);
+# projects only opt in. So the manifest targets that global location — shared by every
+# hive-enabled project.
+_SCRIPTS_DIR = "~/.hivemind/scripts"
 _PURPOSE = {
     "hive_recall.sh": "Recall hook (UserPromptSubmit) — injects relevant hive memories every prompt.",
     "hive-skill-install.sh": "Load a shared skill from the hive into .claude/skills/ over HTTP.",
     "hive-update.sh": "Shell fallback for this same update (re-fetches the install package).",
     "hive-secret": "Fetch a vault secret into an env var (never prints values).",
+    "hive-enable.sh": "Turn HiveMind on for a project (wires .claude/settings.json + .mcp.json).",
 }
 
 _APPLY = (
     "Apply in two parts.\n"
-    "1) FILES — for each entry in `files`: ensure the parent dir of `path` exists, then "
-    "compare the local file against `sha256`. Missing → CREATE with `content`; sha differs "
-    "→ OVERWRITE with `content`; sha matches → leave it. Make `mode` \"0755\" files "
+    "1) FILES — the helper scripts live globally; a `path` starting with \"~/\" is the "
+    "user's home dir, expand it. For each entry: ensure the parent dir exists, then compare "
+    "the local file against `sha256`. Missing → CREATE with `content`; sha differs → "
+    "OVERWRITE with `content`; sha matches → leave it. Make `mode` \"0755\" files "
     "executable.\n"
     "2) CONFIG — reconcile `config` (the Claude-side wiring) WITHOUT touching secrets. For "
     "each target file, read it, apply every `requirements` item, and write back only if "
@@ -45,12 +49,13 @@ _APPLY = (
 )
 
 _HOW = (
-    "hive_update covers the CLIENT-SIDE integration of HiveMind in this project: the helper "
-    "scripts (`files`) AND the Claude wiring (`config`: the recall hook in "
-    ".claude/settings.json and the MCP server in .mcp.json). It does NOT manage CLAUDE.md — "
-    "the operating instructions are delivered as a system memory injected by the recall hook "
-    "every prompt, so there is nothing to sync into CLAUDE.md. Server tools/endpoints update "
-    "on redeploy (new MCP tools on reconnect); those need no client action either."
+    "HiveMind installs GLOBALLY once (~/.hivemind/scripts/ + the macOS tunnel); each project "
+    "just opts in. hive_update covers the client-side integration: the global helper scripts "
+    "(`files`, under ~/.hivemind/scripts/ — shared by every hive-enabled project) AND this "
+    "project's Claude wiring (`config`: the recall hook in .claude/settings.json and the MCP "
+    "server in .mcp.json). It does NOT touch the SSH tunnel (global, set up once) and does "
+    "NOT manage CLAUDE.md — the operating instructions arrive as a system memory injected by "
+    "the recall hook every prompt. Server tools/endpoints update on redeploy."
 )
 
 # Declarative spec of the Claude-side wiring. Secrets (token/url) are intentionally NOT
@@ -99,7 +104,7 @@ def build_manifest() -> dict:
             base = name.rsplit("/", 1)[-1]
             content = zf.read(name).decode("utf-8")
             files.append({
-                "path": f".hivemind/scripts/{base}",
+                "path": f"{_SCRIPTS_DIR}/{base}",
                 "purpose": _PURPOSE.get(base, "HiveMind helper script."),
                 "mode": "0755",
                 "sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),

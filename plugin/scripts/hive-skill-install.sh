@@ -11,15 +11,25 @@ set -uo pipefail
 
 PROJECT="$(pwd)"
 SETTINGS="$PROJECT/.claude/settings.json"
+CFG="$HOME/.hivemind/config.json"
 
-# Pull HIVE_URL/HIVE_TOKEN from settings.json unless already in the environment.
-if [ -f "$SETTINGS" ]; then
-  eval "$(HIVE_SETTINGS="$SETTINGS" python3 - <<'PY'
+# creds: env → ~/.hivemind/config.json → this project's .claude/settings.json
+if [ -z "${HIVE_URL:-}" ] || [ -z "${HIVE_TOKEN:-}" ]; then
+  eval "$(HIVE_CFG="$CFG" HIVE_SETTINGS="$SETTINGS" python3 - <<'PY'
 import json, os
-s = json.load(open(os.environ["HIVE_SETTINGS"])).get("env", {})
+vals = {"HIVE_URL": None, "HIVE_TOKEN": None}
+cfg = os.environ.get("HIVE_CFG")
+if cfg and os.path.exists(cfg):
+    c = json.load(open(cfg))
+    vals["HIVE_URL"], vals["HIVE_TOKEN"] = c.get("hive_url"), c.get("hive_token")
+st = os.environ.get("HIVE_SETTINGS")
+if st and os.path.exists(st):
+    s = json.load(open(st)).get("env", {})
+    vals["HIVE_URL"] = vals["HIVE_URL"] or s.get("HIVE_URL")
+    vals["HIVE_TOKEN"] = vals["HIVE_TOKEN"] or s.get("HIVE_TOKEN")
 for k in ("HIVE_URL", "HIVE_TOKEN"):
-    if not os.environ.get(k) and s.get(k):
-        print(f'export {k}={json.dumps(s[k])}')
+    if not os.environ.get(k) and vals[k]:
+        print(f'export {k}={json.dumps(vals[k])}')
 PY
 )"
 fi

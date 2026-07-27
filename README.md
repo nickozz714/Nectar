@@ -41,12 +41,21 @@ Browser (a literal window into the mind) at `http://localhost:7474`.
 
 ## Connect a project (self-install kit)
 
-The maintained package **`hivemind-install.zip`** (repo root) lets Claude wire up any
-project itself: drop the zip in a project, tell Claude to install HiveMind, and it unzips,
-reads `INSTRUCTIONS.md` and runs `install.sh <HIVE_URL> <HIVE_TOKEN> [anchors] [user@host]`
-— merging the recall hook into `.claude/settings.json` and the MCP server into `.mcp.json`.
-**No token is baked into the zip**; it's supplied at install time (per person/machine, mint
-one with `hive_invite` or `/manage/tokens`).
+The maintained package **`hivemind-install.zip`** (repo root) lets Claude wire things up
+itself. The model is **install once globally, then enable per project**:
+
+- **Global (once per machine)** — `hive-install-global.sh <HIVE_URL> <HIVE_TOKEN> [user@host]`
+  puts the helper scripts in `~/.hivemind/scripts/`, stores the connection in
+  `~/.hivemind/config.json`, and (on macOS + a LAN IP) sets up the localhost SSH tunnel
+  **once**.
+- **Per project (where relevant)** — `~/.hivemind/scripts/hive-enable.sh [anchors]` wires
+  that project's `.claude/settings.json` (recall hook + `HIVE_ENABLED`) and `.mcp.json`
+  (the `hivemind` MCP server, scoped to that project). It never touches the tunnel again.
+  In an enabled project you write memories to the hive (`hive_remember`), not local markdown.
+
+`install.sh <HIVE_URL> <HIVE_TOKEN> [anchors] [user@host]` is a one-command wrapper (global
++ enable current project). **No token is baked into the zip**; it's supplied at install time
+(per person/machine, mint one with `hive_invite` or `/manage/tokens`).
 
 **macOS caveat (handled by the installer):** the Claude Code CLI binary can't open a socket
 to a private LAN IP (192.168/10/172.16) — a known macOS "Local Network" permission bug in

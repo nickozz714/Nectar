@@ -12,11 +12,14 @@ PKG="$STAGE/hivemind-install"
 mkdir -p "$PKG/scripts"
 cp "$REPO/installer/INSTRUCTIONS.md" "$PKG/INSTRUCTIONS.md"
 cp "$REPO/installer/install.sh" "$PKG/install.sh"
+cp "$REPO/installer/hive-install-global.sh" "$PKG/hive-install-global.sh"
+# Runtime + per-project helpers, copied globally to ~/.hivemind/scripts/ by the installer.
 cp "$REPO/plugin/scripts/hive_recall.sh" "$PKG/scripts/hive_recall.sh"
 cp "$REPO/plugin/scripts/hive-secret" "$PKG/scripts/hive-secret"
 cp "$REPO/plugin/scripts/hive-skill-install.sh" "$PKG/scripts/hive-skill-install.sh"
 cp "$REPO/plugin/scripts/hive-update.sh" "$PKG/scripts/hive-update.sh"
-chmod +x "$PKG/install.sh" "$PKG/scripts/"*
+cp "$REPO/plugin/scripts/hive-enable.sh" "$PKG/scripts/hive-enable.sh"
+chmod +x "$PKG/install.sh" "$PKG/hive-install-global.sh" "$PKG/scripts/"*
 
 ( cd "$STAGE" && zip -qr hivemind-install.zip hivemind-install )
 mv -f "$STAGE/hivemind-install.zip" "$REPO/hivemind-install.zip"

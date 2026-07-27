@@ -32,11 +32,19 @@ Noemt recall openstaande chores en je taak laat het toe: onderhoud even mee —
 Haal secrets alleen via `hive-secret` in een env-var (`export X=$(hive-secret X)`) — nooit
 via de chat, nooit printen.
 
+## Installatiemodel: globaal + per project
+HiveMind installeer je **één keer globaal per machine** (`hive-install-global.sh`): de
+helper-scripts komen in `~/.hivemind/scripts/`, de connectie in `~/.hivemind/config.json`, en
+op macOS wordt de localhost-tunnel **één keer** opgezet. Daarna zet je het **per project aan
+waar relevant** met `~/.hivemind/scripts/hive-enable.sh [anchors]` (wiret `.claude/settings.json`
++ `.mcp.json` van dat project). Aanzetten raakt de tunnel nooit meer aan. **In een aangezet
+project schrijf je geen lokale markdown-memories — gebruik `hive_remember`.**
+
 ## Client-onderhoud: bijwerken & skills laden
 De client kent drie lagen die elk anders updaten:
 - **Instructies** (dit) bereiken je automatisch via de recall-hook — niets te installeren.
 - **Tools/endpoints** worden live bij een server-redeploy; nieuwe MCP-tools bij reconnect.
-- **Lokale scripts** (in `.hivemind/scripts/`) zijn het enige dat per project staat.
+- **Globale scripts** (in `~/.hivemind/scripts/`) zijn gedeeld door alle aangezette projecten.
 
 **Bijwerken** — vraagt de gebruiker "update HiveMind" / "haal de nieuwste versie": roep de
 MCP-tool **`hive_update`** aan. Het manifest heeft twee delen en `apply_instructions`:
@@ -51,15 +59,15 @@ MCP-tool **`hive_update`** aan. Het manifest heeft twee delen en `apply_instruct
 `hive_update` beheert **niet** CLAUDE.md — deze instructies komen via de recall-systeem-memory
 binnen, dus daar hoeft niets gesynct te worden. Rapporteer wat je toevoegde/bijwerkte/
 onveranderd liet, voor zowel files als config. Fallback als MCP plat ligt:
-`.hivemind/scripts/hive-update.sh` (alleen de scripts).
+`~/.hivemind/scripts/hive-update.sh` (alleen de scripts).
 
 **Een gedeelde skill laden** — vraagt de gebruiker "laad/installeer skill X": draai
-`.hivemind/scripts/hive-skill-install.sh "<naam of uid>"` (schrijft naar
+`~/.hivemind/scripts/hive-skill-install.sh "<naam of uid>"` (schrijft naar
 `.claude/skills/<slug>/`), of met MCP `skill_list` → `skill_get(uid)` en schrijf elk
 `{path, content}`-bestand onder `.claude/skills/<slug>/`. Opnieuw draaien haalt de nieuwste
 versie op. Zeg de gebruiker daarna een nieuwe sessie te starten.
 
 **Hive-skills meezoeken:** Claude Code ontdekt alleen *lokale* skills — de hive wordt niet
 vanzelf doorzocht. Heb je voor de taak lokaal geen passende skill, raadpleeg dan `skill_list`
-(of `.hivemind/scripts/hive-skill-install.sh --list`) om te zien of de hive er een heeft, en
+(of `~/.hivemind/scripts/hive-skill-install.sh --list`) om te zien of de hive er een heeft, en
 bied aan die te laden. Zo benut je de gedeelde skillbibliotheek toch.

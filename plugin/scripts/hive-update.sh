@@ -1,53 +1,45 @@
 #!/usr/bin/env bash
-# Refresh this project's HiveMind client files (recall hook + helper scripts) to the
-# latest maintained version, by re-fetching the server's install package over HTTP.
-# Your token and settings are left untouched — only .hivemind/scripts/ is refreshed.
+# Refresh the GLOBAL HiveMind helper scripts (~/.hivemind/scripts/) to the latest maintained
+# version by re-fetching the server's install package over HTTP. Your connection/token are
+# left untouched. This is the shell fallback for the `hive_update` MCP tool.
 #
-#   hive-update.sh            update the scripts in the current project
+#   hive-update.sh
 #
-# HIVE_URL/HIVE_TOKEN are read from .claude/settings.json (env vars override).
-#
-# Note: this updates only the LOCAL scripts. The "how to work with HiveMind" instructions
-# and the shared skills live server-side and reach you automatically — the instructions via
-# the recall hook (system memory, injected every prompt), the tools via the MCP server on
-# reconnect. So most of the time you don't need this at all; run it when the hook or the
-# helper scripts themselves changed.
+# Connection is read from ~/.hivemind/config.json (env HIVE_URL/HIVE_TOKEN override).
 set -uo pipefail
 
-PROJECT="$(pwd)"
-SETTINGS="$PROJECT/.claude/settings.json"
-[ -f "$SETTINGS" ] || { echo "geen .claude/settings.json — draai dit vanuit een hive-project" >&2; exit 1; }
+HIVE_HOME="$HOME/.hivemind"
+CFG="$HIVE_HOME/config.json"
 
-eval "$(HIVE_SETTINGS="$SETTINGS" python3 - <<'PY'
+# creds: env → ~/.hivemind/config.json
+if [ -z "${HIVE_URL:-}" ] || [ -z "${HIVE_TOKEN:-}" ]; then
+  if [ -f "$CFG" ]; then
+    eval "$(HIVE_CFG="$CFG" python3 - <<'PY'
 import json, os
-s = json.load(open(os.environ["HIVE_SETTINGS"])).get("env", {})
-for k in ("HIVE_URL", "HIVE_TOKEN"):
-    if not os.environ.get(k) and s.get(k):
-        print(f'export {k}={json.dumps(s[k])}')
+c = json.load(open(os.environ["HIVE_CFG"]))
+for k, v in (("HIVE_URL", c.get("hive_url")), ("HIVE_TOKEN", c.get("hive_token"))):
+    if not os.environ.get(k) and v:
+        print(f'export {k}={json.dumps(v)}')
 PY
 )"
-
-URL="${HIVE_URL:-}"; TOKEN="${HIVE_TOKEN:-}"
-[ -z "$URL" ] || [ -z "$TOKEN" ] && { echo "geen HIVE_URL/HIVE_TOKEN in settings.json" >&2; exit 1; }
-URL="${URL%/}"
-
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-
-echo "install-pakket ophalen van $URL/install.zip …"
-if ! curl -sf -m 30 -H "Authorization: Bearer $TOKEN" "$URL/install.zip" -o "$TMP/kit.zip"; then
-  echo "kon install.zip niet ophalen (token geldig? server bereikbaar?)" >&2
-  exit 1
+  fi
 fi
 
+URL="${HIVE_URL:-}"; TOKEN="${HIVE_TOKEN:-}"
+[ -z "$URL" ] || [ -z "$TOKEN" ] && { echo "geen HIVE_URL/HIVE_TOKEN (draai hive-install-global.sh)" >&2; exit 1; }
+URL="${URL%/}"
+
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+echo "install-pakket ophalen van $URL/install.zip …"
+curl -sf -m 30 -H "Authorization: Bearer $TOKEN" "$URL/install.zip" -o "$TMP/kit.zip" \
+  || { echo "kon install.zip niet ophalen (token geldig? server bereikbaar?)" >&2; exit 1; }
 unzip -qo "$TMP/kit.zip" -d "$TMP" || { echo "uitpakken mislukt" >&2; exit 1; }
 SRC="$(dirname "$(find "$TMP" -name hive_recall.sh -print -quit)")"
-[ -d "$SRC" ] || { echo "geen scripts in het pakket gevonden" >&2; exit 1; }
+[ -d "$SRC" ] || { echo "geen scripts in het pakket" >&2; exit 1; }
 
-mkdir -p "$PROJECT/.hivemind/scripts"
-cp -f "$SRC"/* "$PROJECT/.hivemind/scripts/"
-chmod +x "$PROJECT/.hivemind/scripts/"* 2>/dev/null || true
-
-echo "bijgewerkt: .hivemind/scripts/"
-ls -1 "$PROJECT/.hivemind/scripts/" | sed 's/^/  - /'
-echo "Klaar. De recall-hook gebruikt de nieuwe versie bij je volgende prompt."
+mkdir -p "$HIVE_HOME/scripts"
+cp -f "$SRC"/* "$HIVE_HOME/scripts/"
+chmod +x "$HIVE_HOME/scripts/"* 2>/dev/null || true
+echo "bijgewerkt: ~/.hivemind/scripts/"
+ls -1 "$HIVE_HOME/scripts/" | sed 's/^/  - /'
+echo "Klaar. Alle hive-projecten gebruiken meteen de nieuwe scripts."
