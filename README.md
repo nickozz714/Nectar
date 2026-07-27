@@ -60,6 +60,15 @@ The recall hook keeps using the LAN IP (curl works). Needs passwordless SSH to t
 Maintenance: the zip is assembled from `installer/` + `plugin/scripts/` by
 `installer/build.sh`. Re-run it and commit the zip whenever those change.
 
+## Deploy & login
+
+How people sign in is a **deploy-time choice, not baked into the image**: the wizard,
+password and token logins always work, and Microsoft Entra SSO switches on only if you pass
+its config at rollout (leave it out for an org that doesn't want it). The full rollout &
+auth-configuration guide is **[deploy/README.md](deploy/README.md)** (with
+[deploy/entra/README.md](deploy/entra/README.md) for the Entra app-registration and
+[deploy/azure/README.md](deploy/azure/README.md) for Azure Container Apps).
+
 ## Remote access
 
 `deploy/VPN/` is a hardened VPN container so you can reach the hive from
