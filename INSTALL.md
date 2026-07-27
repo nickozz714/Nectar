@@ -54,8 +54,24 @@ also in the GUI **Beheer** tab. Teams are optional (`/admin/teams`, needs the op
 HiveMind does **nothing** until a project opts in — so other projects and ad-hoc Claude
 sessions stay hive-free.
 
-Install the plugin (`plugin/`) in Claude Code, then from the project directory either
-register on the spot or pass an existing token:
+**Easiest: the self-install kit** (`hivemind-install.zip` from the repo root). Drop it in
+a project and let Claude install it — it handles the macOS tunnel automatically:
+
+```bash
+unzip -o hivemind-install.zip && cd hivemind-install
+# macOS + LAN IP: pass the SSH target (4th arg) so it sets up the localhost tunnel:
+./install.sh "http://your-server:8642" "<token>" "Data Modelling,MyCompany" "user@your-server"
+# Linux / hostname server: drop the SSH target.
+```
+
+> **macOS:** the Claude Code CLI can't reach a private LAN IP (Local Network permission bug,
+> claude-code #27828/#55169) — `claude mcp list` shows `FailedToOpenSocket`. The installer
+> routes the MCP through a persistent `launchd` localhost SSH tunnel and points it at
+> `http://localhost:<port>/mcp`; the recall hook keeps using the LAN IP (curl works). Needs
+> passwordless SSH to the server (`ssh-copy-id user@host`). Not needed on Linux.
+
+**Alternatively, the plugin + `hive-init`:** install the plugin (`plugin/`) in Claude Code,
+then from the project directory either register on the spot or pass an existing token:
 
 ```bash
 export HIVE_URL=http://localhost:8642

@@ -43,10 +43,19 @@ Browser (a literal window into the mind) at `http://localhost:7474`.
 
 The maintained package **`hivemind-install.zip`** (repo root) lets Claude wire up any
 project itself: drop the zip in a project, tell Claude to install HiveMind, and it unzips,
-reads `INSTRUCTIONS.md` and runs `install.sh <HIVE_URL> <HIVE_TOKEN> [anchors]` — merging
-the recall hook into `.claude/settings.json` and the MCP server into `.mcp.json`. **No
-token is baked into the zip**; it's supplied at install time (per person/machine, mint one
-with `hive_invite` or `/manage/tokens`).
+reads `INSTRUCTIONS.md` and runs `install.sh <HIVE_URL> <HIVE_TOKEN> [anchors] [user@host]`
+— merging the recall hook into `.claude/settings.json` and the MCP server into `.mcp.json`.
+**No token is baked into the zip**; it's supplied at install time (per person/machine, mint
+one with `hive_invite` or `/manage/tokens`).
+
+**macOS caveat (handled by the installer):** the Claude Code CLI binary can't open a socket
+to a private LAN IP (192.168/10/172.16) — a known macOS "Local Network" permission bug in
+the CLI (claude-code #27828/#55169), so `claude mcp list` reports `FailedToOpenSocket` even
+though curl and the recall hook work. Fix: the MCP goes through a **localhost SSH tunnel**.
+On macOS + a LAN IP, pass the SSH target (`user@host`); the installer sets up a persistent
+`launchd` tunnel (`localhost:<port>` → server) and points the MCP at `http://localhost:<port>/mcp`.
+The recall hook keeps using the LAN IP (curl works). Needs passwordless SSH to the server
+(`ssh-copy-id user@host`). Linux and hostname/public servers connect directly, no tunnel.
 
 Maintenance: the zip is assembled from `installer/` + `plugin/scripts/` by
 `installer/build.sh`. Re-run it and commit the zip whenever those change.
