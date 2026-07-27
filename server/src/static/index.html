@@ -55,22 +55,38 @@
 <div id="overlay">
   <div class="box">
     <h2>🐝 HiveMind</h2>
-    <div style="display:flex;gap:6px;margin-bottom:12px">
-      <button id="tabPw" class="ghost" style="flex:1" onclick="loginTab('pw')">Gebruikersnaam</button>
-      <button id="tabTok" class="ghost" style="flex:1" onclick="loginTab('tok')">Token</button>
+
+    <div id="wizard" style="display:none">
+      <p style="color:var(--dim);font-size:13px;margin-bottom:12px">Welkom! De hive is nog leeg.
+      Maak het eerste account aan — dit wordt meteen de <b>org_admin</b>.</p>
+      <input id="wname" placeholder="jouw naam / gebruikersnaam" autocomplete="username">
+      <input id="wemail" placeholder="e-mail (optioneel, voor Microsoft-login)">
+      <input id="wpass" type="password" placeholder="wachtwoord (min. 8 tekens)" autocomplete="new-password"
+             onkeydown="if(event.key==='Enter')doWizard()">
+      <button class="action" onclick="doWizard()">Account aanmaken</button>
     </div>
-    <div id="loginPw">
-      <input id="luser" placeholder="gebruikersnaam" autocomplete="username">
-      <input id="lpass" type="password" placeholder="wachtwoord" autocomplete="current-password"
-             onkeydown="if(event.key==='Enter')loginPassword()">
-      <button class="action" onclick="loginPassword()">Inloggen</button>
+
+    <div id="loginBox">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="tabPw" class="ghost" style="flex:1" onclick="loginTab('pw')">Gebruikersnaam</button>
+        <button id="tabTok" class="ghost" style="flex:1" onclick="loginTab('tok')">Token</button>
+      </div>
+      <div id="loginPw">
+        <input id="luser" placeholder="gebruikersnaam" autocomplete="username">
+        <input id="lpass" type="password" placeholder="wachtwoord" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')loginPassword()">
+        <button class="action" onclick="loginPassword()">Inloggen</button>
+      </div>
+      <div id="loginTok" style="display:none">
+        <p style="color:var(--dim);font-size:13px;margin-bottom:10px">Log in met je account-token.</p>
+        <input id="tokenInput" type="password" placeholder="account token" autocomplete="off"
+               onkeydown="if(event.key==='Enter')login()">
+        <button class="action" onclick="login()">Verbinden</button>
+      </div>
+      <button id="entraBtn" class="ghost" style="display:none;width:100%;margin-top:10px"
+              onclick="location.href='/auth/entra/login'">Inloggen met Microsoft</button>
     </div>
-    <div id="loginTok" style="display:none">
-      <p style="color:var(--dim);font-size:13px;margin-bottom:10px">Log in met je account-token.</p>
-      <input id="tokenInput" type="password" placeholder="account token" autocomplete="off"
-             onkeydown="if(event.key==='Enter')login()">
-      <button class="action" onclick="login()">Verbinden</button>
-    </div>
+
     <div id="loginErr" class="err"></div>
   </div>
 </div>
@@ -478,7 +494,10 @@ function renderBeheer() {
   const page = document.getElementById("beheerPage");
   page.innerHTML = `
     <h2 style="margin-bottom:6px">Beheer</h2>
-    <p style="color:var(--dim);margin-bottom:14px">Accounts en tokens aanmaken vereist het infra-admin-token (uit .env).</p>
+    <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert HiveMind zelf in een project.</p>
+      <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
+    <p style="color:var(--dim);margin-bottom:14px">Accounts en tokens aanmaken kan met het infra-admin-token (uit .env) of, als org_admin, via de tools/API.</p>
     <input id="admTok" type="password" placeholder="admin token" value="${esc(sessionStorage.getItem("hive_admin") || "")}">
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
       <input id="accName" placeholder="accountnaam">
@@ -575,13 +594,64 @@ function boot() {
   requestAnimationFrame(tick);
 }
 
+async function doWizard() {
+  const name = document.getElementById("wname").value.trim();
+  const email = document.getElementById("wemail").value.trim();
+  const pass = document.getElementById("wpass").value;
+  if (name.length < 2) { document.getElementById("loginErr").textContent = "Naam te kort"; return; }
+  try {
+    const reg = await (await fetch("/register", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email: email || null }) })).json();
+    if (!reg.token) throw new Error(reg.detail || "mislukt");
+    TOKEN = reg.token;
+    if (pass) {
+      await fetch("/auth/password", { method: "POST", headers: {
+        "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pass }) });
+    }
+    ME = await api("/graph/me");
+    localStorage.setItem("hive_token", TOKEN);
+    document.getElementById("overlay").style.display = "none";
+    boot();
+  } catch (e) { document.getElementById("loginErr").textContent = e.message; }
+}
+
+async function downloadInstallZip() {
+  try {
+    const r = await fetch("/install.zip", { headers: { "Authorization": "Bearer " + TOKEN } });
+    if (!r.ok) throw new Error("download mislukt");
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement("a"); a.href = url; a.download = "hivemind-install.zip";
+    a.click(); URL.revokeObjectURL(url);
+  } catch (e) { alert(e.message); }
+}
+
 (async () => {
+  // Token handed back by the Microsoft (Entra) callback via the URL fragment.
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get("token")) { TOKEN = hash.get("token"); localStorage.setItem("hive_token", TOKEN); history.replaceState(null, "", location.pathname); }
+  if (hash.get("error")) { document.getElementById("loginErr").textContent = decodeURIComponent(hash.get("error")); }
+
   if (TOKEN) {
     try { ME = await api("/graph/me"); document.getElementById("overlay").style.display = "none"; boot(); return; }
-    catch (e) { /* fall through to login */ }
+    catch (e) { TOKEN = ""; localStorage.removeItem("hive_token"); }
   }
+
   document.getElementById("overlay").style.display = "flex";
+  // First run? Show the wizard instead of login.
+  try {
+    const st = await (await fetch("/register")).json();
+    if (st.first_run) {
+      document.getElementById("wizard").style.display = "";
+      document.getElementById("loginBox").style.display = "none";
+      return;
+    }
+  } catch (e) { /* ignore */ }
   loginTab("pw");
+  try {
+    const e = await (await fetch("/auth/entra/status")).json();
+    if (e.enabled) document.getElementById("entraBtn").style.display = "";
+  } catch (e) { /* ignore */ }
 })();
 </script>
 </body>

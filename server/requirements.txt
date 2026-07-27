@@ -7,3 +7,4 @@ fastmcp
 cryptography
 httpx
 fastembed
+msal

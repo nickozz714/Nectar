@@ -17,6 +17,8 @@ ENV EMBEDDINGS_MODEL=$EMBEDDINGS_MODEL
 RUN python -c "import os; from fastembed import TextEmbedding; TextEmbedding(os.environ['EMBEDDINGS_MODEL'])"
 
 COPY server/src ./src
+# The self-install kit, downloadable from the GUI / GET /install.zip.
+COPY hivemind-install.zip ./hivemind-install.zip
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 

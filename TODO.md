@@ -46,6 +46,15 @@ embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid
 - [ ] **Rate limiting / abuse-bescherming** op de publieke endpoints.
 - [ ] **Full-text index** in Neo4j voor de fallback-zoekweg (nu woord-CONTAINS-scan).
 
+## Gebouwd 2026-07-27
+- [x] Wachtwoord-login (GUI + MCP) + org_admin reset; scrypt.
+- [x] Microsoft Entra (Azure AD) SSO — config-driven, e-mail-mapping; `deploy/entra/README.md`.
+- [x] First-time wizard: lege hive → GUI-wizard maakt het eerste account (org_admin) + token.
+- [x] Install-zip downloadbaar uit de GUI (`GET /install.zip`, in de image gebakken).
+- [x] Sessie-status: session_save/list/resume/delete (per-account, resumebaar op elk apparaat).
+- [x] Dedup-force op hive_remember; systeem-memories (altijd in recall).
+- [x] Azure Container Apps-deploy mogelijk + instructie (`deploy/azure/README.md`).
+
 ## Later / ideeën
 - [x] Web-UI: hive GUI op `/ui` (2026-07-25) — graph-verkenner, zoeken, chores, review, beheer.
       Nog uit te breiden: nodes bewerken via suggesties vanuit de GUI, audit-inzage, teams/secrets-overzicht.

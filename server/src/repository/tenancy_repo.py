@@ -121,6 +121,18 @@ def set_password_by_name(session: Session, org_uid: str, name: str, password_has
     return record is not None
 
 
+def get_account_by_email(session: Session, email: str) -> dict | None:
+    record = session.run(
+        """
+        MATCH (a:Account) WHERE toLower(a.email) = toLower($email)
+        RETURN a.uid AS uid, a.org_uid AS org_uid, a.name AS name, a.role AS role
+        ORDER BY a.created LIMIT 1
+        """,
+        email=email,
+    ).single()
+    return dict(record) if record else None
+
+
 def get_account_for_login(session: Session, name: str) -> dict | None:
     """Look up an account by username for password login. Returns the password hash too.
     Names are unique per org; on a single-org deployment the name is unambiguous."""

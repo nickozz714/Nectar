@@ -7,7 +7,7 @@ from fastmcp.server.dependencies import get_http_request
 
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
-from src.repository import governance_repo, graph_repo
+from src.repository import governance_repo, graph_repo, session_repo
 from src.services import (
     governance_service,
     memory_service,
@@ -235,6 +235,42 @@ def hive_set_role(account_name: str, role: str) -> dict:
     org_admin. The role is applied to their account and all their tokens."""
     with _authed() as (session, account):
         return org_service.set_role(session, account, account_name, role)
+
+
+@mcp.tool
+def session_save(name: str, state: str) -> dict:
+    """Save (or overwrite) a working-session snapshot in the hive under `name`, bound to
+    YOUR account. Put whatever a future session needs to continue: the goal, what's done,
+    current step, open questions, key file paths/decisions. Resume it later with
+    session_resume — from any device, as long as you use a token for the same account."""
+    with _authed() as (session, account):
+        return session_repo.save(session, account, name, state)
+
+
+@mcp.tool
+def session_list() -> list[dict]:
+    """List your saved session snapshots (name, last updated, size) — bound to your account."""
+    with _authed() as (session, account):
+        return session_repo.list_for(session, account)
+
+
+@mcp.tool
+def session_resume(name: str) -> dict:
+    """Load a saved session snapshot to continue where it left off (bound to your account)."""
+    with _authed() as (session, account):
+        data = session_repo.get(session, account, name)
+        if data is None:
+            raise ValueError(f"No saved session '{name}' for this account")
+        return data
+
+
+@mcp.tool
+def session_delete(name: str) -> dict:
+    """Delete a saved session snapshot (bound to your account)."""
+    with _authed() as (session, account):
+        if not session_repo.delete(session, account, name):
+            raise ValueError(f"No saved session '{name}' for this account")
+        return {"deleted": True, "name": name}
 
 
 @mcp.tool

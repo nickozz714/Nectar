@@ -16,6 +16,17 @@ class Settings(BaseSettings):
     SECRET_MASTER_KEY: str = ""  # Fernet key; auto-generated + persisted when empty
     HIVE_ORG_NAME: str = "HiveMind"  # name of the org created by the first self-registration
 
+    # Microsoft Entra (Azure AD) SSO — optional. Configure an app registration and set these.
+    ENTRA_TENANT_ID: str = ""
+    ENTRA_CLIENT_ID: str = ""
+    ENTRA_CLIENT_SECRET: str = ""
+    ENTRA_REDIRECT_URI: str = ""   # e.g. https://host/auth/entra/callback; else derived
+    PUBLIC_BASE_URL: str = ""      # e.g. https://hive.example.com; for redirects
+
+    @property
+    def entra_enabled(self) -> bool:
+        return bool(self.ENTRA_TENANT_ID and self.ENTRA_CLIENT_ID and self.ENTRA_CLIENT_SECRET)
+
     # Embeddings: local in-process by default (fastembed) — the stack runs autonomously,
     # no cloud. An OpenAI-compatible EMBEDDINGS_BASE_URL overrides local mode.
     EMBEDDINGS_LOCAL: bool = True
