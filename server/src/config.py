@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     ENTRA_CLIENT_SECRET: str = ""
     ENTRA_REDIRECT_URI: str = ""   # e.g. https://host/auth/entra/callback; else derived
     PUBLIC_BASE_URL: str = ""      # e.g. https://hive.example.com; for redirects
+    # Any Microsoft user from the (single-tenant) app auto-gets a member account on first
+    # login — the Entra tenant is the access boundary. Set false for invite-only-with-SSO.
+    ENTRA_AUTO_PROVISION: bool = True
 
     @property
     def entra_enabled(self) -> bool:

@@ -56,11 +56,23 @@ def complete(session: Session, code: str, state: str, redirect_uri: str) -> dict
 
     account = tenancy_repo.get_account_by_email(session, email)
     if account is None:
+        # First Microsoft user of an empty hive bootstraps it as org_admin.
         if registration_repo.org_count(session) == 0:
             reg = registration_repo.register_first(
                 session, get_settings().HIVE_ORG_NAME, name or email, email
             )
-            return {"token": reg["token"], "name": name or email, "role": "org_admin"}
+            return {"token": reg["token"], "name": name or email, "role": "org_admin",
+                    "note": "eerste gebruiker — org aangemaakt, org_admin"}
+        # Otherwise auto-provision a member account: the Entra tenant is the access boundary.
+        if get_settings().ENTRA_AUTO_PROVISION:
+            org_uid = tenancy_repo.first_org(session)
+            acc = tenancy_repo.create_account(
+                session, org_uid, email, None, "member", person=name or email, email=email
+            )
+            token = tenancy_repo.create_token(session, acc["uid"], "entra-login", 30, role="member")
+            audit_repo.log(session, org_uid, acc["uid"], "login_entra_provision", email)
+            return {"token": token["token"], "name": acc["name"], "role": "member",
+                    "note": "nieuw account via Microsoft-login"}
         raise PermissionError(
             f"{email} is niet geregistreerd — vraag een org_admin om een account/invite"
         )

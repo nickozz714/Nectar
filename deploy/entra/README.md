@@ -6,11 +6,14 @@ zonder; is het niet geconfigureerd, dan is de Microsoft-knop simpelweg verborgen
 ## Hoe het werkt
 - GUI toont "Inloggen met Microsoft" → `/auth/entra/login` → Microsoft-login →
   `/auth/entra/callback` → HiveMind wisselt de code in, leest **e-mail/naam** uit het
-  id-token, en **koppelt op e-mail** aan een HiveMind-account:
-  - bestaat er een account met die e-mail → inloggen (token, 30 dagen);
+  id-token, en logt de gebruiker in — **het Microsoft-account IS de identiteit**:
+  - bestaat er al een account met die e-mail → inloggen (token, 30 dagen);
   - is de hive nog leeg (first run) → die persoon wordt org_admin;
-  - anders → geweigerd (vraag een org_admin om een account/invite met jouw e-mail).
+  - anders → **automatisch een member-account aangemaakt** (auto-provisioning). Omdat je
+    app single-tenant is, is de Microsoft-tenant de toegangsgrens: alleen jouw org-leden
+    kunnen inloggen, en iedereen die inlogt krijgt vanzelf een account.
 - Het HiveMind-token gaat via de URL-fragment terug naar de GUI (nooit server-side gelogd).
+- Auto-provisioning uitzetten (invite-only-met-SSO)? Zet `ENTRA_AUTO_PROVISION=false`.
 
 ## 1. App-registratie in Entra
 In het Azure-portaal → **Microsoft Entra ID → App registrations → New registration**:
@@ -39,9 +42,11 @@ Microsoft-knop verschijnt in de GUI.
 
 ## 3. Gebruikers toelaten
 - **Eerste keer**: de allereerste Microsoft-login op een lege hive wordt org_admin.
-- **Daarna**: maak per persoon een account aan met hun **e-mail** (admin-API/`/manage` of
-  de Beheer-tab), of geef ze een invite. Bij hun Microsoft-login worden ze op e-mail
-  gekoppeld en krijgen ze de rol van dat account.
+- **Daarna, standaard (auto-provisioning aan)**: iedereen uit je Microsoft-tenant kan
+  inloggen en krijgt automatisch een **member**-account. Wil je iemand meer rechten geven,
+  promoveer dan met `hive_set_role`. De tenant zelf is de toegangsgrens.
+- **Invite-only-met-SSO** (`ENTRA_AUTO_PROVISION=false`): dan moet de e-mail vooraf een
+  account hebben (admin-API/`/manage`/Beheer-tab); onbekende e-mails worden geweigerd.
 
 ## Noten
 - De redirect-URI in Entra moet **exact** matchen met wat HiveMind gebruikt (schema, host,

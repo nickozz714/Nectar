@@ -121,6 +121,13 @@ def set_password_by_name(session: Session, org_uid: str, name: str, password_has
     return record is not None
 
 
+def first_org(session: Session) -> str | None:
+    record = session.run(
+        "MATCH (o:Org) RETURN o.uid AS uid ORDER BY o.created LIMIT 1"
+    ).single()
+    return record["uid"] if record else None
+
+
 def get_account_by_email(session: Session, email: str) -> dict | None:
     record = session.run(
         """
