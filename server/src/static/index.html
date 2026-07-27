@@ -526,6 +526,10 @@ function renderBeheer() {
     <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert HiveMind zelf in een project.</p>
       <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
+    <div class="card"><h3 style="margin-bottom:8px">Skills in de hive</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Deel-skills die je in een project kunt laden. In een hive-verbonden Claude: vraag <em>"laad skill X"</em>, of draai het commando.</p>
+      <button class="ghost" onclick="loadSkills()">Laden</button>
+      <div id="skillList"></div></div>
     ${isAdmin ? `
     <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
@@ -546,6 +550,24 @@ function renderBeheer() {
       <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
       <div id="accList"></div></div>`
     : `<p style="color:var(--dim)">Accountbeheer is voorbehouden aan org_admins. Vraag een org_admin om een account of token.</p>`}`;
+}
+async function loadSkills() {
+  try {
+    const skills = await api("/skills");
+    const el = document.getElementById("skillList");
+    if (!skills.length) { el.innerHTML = `<div class="t" style="color:var(--dim)">Nog geen skills in de hive.</div>`; return; }
+    el.innerHTML = skills.map(s => {
+      const cmd = `.hivemind/scripts/hive-skill-install.sh "${s.title}"`;
+      return `<div class="item"><strong>${esc(s.title)}</strong>
+        <button class="ghost" style="float:right" onclick='copyText(${JSON.stringify(cmd)})'>kopieer commando</button>
+        <div class="t" style="margin-top:4px;font-family:monospace;opacity:.8">${esc(cmd)}</div></div>`;
+    }).join("");
+  } catch (e) { alert(e.message); }
+}
+function copyText(t) {
+  navigator.clipboard?.writeText(t).then(
+    () => { const el = event.target; const o = el.textContent; el.textContent = "gekopieerd ✓"; setTimeout(() => el.textContent = o, 1200); },
+    () => alert(t));
 }
 async function loadAccounts() {
   try {

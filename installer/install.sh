@@ -134,3 +134,5 @@ if [ -d "$PROJECT/.git" ]; then
   echo "TIP: git-repo — zet .claude/settings.json, .mcp.json en .hivemind/ in .gitignore (token niet committen)."
 fi
 echo "Klaar. Start een NIEUWE Claude-sessie; keur de 'hivemind' MCP-server goed als erom gevraagd wordt."
+echo "Skills laden:  .hivemind/scripts/hive-skill-install.sh --list   (of vraag Claude: \"laad skill X uit de hive\")"
+echo "Bijwerken:     .hivemind/scripts/hive-update.sh                 (verse hook + helper-scripts van de server)"

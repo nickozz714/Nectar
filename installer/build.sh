@@ -14,6 +14,8 @@ cp "$REPO/installer/INSTRUCTIONS.md" "$PKG/INSTRUCTIONS.md"
 cp "$REPO/installer/install.sh" "$PKG/install.sh"
 cp "$REPO/plugin/scripts/hive_recall.sh" "$PKG/scripts/hive_recall.sh"
 cp "$REPO/plugin/scripts/hive-secret" "$PKG/scripts/hive-secret"
+cp "$REPO/plugin/scripts/hive-skill-install.sh" "$PKG/scripts/hive-skill-install.sh"
+cp "$REPO/plugin/scripts/hive-update.sh" "$PKG/scripts/hive-update.sh"
 chmod +x "$PKG/install.sh" "$PKG/scripts/"*
 
 ( cd "$STAGE" && zip -qr hivemind-install.zip hivemind-install )

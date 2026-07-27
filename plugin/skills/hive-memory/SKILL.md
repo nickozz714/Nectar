@@ -39,6 +39,34 @@ Package reusable working instructions as a skill: `files` = list of `{path, cont
 including a `SKILL.md` (Claude Code skill format). You can update your own skills
 directly; propose changes to someone else's skill via `hive_suggest`.
 
+## Loading a shared skill into a project
+
+When the user asks to load/install a skill from the hive ("laad skill X", "installeer
+skill X"), pull it into the project's `.claude/skills/` so Claude Code picks it up:
+
+- **Preferred (no MCP needed):** run the bundled helper —
+  `.hivemind/scripts/hive-skill-install.sh --list` to see what's available, then
+  `.hivemind/scripts/hive-skill-install.sh "<name or uid>"`. It fetches over HTTP and
+  writes `.claude/skills/<slug>/`. Tell the user to start a fresh session afterwards.
+- **Fallback (MCP up):** call `skill_get(uid)` and write each returned `{path, content}`
+  file under `.claude/skills/<slug>/` yourself.
+
+Re-running the helper re-pulls the latest version of that skill — that is how you update
+an already-installed skill.
+
+## Keeping the client up to date
+
+The three layers update differently — know which is which:
+
+- **These instructions** reach every connected CLI automatically: they live as a hive
+  **system memory** injected by the recall hook on every prompt. To change what all CLIs
+  are told, an org_admin edits that system memory — nothing to run on the client.
+- **Tools & endpoints** (MCP tools, `/skills`, …) are server-side; a redeploy makes them
+  live for everyone on the next MCP reconnect.
+- **Local scripts** (the recall hook + these helpers) are the only thing copied per
+  project. Refresh them with `.hivemind/scripts/hive-update.sh`, which re-fetches the
+  server's maintained install package (your token stays untouched).
+
 ## Knowledge transfer & promotion
 
 The mind works like a human brain: knowledge from one context applies elsewhere. If you

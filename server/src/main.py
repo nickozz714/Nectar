@@ -9,7 +9,9 @@ from fastapi.responses import FileResponse, HTMLResponse
 from src.authentication.deps import AuthedAccount, require_account
 from src.db.neo4j import close_driver, init_db
 from src.mcp_server.tools import mcp
-from src.routers import admin, auth, entra, graph_api, manage, recall, review, secrets, signup
+from src.routers import (
+    admin, auth, entra, graph_api, manage, recall, review, secrets, signup, skills,
+)
 from src.services.embeddings import warmup
 
 _STATIC = Path(__file__).parent / "static"
@@ -38,6 +40,7 @@ app.include_router(secrets.router)
 app.include_router(graph_api.router)
 app.include_router(review.router)
 app.include_router(entra.router)
+app.include_router(skills.router)
 
 
 @app.get("/health")
