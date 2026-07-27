@@ -1,0 +1,29 @@
+"""hive_update's manifest: the self-describing client kit the LLM applies to refresh a
+project (what/where/how). Reads the maintained install package baked next to the repo."""
+from __future__ import annotations
+
+import hashlib
+
+import pytest
+
+
+def test_manifest_lists_scripts_with_content_and_hashes():
+    from src.services import kit_service
+
+    if kit_service._zip_path() is None:
+        pytest.skip("hivemind-install.zip not present (run installer/build.sh)")
+
+    manifest = kit_service.build_manifest()
+    assert manifest["kit_version"] and manifest["apply_instructions"]
+    files = {f["path"]: f for f in manifest["files"]}
+
+    # the recall hook + both helpers must be there, under the stable .hivemind path
+    for name in ("hive_recall.sh", "hive-skill-install.sh", "hive-update.sh"):
+        path = f".hivemind/scripts/{name}"
+        assert path in files, f"{path} missing from manifest"
+        entry = files[path]
+        assert entry["mode"] == "0755"
+        assert entry["content"], "content must be inlined so the LLM can write it"
+        assert entry["purpose"]
+        # the advertised sha256 must actually match the content the LLM will write
+        assert entry["sha256"] == hashlib.sha256(entry["content"].encode()).hexdigest()

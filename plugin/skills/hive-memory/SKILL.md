@@ -64,8 +64,15 @@ The three layers update differently — know which is which:
 - **Tools & endpoints** (MCP tools, `/skills`, …) are server-side; a redeploy makes them
   live for everyone on the next MCP reconnect.
 - **Local scripts** (the recall hook + these helpers) are the only thing copied per
-  project. Refresh them with `.hivemind/scripts/hive-update.sh`, which re-fetches the
-  server's maintained install package (your token stays untouched).
+  project. Refresh them by calling **`hive_update`** (MCP): it returns a manifest — each
+  file's target `path`, `purpose`, `sha256` and `content`, plus `apply_instructions`.
+  Apply it yourself: create missing files, overwrite those whose local content differs
+  from `sha256`, leave matching ones, make 0755 files executable, and never touch the
+  token. Then report what you added/updated/left unchanged. (Shell fallback when MCP is
+  down: `.hivemind/scripts/hive-update.sh`.)
+
+When the user says "update HiveMind" / "haal de nieuwste versie", call `hive_update` and
+apply the manifest as above.
 
 ## Knowledge transfer & promotion
 

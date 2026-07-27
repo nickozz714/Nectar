@@ -10,6 +10,7 @@ from src.db.neo4j import graph_session
 from src.repository import governance_repo, graph_repo, session_repo
 from src.services import (
     governance_service,
+    kit_service,
     memory_service,
     org_service,
     search_service,
@@ -301,3 +302,16 @@ def skill_get(skill_uid: str) -> dict:
             raise ValueError("Skill not found or not visible")
         node["files"] = graph_repo.node_files(session, account, skill_uid)
         return node
+
+
+@mcp.tool
+def hive_update() -> dict:
+    """Update this project's HiveMind client files to the latest maintained version.
+    Returns a self-describing manifest — for each client file its target `path`, `purpose`,
+    `mode`, `sha256` and full `content`, plus `apply_instructions` telling you exactly how
+    to apply it: create files that are missing, overwrite those whose local content differs
+    (compare against `sha256`), leave unchanged ones alone, and make 0755 files executable.
+    Never alter the token. After applying, report what you added/updated/left unchanged.
+    Use this when the user asks to update/refresh HiveMind — no local script needed."""
+    with _authed() as (session, account):
+        return kit_service.build_manifest()
