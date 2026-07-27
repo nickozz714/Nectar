@@ -16,5 +16,20 @@ services:
       retries: 60
       start_period: 30s
 
+  # HTTPS sidecar so the MCP client (Bun) can connect over TLS (plain HTTP to a LAN IP
+  # fails at the socket level). API stays on :8642 for the curl-based recall hook.
+  caddy:
+    image: caddy:2
+    depends_on:
+      hivemind:
+        condition: service_healthy
+    ports:
+      - "8643:8643"   # HTTPS: API + MCP over TLS
+    volumes:
+      - ./deploy/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    restart: unless-stopped
+
 volumes:
   hive-data:
+  caddy-data:

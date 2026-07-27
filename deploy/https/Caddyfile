@@ -1,0 +1,31 @@
+{
+	admin off
+	# Clients connecting by IP send no SNI; serve the IP's cert as the default so the
+	# TLS handshake succeeds (Bun/Claude Code connects by IP without SNI).
+	default_sni your-server
+}
+
+# HTTPS in front of the HiveMind API — Claude Code's MCP client (Bun) connects reliably
+# over TLS where plain HTTP to a LAN IP fails at the socket level. Self-signed via Caddy's
+# internal CA (valid for the IP below); install the root CA on client devices from /ca.crt.
+https://your-server:8643 {
+	# Listen on all interfaces (your-server isn't a local address inside the container),
+	# but keep the cert subject = the IP so clients validating https://your-server pass.
+	bind 0.0.0.0
+	tls internal
+
+	# Download the root CA to trust on devices (macOS/iOS/Android/Windows).
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		file_server
+		header Content-Type application/x-x509-ca-cert
+		header Content-Disposition "attachment; filename=hivemind-ca.crt"
+	}
+
+	handle {
+		reverse_proxy hivemind:8000 {
+			flush_interval -1
+		}
+	}
+}
