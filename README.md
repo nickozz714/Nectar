@@ -39,6 +39,18 @@ Bootstrap an org and a token, connect a project, done — the full walkthrough i
 **[INSTALL.md](INSTALL.md)**. The GUI is then at `http://localhost:8642/ui`, the Neo4j
 Browser (a literal window into the mind) at `http://localhost:7474`.
 
+## Connect a project (self-install kit)
+
+The maintained package **`hivemind-install.zip`** (repo root) lets Claude wire up any
+project itself: drop the zip in a project, tell Claude to install HiveMind, and it unzips,
+reads `INSTRUCTIONS.md` and runs `install.sh <HIVE_URL> <HIVE_TOKEN> [anchors]` — merging
+the recall hook into `.claude/settings.json` and the MCP server into `.mcp.json`. **No
+token is baked into the zip**; it's supplied at install time (per person/machine, mint one
+with `hive_invite` or `/manage/tokens`).
+
+Maintenance: the zip is assembled from `installer/` + `plugin/scripts/` by
+`installer/build.sh`. Re-run it and commit the zip whenever those change.
+
 ## Remote access
 
 `deploy/VPN/` is a hardened VPN container so you can reach the hive from
