@@ -364,6 +364,38 @@ def list_system(session: Session, account: AuthedAccount) -> list[dict]:
     return nodes
 
 
+def upsert_system_seed(
+    session: Session, org_uid: str, seed_key: str, type_: str, title: str, content: str
+) -> dict:
+    """Idempotently maintain a repo-seeded SYSTEM memory for an org (always in recall).
+    Keyed by `seed_key` so redeploys refresh content in place. To avoid a duplicate, a
+    pre-existing hand-made system node with the same title (no seed_key yet) is adopted."""
+    label = KNOWLEDGE_TYPES[type_]
+    # Adopt a legacy hand-made system node with this exact title so we update it in place.
+    session.run(
+        """
+        MATCH (n:Knowledge {org_uid: $org_uid, title: $title})
+        WHERE n.system = true AND n.seed_key IS NULL
+        SET n.seed_key = $seed_key
+        """,
+        org_uid=org_uid, title=title, seed_key=seed_key,
+    )
+    record = session.run(
+        f"""
+        MERGE (n:Knowledge {{org_uid: $org_uid, seed_key: $seed_key}})
+        ON CREATE SET n.uid = randomUUID(), n.created = timestamp(), n.use_count = 0,
+                      n.created_by = 'system-seed', n.created_by_model = 'repo-seed'
+        SET n:{label}, n.type = $type, n.title = $title, n.content = $content,
+            n.scope = 'org', n.team_uid = NULL, n.account_uid = NULL,
+            n.system = true, n.archived = false, n.sensitivity = 'intern',
+            n.last_used = timestamp(), n.updated = timestamp()
+        RETURN n.uid AS uid, n.title AS title
+        """,
+        org_uid=org_uid, seed_key=seed_key, type=type_, title=title, content=content,
+    ).single()
+    return dict(record)
+
+
 def set_scope(session: Session, uid: str, target_scope: str) -> bool:
     record = session.run(
         "MATCH (n:Knowledge {uid: $uid}) SET n.scope = $scope RETURN n.uid AS uid",

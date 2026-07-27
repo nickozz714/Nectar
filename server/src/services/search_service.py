@@ -67,6 +67,17 @@ def search(
     return top
 
 
+def render_system(results: list[dict]) -> str:
+    """Render standing (system) memories with their FULL content — these are instructions
+    the model must actually follow, so they are never truncated the way search hits are."""
+    blocks = []
+    for node in results:
+        topics = " > ".join(node.get("topics", [])) or ""
+        head = f"### {node.get('title')}" + (f"  ({topics})" if topics else "")
+        blocks.append(head + "\n" + (node.get("content") or "").strip())
+    return "\n\n".join(blocks)
+
+
 def render_results(results: list[dict]) -> str:
     if not results:
         return "No hive memories matched."

@@ -35,7 +35,7 @@ def recall(
     parts = []
     if system:
         parts.append("## HiveMind — vaste instructies (altijd van toepassing)\n"
-                     + search_service.render_results(system))
+                     + search_service.render_system(system))
     if results:
         parts.append("## HiveMind recall\n" + search_service.render_results(results))
     if ready:

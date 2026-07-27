@@ -22,6 +22,9 @@ def register_first(session: Session, org_name: str, name: str, email: str | None
         session, org["uid"], name, None, "org_admin", person=name, email=email
     )
     token = tenancy_repo.create_token(session, account["uid"], "self-register", None, role="org_admin")
+    # A fresh org gets the repo-seeded system instructions immediately.
+    from src.services import seed_service
+    seed_service.seed_org(session, org["uid"])
     return {"token": token["token"], "role": "org_admin", "org_uid": org["uid"],
             "note": "first user — created the org and got org_admin"}
 

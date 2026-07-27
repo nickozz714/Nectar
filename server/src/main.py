@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import close_driver, init_db
+from src.db.neo4j import close_driver, graph_session, init_db
 from src.mcp_server.tools import mcp
 from src.routers import (
     admin, auth, entra, graph_api, manage, recall, review, secrets, signup, skills,
@@ -23,6 +23,10 @@ mcp_app = mcp.http_app(path="/mcp")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # System instructions are repo-maintained: refresh the seeded system memory in every org.
+    from src.services import seed_service
+    with graph_session() as session:
+        seed_service.seed_all(session)
     warmup()
     async with mcp_app.lifespan(app):
         yield
