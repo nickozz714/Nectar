@@ -306,12 +306,17 @@ def skill_get(skill_uid: str) -> dict:
 
 @mcp.tool
 def hive_update() -> dict:
-    """Update this project's HiveMind client files to the latest maintained version.
-    Returns a self-describing manifest — for each client file its target `path`, `purpose`,
-    `mode`, `sha256` and full `content`, plus `apply_instructions` telling you exactly how
-    to apply it: create files that are missing, overwrite those whose local content differs
-    (compare against `sha256`), leave unchanged ones alone, and make 0755 files executable.
-    Never alter the token. After applying, report what you added/updated/left unchanged.
-    Use this when the user asks to update/refresh HiveMind — no local script needed."""
+    """Update this project's HiveMind client integration to the latest maintained version.
+    Returns a self-describing manifest with `apply_instructions` and two parts:
+    - `files`: the helper scripts (each with target `path`, `purpose`, `mode`, `sha256`,
+      full `content`) — create missing, overwrite where the local sha differs, leave equal
+      ones, make 0755 executable.
+    - `config`: the Claude-side wiring to reconcile — the recall hook in
+      .claude/settings.json and the MCP server in .mcp.json — described declaratively as
+      requirements. Fix only what is missing/wrong and PRESERVE all secrets (HIVE_TOKEN,
+      HIVE_URL, Authorization, the MCP url); never overwrite or print them.
+    Does not manage CLAUDE.md (instructions arrive via the recall system memory). After
+    applying, report what you added/updated/left unchanged for both files and config.
+    Use this whenever the user asks to update/refresh HiveMind — no local script needed."""
     with _authed() as (session, account):
         return kit_service.build_manifest()

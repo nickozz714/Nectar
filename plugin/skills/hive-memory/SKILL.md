@@ -63,13 +63,15 @@ The three layers update differently — know which is which:
   are told, an org_admin edits that system memory — nothing to run on the client.
 - **Tools & endpoints** (MCP tools, `/skills`, …) are server-side; a redeploy makes them
   live for everyone on the next MCP reconnect.
-- **Local scripts** (the recall hook + these helpers) are the only thing copied per
-  project. Refresh them by calling **`hive_update`** (MCP): it returns a manifest — each
-  file's target `path`, `purpose`, `sha256` and `content`, plus `apply_instructions`.
-  Apply it yourself: create missing files, overwrite those whose local content differs
-  from `sha256`, leave matching ones, make 0755 files executable, and never touch the
-  token. Then report what you added/updated/left unchanged. (Shell fallback when MCP is
-  down: `.hivemind/scripts/hive-update.sh`.)
+- **Local integration** (helper scripts + the Claude wiring) is the only thing that lives
+  per project. Refresh it by calling **`hive_update`** (MCP). The manifest has two parts:
+  `files` (helper scripts — create missing, overwrite where the local `sha256` differs,
+  leave equal ones, chmod 0755) and `config` (declarative requirements for the recall hook
+  in `.claude/settings.json` and the MCP server in `.mcp.json` — fix only what's missing or
+  wrong, and PRESERVE all secrets: HIVE_TOKEN, HIVE_URL, Authorization, the MCP url; never
+  overwrite or print them). It does NOT manage CLAUDE.md. Report what you added/updated/left
+  unchanged for both parts. Shell fallback when MCP is down (scripts only):
+  `.hivemind/scripts/hive-update.sh`.
 
 When the user says "update HiveMind" / "haal de nieuwste versie", call `hive_update` and
 apply the manifest as above.

@@ -15,6 +15,16 @@ def test_manifest_lists_scripts_with_content_and_hashes():
 
     manifest = kit_service.build_manifest()
     assert manifest["kit_version"] and manifest["apply_instructions"]
+
+    # config part: declarative wiring for settings.json + .mcp.json, WITHOUT secrets
+    config = manifest["config"]
+    assert config["settings_json"]["path"] == ".claude/settings.json"
+    assert config["mcp_json"]["path"] == ".mcp.json"
+    blob = str(config)
+    assert "hive_recall.sh" in blob and "mcpServers" in str(config["mcp_json"])
+    # the manifest advertises the token only as something to PRESERVE, via a placeholder
+    assert "<token>" in blob
+
     files = {f["path"]: f for f in manifest["files"]}
 
     # the recall hook + both helpers must be there, under the stable .hivemind path

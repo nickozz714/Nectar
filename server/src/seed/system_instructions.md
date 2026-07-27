@@ -38,13 +38,20 @@ De client kent drie lagen die elk anders updaten:
 - **Tools/endpoints** worden live bij een server-redeploy; nieuwe MCP-tools bij reconnect.
 - **Lokale scripts** (in `.hivemind/scripts/`) zijn het enige dat per project staat.
 
-**Bijwerken van de lokale scripts** — vraagt de gebruiker "update HiveMind" / "haal de
-nieuwste versie": roep de MCP-tool **`hive_update`** aan. Die geeft een manifest terug (per
-bestand: `path`, `purpose`, `mode`, `sha256`, `content` + `apply_instructions`). Pas het
-zelf toe: ontbrekende bestanden aanmaken, bestanden waarvan de lokale inhoud van `sha256`
-afwijkt overschrijven, gelijke laten staan, `0755`-bestanden uitvoerbaar maken, en het
-**token nooit aanraken**. Rapporteer daarna wat je toevoegde/bijwerkte/onveranderd liet.
-Fallback als MCP plat ligt: `.hivemind/scripts/hive-update.sh`.
+**Bijwerken** — vraagt de gebruiker "update HiveMind" / "haal de nieuwste versie": roep de
+MCP-tool **`hive_update`** aan. Het manifest heeft twee delen en `apply_instructions`:
+- `files` — de helper-scripts (`path`, `purpose`, `mode`, `sha256`, `content`): ontbrekende
+  aanmaken, bij afwijkende `sha256` overschrijven, gelijke laten staan, `0755` uitvoerbaar
+  maken.
+- `config` — de Claude-koppeling die je moet verzoenen: de recall-hook in
+  `.claude/settings.json` en de MCP-server in `.mcp.json` (declaratief als `requirements`).
+  Repareer alleen wat ontbreekt/fout is en **behoud alle secrets** (HIVE_TOKEN, HIVE_URL,
+  Authorization, de MCP-url — op macOS een localhost-tunnel); nooit overschrijven of printen.
+
+`hive_update` beheert **niet** CLAUDE.md — deze instructies komen via de recall-systeem-memory
+binnen, dus daar hoeft niets gesynct te worden. Rapporteer wat je toevoegde/bijwerkte/
+onveranderd liet, voor zowel files als config. Fallback als MCP plat ligt:
+`.hivemind/scripts/hive-update.sh` (alleen de scripts).
 
 **Een gedeelde skill laden** — vraagt de gebruiker "laad/installeer skill X": draai
 `.hivemind/scripts/hive-skill-install.sh "<naam of uid>"` (schrijft naar

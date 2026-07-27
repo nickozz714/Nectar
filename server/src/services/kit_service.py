@@ -30,21 +30,55 @@ _PURPOSE = {
 }
 
 _APPLY = (
-    "For each entry in `files`: ensure the parent directory of `path` exists, then compare "
-    "the local file at `path` (relative to the project root) against `sha256`. "
-    "If the file is missing → CREATE it with `content`. If it exists but the sha differs → "
-    "OVERWRITE it with `content`. If the sha matches → leave it (report as unchanged). "
-    "When `mode` is \"0755\", make the file executable. Never touch the token or other keys "
-    "in .claude/settings.json / .mcp.json. Finally, report a short summary: what you added, "
-    "what you updated, what was already current."
+    "Apply in two parts.\n"
+    "1) FILES — for each entry in `files`: ensure the parent dir of `path` exists, then "
+    "compare the local file against `sha256`. Missing → CREATE with `content`; sha differs "
+    "→ OVERWRITE with `content`; sha matches → leave it. Make `mode` \"0755\" files "
+    "executable.\n"
+    "2) CONFIG — reconcile `config` (the Claude-side wiring) WITHOUT touching secrets. For "
+    "each target file, read it, apply every `requirements` item, and write back only if "
+    "something was missing or wrong. NEVER overwrite, print, or invent HIVE_TOKEN / HIVE_URL "
+    "/ Authorization / the MCP url — preserve whatever is already there (on macOS the MCP url "
+    "is a localhost tunnel; keep it). Merge into existing JSON; do not drop unrelated keys.\n"
+    "Finally report a short summary: what you added, updated, or left unchanged (files AND "
+    "config), and never reveal token values."
 )
 
 _HOW = (
-    "This is the LOCAL-FILES layer of HiveMind updates. Two other layers update on their own: "
-    "the operating instructions reach you via the recall hook (a system memory injected every "
-    "prompt), and server tools/endpoints go live on redeploy (new MCP tools on reconnect). "
-    "hive_update only refreshes the per-project scripts."
+    "hive_update covers the CLIENT-SIDE integration of HiveMind in this project: the helper "
+    "scripts (`files`) AND the Claude wiring (`config`: the recall hook in "
+    ".claude/settings.json and the MCP server in .mcp.json). It does NOT manage CLAUDE.md — "
+    "the operating instructions are delivered as a system memory injected by the recall hook "
+    "every prompt, so there is nothing to sync into CLAUDE.md. Server tools/endpoints update "
+    "on redeploy (new MCP tools on reconnect); those need no client action either."
 )
+
+# Declarative spec of the Claude-side wiring. Secrets (token/url) are intentionally NOT
+# included — the LLM preserves whatever the install already put there.
+_CONFIG = {
+    "settings_json": {
+        "path": ".claude/settings.json",
+        "format": "json",
+        "requirements": [
+            "env.HIVE_ENABLED must equal \"1\".",
+            "env.HIVE_URL and env.HIVE_TOKEN must be present — PRESERVE existing values, "
+            "never overwrite or print them. env.HIVE_ANCHORS may exist; keep it.",
+            "hooks.UserPromptSubmit must contain a command hook whose command ends with "
+            "\".hivemind/scripts/hive_recall.sh\". Add it if missing; fix the path if it "
+            "points at an old location; do not duplicate it.",
+        ],
+    },
+    "mcp_json": {
+        "path": ".mcp.json",
+        "format": "json",
+        "requirements": [
+            "mcpServers.hivemind must exist with type \"http\" and a headers.Authorization "
+            "of \"Bearer <token>\". PRESERVE the existing url and token exactly (the url may "
+            "be a http://localhost:<port>/mcp tunnel on macOS); only add the entry if it is "
+            "entirely missing.",
+        ],
+    },
+}
 
 
 def build_manifest() -> dict:
@@ -77,10 +111,6 @@ def build_manifest() -> dict:
         "kit_version": kit_version,
         "how_it_works": _HOW,
         "apply_instructions": _APPLY,
-        "settings_check": (
-            "Also verify (do not rewrite unless broken): .claude/settings.json has a "
-            "UserPromptSubmit hook whose command ends in .hivemind/scripts/hive_recall.sh, "
-            "and .mcp.json has an 'hivemind' server. Leave HIVE_TOKEN / Authorization as-is."
-        ),
         "files": files,
+        "config": _CONFIG,
     }
