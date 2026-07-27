@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from src.db.neo4j import close_driver, init_db
 from src.mcp_server.tools import mcp
-from src.routers import admin, graph_api, manage, recall, review, secrets, signup
+from src.routers import admin, auth, graph_api, manage, recall, review, secrets, signup
 from src.services.embeddings import warmup
 
 _STATIC = Path(__file__).parent / "static"
@@ -30,6 +30,7 @@ app = FastAPI(title="HiveMind", lifespan=lifespan)
 app.include_router(admin.router)
 app.include_router(manage.router)
 app.include_router(signup.router)
+app.include_router(auth.router)
 app.include_router(recall.router)
 app.include_router(secrets.router)
 app.include_router(graph_api.router)

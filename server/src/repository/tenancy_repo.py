@@ -101,6 +101,41 @@ def set_token_role(session: Session, token_hash: str, role: str) -> bool:
     return record is not None
 
 
+def set_password(session: Session, account_uid: str, password_hash: str) -> bool:
+    record = session.run(
+        "MATCH (a:Account {uid: $uid}) SET a.password_hash = $h RETURN a.uid AS uid",
+        uid=account_uid,
+        h=password_hash,
+    ).single()
+    return record is not None
+
+
+def set_password_by_name(session: Session, org_uid: str, name: str, password_hash: str) -> bool:
+    record = session.run(
+        "MATCH (a:Account {org_uid: $org_uid, name: $name}) SET a.password_hash = $h "
+        "RETURN a.uid AS uid",
+        org_uid=org_uid,
+        name=name,
+        h=password_hash,
+    ).single()
+    return record is not None
+
+
+def get_account_for_login(session: Session, name: str) -> dict | None:
+    """Look up an account by username for password login. Returns the password hash too.
+    Names are unique per org; on a single-org deployment the name is unambiguous."""
+    record = session.run(
+        """
+        MATCH (a:Account {name: $name})
+        RETURN a.uid AS uid, a.org_uid AS org_uid, a.name AS name, a.role AS role,
+               a.password_hash AS password_hash
+        ORDER BY a.created LIMIT 1
+        """,
+        name=name,
+    ).single()
+    return dict(record) if record else None
+
+
 def set_account_role(session: Session, org_uid: str, account_name: str, role: str) -> bool:
     """Promote/demote a person: set the role on their account AND all its tokens (role is
     token-bound, so both must move)."""

@@ -334,6 +334,36 @@ def hard_delete(session: Session, org_uid: str, uid: str) -> bool:
     return record is not None
 
 
+def set_system(session: Session, org_uid: str, uid: str, on: bool) -> bool:
+    """Mark/unmark a node as a SYSTEM memory — always injected into recall (standing
+    instructions), regardless of query relevance."""
+    record = session.run(
+        "MATCH (n:Knowledge {uid: $uid, org_uid: $org_uid}) SET n.system = $on RETURN n.uid AS uid",
+        uid=uid,
+        org_uid=org_uid,
+        on=on,
+    ).single()
+    return record is not None
+
+
+def list_system(session: Session, account: AuthedAccount) -> list[dict]:
+    """All visible SYSTEM memories, with topic breadcrumbs. Always shown in recall."""
+    result = session.run(
+        f"""
+        MATCH (n:Knowledge {{org_uid: $org_uid}})
+        WHERE n.system = true AND coalesce(n.archived, false) = false AND {VISIBLE}
+        RETURN n
+        ORDER BY n.type, n.title
+        """,
+        **_acc_params(account),
+    )
+    nodes = [node_to_dict(r["n"]) for r in result]
+    breadcrumbs = parent_titles(session, [n["uid"] for n in nodes])
+    for n in nodes:
+        n["topics"] = breadcrumbs.get(n["uid"], [])
+    return nodes
+
+
 def set_scope(session: Session, uid: str, target_scope: str) -> bool:
     record = session.run(
         "MATCH (n:Knowledge {uid: $uid}) SET n.scope = $scope RETURN n.uid AS uid",

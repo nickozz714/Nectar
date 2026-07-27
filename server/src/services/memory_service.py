@@ -93,11 +93,13 @@ def remember(
     parent_topics: list[str],
     scope: str = "team",
     model_name: str = "",
+    force: bool = False,
 ) -> dict:
     """Direct write through the write-gate: quality checks + PII filter + dedup.
     Hard duplicates are rejected; grey-zone lookalikes are created but flagged as a
-    dedup chore for the swarm. Default scope is team (org when the account has no
-    team). Topics are semantically matched before anything new is created."""
+    dedup chore for the swarm. `force=True` skips the dedup check entirely — for a
+    genuine false positive that must be created anyway. Quality + PII always apply.
+    Default scope is team (org when the account has no team)."""
     settings = get_settings()
     notes: list[str] = []
     title = title.strip()
@@ -126,7 +128,7 @@ def remember(
 
     embedding = embed(f"{title}\n{content}")
     grey_zone_of: dict | None = None
-    if embedding is not None:
+    if embedding is not None and not force:
         nearest = graph_repo.vector_candidates(session, account, embedding, k=1, allowed=None)
         if nearest:
             existing, sim = nearest[0]
@@ -136,8 +138,9 @@ def remember(
                     "created": False,
                     "existing_uid": existing["uid"],
                     "existing_title": existing["title"],
-                    "note": f"Near-duplicate (similarity {sim:.2f}) of an existing node; "
-                    "it was touched instead. Use hive_suggest to propose an edit if it is outdated.",
+                    "note": f"Near-duplicate (similarity {sim:.2f}) of an existing node; it was "
+                    "touched instead. Re-run with force=True if this is a genuine false positive, "
+                    "or use hive_suggest to propose an edit if the existing one is outdated.",
                 }
             if sim >= settings.DEDUP_REVIEW_THRESHOLD and existing.get("type") != "topic":
                 grey_zone_of = {"uid": existing["uid"], "title": existing["title"], "sim": sim}
@@ -160,6 +163,8 @@ def remember(
             f"(similarity {grey_zone_of['sim']:.2f}); a dedup chore was filed for the swarm"
         )
 
+    if force:
+        notes.append("created with force — dedup check skipped")
     linked, topic_notes = link_topics(session, account, node["uid"], parent_topics)
     notes.extend(topic_notes)
     if not linked:

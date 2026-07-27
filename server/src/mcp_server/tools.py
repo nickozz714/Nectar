@@ -76,10 +76,12 @@ def hive_remember(
     parent_topics: list[str],
     scope: str = "team",
     model_name: str = "",
+    force: bool = False,
 ) -> dict:
     """Write reusable knowledge into the hive. type: memory | process | workflow |
     convention | decision | glossary (for file-backed skills/workflows use skill_put /
-    workflow_put). Link it under parent topics
+    workflow_put). Set force=True to create anyway when a previous call was rejected as a
+    near-duplicate but it is genuinely new (a dedup false positive). Link it under parent topics
     (subjects, projects or systems — e.g. 'Data Modelling', 'Swinkels'); semantically
     similar existing topics are reused, only then is a new topic created. scope: team
     (default), org, or account. The write-gate enforces: specific title, self-contained
@@ -89,7 +91,7 @@ def hive_remember(
     organization — no session noise."""
     with _authed() as (session, account):
         return memory_service.remember(
-            session, account, type, title, content, parent_topics, scope, model_name
+            session, account, type, title, content, parent_topics, scope, model_name, force
         )
 
 
@@ -205,6 +207,26 @@ def hive_delete(node_uid: str) -> dict:
     prune wrong or obsolete memories. Audited; cannot be undone."""
     with _authed() as (session, account):
         return governance_service.admin_delete(session, account, node_uid)
+
+
+@mcp.tool
+def hive_set_password(password: str) -> dict:
+    """Set/change the password on YOUR account so you can log into the GUI with username +
+    password (minimum 8 chars). The account name is your username."""
+    with _authed() as (session, account):
+        from src.services import auth_service
+        return auth_service.set_own_password(session, account, password)
+
+
+@mcp.tool
+def hive_set_system(node_uid: str, on: bool = True) -> dict:
+    """(org_admin) Mark a node as a SYSTEM memory — it is then injected into EVERY recall
+    on every prompt for every connected client, regardless of relevance. Use it for
+    standing instructions (e.g. 'how to work with the HiveMind') so guidance is always
+    present and centrally updatable (edit the node → all clients get it next prompt).
+    Set on=False to unpin."""
+    with _authed() as (session, account):
+        return governance_service.set_system(session, account, node_uid, on)
 
 
 @mcp.tool

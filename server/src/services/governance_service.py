@@ -99,6 +99,18 @@ def admin_delete(session: Session, account: AuthedAccount, uid: str) -> dict:
     return {"deleted": True, "uid": uid, "title": node.get("title")}
 
 
+def set_system(session: Session, account: AuthedAccount, uid: str, on: bool) -> dict:
+    """org_admin: mark a node as a SYSTEM memory (always injected into recall) or unmark it.
+    Use for standing instructions like 'how to work with the HiveMind'."""
+    assert_role(account, "org_admin", "Setting system memories")
+    node = graph_repo.get_node(session, account, uid)
+    if node is None:
+        raise ValueError("Node not found or not visible")
+    graph_repo.set_system(session, account.org_uid, uid, on)
+    audit_repo.log(session, account.org_uid, account.uid, "set_system", uid, {"on": on})
+    return {"uid": uid, "system": on, "title": node.get("title")}
+
+
 def approve_scope_widening(
     session: Session, chore_uid: str, org_uid: str, note: str, reviewed_by: str = "human-admin"
 ) -> dict:

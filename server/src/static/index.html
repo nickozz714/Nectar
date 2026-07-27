@@ -55,9 +55,22 @@
 <div id="overlay">
   <div class="box">
     <h2>🐝 HiveMind</h2>
-    <p>Log in met je account-token. Je rol bepaalt wat je mag: lezen &amp; schrijven (member), onderhoud (maintainer), reviewen (org_admin).</p>
-    <input id="tokenInput" type="password" placeholder="account token" autocomplete="off">
-    <button class="action" onclick="login()">Verbinden</button>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="tabPw" class="ghost" style="flex:1" onclick="loginTab('pw')">Gebruikersnaam</button>
+      <button id="tabTok" class="ghost" style="flex:1" onclick="loginTab('tok')">Token</button>
+    </div>
+    <div id="loginPw">
+      <input id="luser" placeholder="gebruikersnaam" autocomplete="username">
+      <input id="lpass" type="password" placeholder="wachtwoord" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')loginPassword()">
+      <button class="action" onclick="loginPassword()">Inloggen</button>
+    </div>
+    <div id="loginTok" style="display:none">
+      <p style="color:var(--dim);font-size:13px;margin-bottom:10px">Log in met je account-token.</p>
+      <input id="tokenInput" type="password" placeholder="account token" autocomplete="off"
+             onkeydown="if(event.key==='Enter')login()">
+      <button class="action" onclick="login()">Verbinden</button>
+    </div>
     <div id="loginErr" class="err"></div>
   </div>
 </div>
@@ -73,6 +86,7 @@
   </div>
   <div class="spacer"></div>
   <span id="who" class="rolebadge"></span>
+  <button class="ghost" onclick="setMyPassword()">Wachtwoord</button>
   <button class="ghost" onclick="logout()">Uitloggen</button>
 </header>
 
@@ -116,6 +130,28 @@ async function api(path, opts = {}) {
   return r.json();
 }
 
+function loginTab(which) {
+  document.getElementById("loginPw").style.display = which === "pw" ? "" : "none";
+  document.getElementById("loginTok").style.display = which === "tok" ? "" : "none";
+  document.getElementById("tabPw").classList.toggle("action", which === "pw");
+  document.getElementById("tabTok").classList.toggle("action", which === "tok");
+}
+
+async function loginPassword() {
+  const name = document.getElementById("luser").value.trim();
+  const password = document.getElementById("lpass").value;
+  try {
+    const r = await fetch("/auth/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, password }) });
+    if (!r.ok) throw new Error("mis");
+    TOKEN = (await r.json()).token;
+    ME = await api("/graph/me");
+    localStorage.setItem("hive_token", TOKEN);
+    document.getElementById("overlay").style.display = "none";
+    boot();
+  } catch (e) { document.getElementById("loginErr").textContent = "Ongeldige gebruikersnaam of wachtwoord"; }
+}
+
 async function login() {
   TOKEN = document.getElementById("tokenInput").value.trim();
   try {
@@ -126,6 +162,15 @@ async function login() {
   } catch (e) { document.getElementById("loginErr").textContent = "Token niet geldig"; }
 }
 function logout() { localStorage.removeItem("hive_token"); location.reload(); }
+
+async function setMyPassword() {
+  const pw = prompt("Nieuw wachtwoord (min. 8 tekens) voor '" + ME.name + "':");
+  if (!pw) return;
+  try {
+    await api("/auth/password", { method: "POST", body: JSON.stringify({ password: pw }) });
+    alert("Wachtwoord ingesteld. Je kunt nu inloggen met gebruikersnaam '" + ME.name + "' + wachtwoord.");
+  } catch (e) { alert(e.message); }
+}
 
 function showTab(name) {
   for (const m of document.querySelectorAll("main")) m.style.display = "none";
@@ -536,6 +581,7 @@ function boot() {
     catch (e) { /* fall through to login */ }
   }
   document.getElementById("overlay").style.display = "flex";
+  loginTab("pw");
 })();
 </script>
 </body>

@@ -5,7 +5,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
 from src.db.neo4j import get_graph
-from src.repository import governance_repo
+from src.repository import governance_repo, graph_repo
 from src.schemas.core import RecallRequest, RecallResponse
 from src.services import search_service
 
@@ -26,8 +26,16 @@ def recall(
         session, account, body.query, anchors=body.anchors or None, limit=body.limit
     )
 
+    # System memories: standing instructions always injected, on top, regardless of query.
+    system = graph_repo.list_system(session, account)
+    seen = {n["uid"] for n in system}
+    results = [n for n in results if n["uid"] not in seen]
+
     ready = governance_repo.ready_count(session, account)
     parts = []
+    if system:
+        parts.append("## HiveMind — vaste instructies (altijd van toepassing)\n"
+                     + search_service.render_results(system))
     if results:
         parts.append("## HiveMind recall\n" + search_service.render_results(results))
     if ready:
