@@ -100,3 +100,22 @@ def test_merge_topics(graph, account):
     for res in (a, b):
         parents = {p["title"] for p in graph_repo.get_node(graph, maint, res["uid"])["parents"]}
         assert "Gemeentelijk Gegevens Model (GGM)" in parents
+
+
+def test_bulk_tags_and_nodes_brief(graph, account):
+    maint = account("nick", role="maintainer")
+    a = _mem(graph, maint, "Eerste node om in bulk te taggen",
+             "Inhoud lang genoeg voor de write-gate hier.", ["Swinkels"])
+    b = _mem(graph, maint, "Tweede node om in bulk te taggen",
+             "Nog wat inhoud die lang genoeg is voor de gate.", ["Fabric werkwijzen"])
+
+    brief = curation_service.list_nodes_brief(graph, maint)
+    assert {n["uid"] for n in (a, b)}.issubset({n["uid"] for n in brief})
+    assert all("topics" in n for n in brief)
+
+    out = curation_service.bulk_set_tags(graph, maint, [
+        {"uid": a["uid"], "tags": ["swinkels", "fabric"]},
+        {"uid": b["uid"], "tags": ["fabric"]},
+    ])
+    assert out["updated"] == 2
+    assert set(graph_repo.get_node(graph, maint, a["uid"])["tags"]) == {"swinkels", "fabric"}

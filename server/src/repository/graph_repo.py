@@ -321,6 +321,22 @@ def nodes_for_reclassify(session: Session, org_uid: str) -> list[dict]:
     return [dict(r) for r in result]
 
 
+def nodes_brief(session: Session, org_uid: str) -> list[dict]:
+    """Lightweight listing of all non-topic knowledge nodes (uid/title/type/tags) — for
+    bulk operations like auto-tagging. Topic breadcrumbs are added by the caller."""
+    result = session.run(
+        """
+        MATCH (n:Knowledge {org_uid: $org_uid})
+        WHERE n.type <> 'topic' AND coalesce(n.archived, false) = false
+        RETURN n.uid AS uid, n.title AS title, n.type AS type,
+               coalesce(n.tags, []) AS tags
+        ORDER BY n.type, n.title
+        """,
+        org_uid=org_uid,
+    )
+    return [dict(r) for r in result]
+
+
 def set_sensitivity(session: Session, uid: str, value: str) -> bool:
     record = session.run(
         "MATCH (n:Knowledge {uid: $uid}) SET n.sensitivity = $v RETURN n.uid AS uid",

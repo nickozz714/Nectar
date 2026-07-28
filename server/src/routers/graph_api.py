@@ -119,6 +119,31 @@ def merge_topics(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.get("/nodes-brief")
+def nodes_brief(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """All non-topic nodes (uid, title, type, topics, tags) — for bulk curation."""
+    return curation_service.list_nodes_brief(session, account)
+
+
+class BulkTags(BaseModel):
+    items: list[dict]  # [{uid, tags}]
+
+
+@router.post("/tags/bulk")
+def bulk_tags(
+    body: BulkTags,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.bulk_set_tags(session, account, body.items)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/reclassify-sensitivity")
 def reclassify_sensitivity(
     account: AuthedAccount = Depends(require_account),

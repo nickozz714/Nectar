@@ -75,6 +75,29 @@ def move_node(
     return {"node_uid": node_uid, "to_topic": target["title"], "removed_parents": removed}
 
 
+def list_nodes_brief(session: Session, account: AuthedAccount) -> list[dict]:
+    """All non-topic nodes with their topic breadcrumbs and current tags."""
+    nodes = graph_repo.nodes_brief(session, account.org_uid)
+    crumbs = graph_repo.parent_titles(session, [n["uid"] for n in nodes])
+    for n in nodes:
+        n["topics"] = crumbs.get(n["uid"], [])
+    return nodes
+
+
+def bulk_set_tags(session: Session, account: AuthedAccount, items: list[dict]) -> dict:
+    """Apply tags to many nodes at once: items = [{uid, tags}]. Maintainer role (bulk
+    curation). Missing/invisible uids are skipped."""
+    assert_role(account, "maintainer", "Bulk tagging")
+    updated = 0
+    for it in items:
+        uid, tags = it.get("uid"), it.get("tags") or []
+        if uid and graph_repo.set_tags(session, account.org_uid, uid, tags):
+            updated += 1
+    audit_repo.log(session, account.org_uid, account.uid, "bulk_set_tags", account.org_uid,
+                   {"count": updated})
+    return {"updated": updated}
+
+
 def reclassify_sensitivity(session: Session, account: AuthedAccount) -> dict:
     """Re-run the (value-based) sensitivity classifier over every node in the org and fix
     stale labels — e.g. old keyword-based false positives that are not actually secret.
