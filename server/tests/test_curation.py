@@ -68,3 +68,35 @@ def test_tags_set_and_search(graph, account):
 
     curation_service.set_tags(graph, acc, res["uid"], remove=["fabric"], add=["azure"])
     assert set(graph_repo.get_node(graph, acc, res["uid"])["tags"]) == {"deployment", "azure"}
+
+
+def test_reclassify_sensitivity_fixes_false_positives(graph, account):
+    admin = account("nick", role="org_admin")
+    # simulate a node mislabeled by the old keyword classifier
+    fp = _mem(graph, admin, "fastmcp Authorization-header valkuil",
+              "get_http_headers() gaf de Authorization-header niet terug; lees via get_http_request(). Bearer-auth per tool-call.",
+              ["HiveMind"])
+    graph_repo.set_sensitivity(graph, fp["uid"], "gevoelig")  # old false positive
+    real = _mem(graph, admin, "Voorbeeld met echte sleutel erin",
+                "let op: api_key = ABCDEF0123456789 staat hier per ongeluk in de tekst.", ["HiveMind"])
+
+    out = curation_service.reclassify_sensitivity(graph, admin)
+    assert out["changed"] >= 1
+    assert graph_repo.get_node(graph, admin, fp["uid"])["sensitivity"] == "intern"
+    assert graph_repo.get_node(graph, admin, real["uid"])["sensitivity"] == "gevoelig"
+
+
+def test_merge_topics(graph, account):
+    maint = account("nick", role="maintainer")
+    a = _mem(graph, maint, "GGM export werkwijze onder korte naam",
+             "Werkwijze die onder het korte GGM-topic hangt.", ["GGM"])
+    b = _mem(graph, maint, "GGM graaf werkwijze onder lange naam",
+             "Werkwijze die onder het lange GGM-topic hangt.", ["Gemeentelijk Gegevens Model (GGM)"])
+
+    out = curation_service.merge_topics(graph, maint, "GGM", "Gemeentelijk Gegevens Model (GGM)")
+    assert out["moved_children"] == 1
+    # the short topic is gone; both nodes now hang under the long one
+    assert graph_repo.get_topic_by_title(graph, maint.org_uid, "GGM") is None
+    for res in (a, b):
+        parents = {p["title"] for p in graph_repo.get_node(graph, maint, res["uid"])["parents"]}
+        assert "Gemeentelijk Gegevens Model (GGM)" in parents

@@ -355,6 +355,15 @@ def topic_create(title: str, parent_topic: str = "") -> dict:
 
 
 @mcp.tool
+def topic_merge(from_topic: str, into_topic: str) -> dict:
+    """Merge one topic into another (maintainer): moves all children of `from_topic` under
+    `into_topic` and deletes the empty source. Use to dedupe split topics, e.g.
+    topic_merge('GGM', 'Gemeentelijk Gegevens Model (GGM)')."""
+    with _authed() as (session, account):
+        return curation_service.merge_topics(session, account, from_topic, into_topic)
+
+
+@mcp.tool
 def node_move(node_uid: str, to_topic: str, keep_others: bool = False) -> dict:
     """Re-hang a node under a different topic (maintainer role). By default this REPLACES the
     node's topic parents; keep_others=True adds the new topic while keeping existing ones

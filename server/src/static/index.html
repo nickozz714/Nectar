@@ -28,6 +28,8 @@
   #right { width: 360px; background: var(--panel); border-left: 1px solid var(--line); padding: 14px; display: none; }
   svg { width: 100%; height: 100%; display: block; cursor: grab; }
   input, select, textarea { width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 14px; margin-bottom: 8px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); margin: 2px 0 10px; cursor: pointer; }
+  .check input[type=checkbox] { width: auto; margin: 0; accent-color: var(--honey); }
   button.action { background: var(--honey); color: #201a08; border: none; border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; margin-right: 6px; transition: filter .12s, background .12s, color .12s, border-color .12s; }
   button.action:hover { filter: brightness(1.06); }
   button.ghost { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; transition: background .12s, color .12s, border-color .12s; }
@@ -154,6 +156,7 @@ const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:
                  skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae" };
 const HIVE_UID = "__hive__";       // synthetic central node all top-level topics hang off
 const HIVE_COLOR = "#f6c85f";
+let TOPICS = [];                   // topic titles, for the move-to-topic select
 // Multiselect type filter: every type is visible until unchecked. Drives both the graph and search.
 const activeTypes = new Set(Object.keys(COLORS));
 const typeVisible = t => t === "hive" || activeTypes.has(t);
@@ -410,10 +413,16 @@ async function selectNode(uid) {
       <div style="margin-bottom:6px">${(n.tags || []).map(t => `<span class="chip">#${esc(t)}</span>`).join("") || '<span class="t" style="color:var(--dim)">geen</span>'}</div>
       <input id="tagInput" placeholder="tags, komma-gescheiden" value="${esc((n.tags || []).join(", "))}">
       <button class="ghost" onclick="saveTags('${uid}')">Tags opslaan</button></div>` : ""}
+    ${(ME.can_maintain && n.type === "topic") ? `<div class="section"><h3>Samenvoegen in ander topic</h3>
+      <input type="hidden" id="mergeFrom" value="${esc(n.title)}">
+      <select id="mergeInto">${TOPICS.filter(t => t !== n.title).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+      <button class="ghost danger" onclick="mergeTopic()">Dit topic hierin samenvoegen</button>
+      <div class="t" style="color:var(--dim);margin-top:4px">Alle inhoud verhuist; dit topic wordt daarna verwijderd.</div></div>` : ""}
     ${(ME.can_maintain && n.type !== "topic") ? `<div class="section"><h3>Verplaats naar topic</h3>
-      <input id="moveTopic" placeholder="topicnaam (wordt aangemaakt indien nieuw)">
-      <label class="typechip" style="border:none;padding:4px 0"><input type="checkbox" id="moveKeep"> huidige topics behouden (multi-parent)</label>
-      <button class="ghost" onclick="moveNode('${uid}')">Verplaatsen</button></div>` : ""}
+      <select id="moveTopic">${TOPICS.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+      <label class="check"><input type="checkbox" id="moveKeep"> huidige topics ook behouden (multi-parent)</label>
+      <button class="ghost" onclick="moveNode('${uid}')">Verplaatsen</button>
+      <div class="t" style="color:var(--dim);margin-top:4px">Nieuw topic nodig? Maak 'm via “+ nieuw” bij Topics.</div></div>` : ""}
     <div class="section" style="color:var(--dim);font-size:12px">
       ${n.sensitivity === "gevoelig" ? '<span class="badge" style="background:var(--red);color:#fff">gevoelig</span> ' : ""}
       gebruikt ${n.use_count ?? 0}× · door ${esc(n.created_by_model || "onbekend model")}</div>
@@ -443,6 +452,18 @@ async function moveNode(uid) {
     await loadTopics(); await selectNode(uid);
   } catch (e) { alert(e.message); }
 }
+async function mergeTopic() {
+  const from = document.getElementById("mergeFrom").value;
+  const into = document.getElementById("mergeInto").value;
+  if (!into || into === from) { alert("Kies een ander doeltopic"); return; }
+  if (!confirm(`"${from}" samenvoegen in "${into}"? Het topic "${from}" wordt verwijderd.`)) return;
+  try {
+    await api("/graph/topics/merge", { method: "POST", body: JSON.stringify({ from_topic: from, into_topic: into }) });
+    document.getElementById("right").style.display = "none";
+    nodes.clear(); links.length = 0; linkKeys.clear(); expanded.clear(); selected = null;
+    await loadTopics();
+  } catch (e) { alert(e.message); }
+}
 async function newTopic() {
   const title = prompt("Naam van het nieuwe topic:"); if (!title) return;
   const parent = prompt("Onder welk bestaand topic hangen? (leeg = top-level)") || "";
@@ -453,6 +474,7 @@ async function newTopic() {
 
 async function loadTopics() {
   const data = await api("/graph/topics");
+  TOPICS = data.topics.map(t => t.title).sort((a, b) => a.localeCompare(b, "nl"));
   // One central HiveMind hub; every TOP-LEVEL topic (no parent topic) hangs off it.
   addNode({ uid: HIVE_UID, title: "HiveMind", type: "hive" });
   for (const t of data.topics) addNode({ uid: t.uid, title: t.title, type: "topic" });
@@ -650,7 +672,10 @@ function renderBeheer() {
       <button class="ghost" onclick="loadSkills()">Laden</button>
       <div id="skillList"></div></div>
     ${isAdmin ? `
-    <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>
+    <div class="card"><h3 style="margin-bottom:8px">Onderhoud</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
+      <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span></div>
+    <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>` + `
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
       <input id="accName" placeholder="accountnaam">
       <input id="accPerson" placeholder="persoon (de mens achter dit account)">
@@ -687,6 +712,14 @@ function copyText(t) {
   navigator.clipboard?.writeText(t).then(
     () => { const el = event.target; const o = el.textContent; el.textContent = "gekopieerd ✓"; setTimeout(() => el.textContent = o, 1200); },
     () => alert(t));
+}
+async function reclassifySensitivity() {
+  const out = document.getElementById("reclOut");
+  out.textContent = " bezig…";
+  try {
+    const r = await api("/graph/reclassify-sensitivity", { method: "POST" });
+    out.textContent = ` ✓ ${r.scanned} beoordeeld, ${r.changed} aangepast (${r.now_internal} → intern, ${r.now_sensitive} → gevoelig)`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function loadAccounts() {
   try {

@@ -307,6 +307,28 @@ def update_node(session: Session, uid: str, fields: dict, embedding: list[float]
     return record is not None
 
 
+def nodes_for_reclassify(session: Session, org_uid: str) -> list[dict]:
+    """All non-topic knowledge nodes with the text needed to recompute sensitivity."""
+    result = session.run(
+        """
+        MATCH (n:Knowledge {org_uid: $org_uid})
+        WHERE n.type <> 'topic'
+        RETURN n.uid AS uid, n.title AS title, n.content AS content,
+               coalesce(n.sensitivity, 'intern') AS sensitivity
+        """,
+        org_uid=org_uid,
+    )
+    return [dict(r) for r in result]
+
+
+def set_sensitivity(session: Session, uid: str, value: str) -> bool:
+    record = session.run(
+        "MATCH (n:Knowledge {uid: $uid}) SET n.sensitivity = $v RETURN n.uid AS uid",
+        uid=uid, v=value,
+    ).single()
+    return record is not None
+
+
 def set_tags(session: Session, org_uid: str, uid: str, tags: list[str]) -> bool:
     """Replace a node's tags (stored lowercased, deduped, as a native string list)."""
     clean = sorted({t.strip().lower() for t in tags if t and t.strip()})
@@ -315,6 +337,31 @@ def set_tags(session: Session, org_uid: str, uid: str, tags: list[str]) -> bool:
         uid=uid, org_uid=org_uid, tags=clean,
     ).single()
     return record is not None
+
+
+def get_topic_by_title(session: Session, org_uid: str, title: str) -> dict | None:
+    record = session.run(
+        "MATCH (t:Topic {org_uid: $org_uid, title_key: toLower($title)}) "
+        "RETURN t.uid AS uid, t.title AS title",
+        org_uid=org_uid, title=title.strip(),
+    ).single()
+    return dict(record) if record else None
+
+
+def reparent_all_children(session: Session, org_uid: str, src_uid: str, dst_uid: str) -> int:
+    """Move every child of topic `src` under topic `dst` (used when merging topics)."""
+    record = session.run(
+        """
+        MATCH (src:Topic {uid: $src, org_uid: $org_uid})-[r:CONTAINS]->(c:Knowledge)
+        MATCH (dst:Topic {uid: $dst, org_uid: $org_uid})
+        WHERE c.uid <> dst.uid
+        MERGE (dst)-[:CONTAINS]->(c)
+        DELETE r
+        RETURN count(c) AS moved
+        """,
+        org_uid=org_uid, src=src_uid, dst=dst_uid,
+    ).single()
+    return record["moved"] if record else 0
 
 
 def detach_topic_parents(session: Session, org_uid: str, node_uid: str) -> int:

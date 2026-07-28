@@ -5,6 +5,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount, assert_role
 from src.repository import audit_repo, graph_repo
 from src.services.embeddings import embed
+from src.services.memory_service import classify_sensitivity
 
 
 def create_topic(
@@ -24,6 +25,28 @@ def create_topic(
     audit_repo.log(session, account.org_uid, account.uid, "create_topic", topic["uid"],
                    {"title": title, "parent": parent_topic or None})
     return topic
+
+
+def merge_topics(
+    session: Session, account: AuthedAccount, from_topic: str, into_topic: str
+) -> dict:
+    """Merge topic `from_topic` INTO `into_topic`: move all its children (memories, skills,
+    sub-topics) under the target, then delete the now-empty source topic. Maintainer role.
+    Deduplicates topics that ended up split (e.g. 'GGM' vs 'Gemeentelijk Gegevens Model')."""
+    assert_role(account, "maintainer", "Merging topics")
+    src = graph_repo.get_topic_by_title(session, account.org_uid, from_topic)
+    if src is None:
+        raise ValueError(f"Source topic '{from_topic}' not found")
+    dst = graph_repo.find_or_create_topic(
+        session, account.org_uid, into_topic.strip(), account.uid, embed(into_topic.strip())
+    )
+    if src["uid"] == dst["uid"]:
+        raise ValueError("Source and target topic are the same")
+    moved = graph_repo.reparent_all_children(session, account.org_uid, src["uid"], dst["uid"])
+    graph_repo.hard_delete(session, account.org_uid, src["uid"])
+    audit_repo.log(session, account.org_uid, account.uid, "merge_topics", dst["uid"],
+                   {"from": src["title"], "into": dst["title"], "moved": moved})
+    return {"into_topic": dst["title"], "merged_from": src["title"], "moved_children": moved}
 
 
 def move_node(
@@ -50,6 +73,28 @@ def move_node(
     audit_repo.log(session, account.org_uid, account.uid, "move_node", node_uid,
                    {"to_topic": target["title"], "replaced": removed, "keep_others": keep_others})
     return {"node_uid": node_uid, "to_topic": target["title"], "removed_parents": removed}
+
+
+def reclassify_sensitivity(session: Session, account: AuthedAccount) -> dict:
+    """Re-run the (value-based) sensitivity classifier over every node in the org and fix
+    stale labels — e.g. old keyword-based false positives that are not actually secret.
+    org_admin only; audited."""
+    assert_role(account, "org_admin", "Reclassifying sensitivity")
+    scanned = changed = to_internal = to_sensitive = 0
+    for n in graph_repo.nodes_for_reclassify(session, account.org_uid):
+        scanned += 1
+        want = classify_sensitivity(f"{n.get('title', '')}\n{n.get('content', '')}")
+        if want != n["sensitivity"]:
+            graph_repo.set_sensitivity(session, n["uid"], want)
+            changed += 1
+            if want == "intern":
+                to_internal += 1
+            else:
+                to_sensitive += 1
+    audit_repo.log(session, account.org_uid, account.uid, "reclassify_sensitivity", account.org_uid,
+                   {"scanned": scanned, "changed": changed})
+    return {"scanned": scanned, "changed": changed,
+            "now_internal": to_internal, "now_sensitive": to_sensitive}
 
 
 def set_tags(

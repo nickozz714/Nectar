@@ -71,6 +71,11 @@ class NodeMove(BaseModel):
     keep_others: bool = False
 
 
+class TopicMerge(BaseModel):
+    from_topic: str
+    into_topic: str
+
+
 class TagEdit(BaseModel):
     add: list[str] = []
     remove: list[str] = []
@@ -98,6 +103,29 @@ def move_node(
 ):
     try:
         return curation_service.move_node(session, account, uid, body.to_topic, body.keep_others)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/topics/merge")
+def merge_topics(
+    body: TopicMerge,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.merge_topics(session, account, body.from_topic, body.into_topic)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/reclassify-sensitivity")
+def reclassify_sensitivity(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.reclassify_sensitivity(session, account)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
