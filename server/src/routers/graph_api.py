@@ -11,7 +11,7 @@ from src.authentication.deps import AuthedAccount, has_role, require_account
 from src.db.neo4j import get_graph
 from src.repository import audit_repo, governance_repo, graph_repo
 from src.schemas.core import ChoreDecision
-from src.services import curation_service, governance_service, search_service
+from src.services import curation_service, governance_service, memory_service, search_service
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -80,6 +80,33 @@ class TagEdit(BaseModel):
     add: list[str] = []
     remove: list[str] = []
     replace: list[str] | None = None
+
+
+class RememberBody(BaseModel):
+    type: str = "memory"
+    title: str
+    content: str
+    parent_topics: list[str] = []
+    tags: list[str] = []
+    scope: str = "team"
+    parent_node: str = ""
+    force: bool = False
+
+
+@router.post("/remember")
+def remember(
+    body: RememberBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Create a knowledge node from the GUI/HTTP (same write-gate as the MCP hive_remember)."""
+    try:
+        return memory_service.remember(
+            session, account, body.type, body.title, body.content, body.parent_topics,
+            body.scope, "gui", body.force, body.tags, body.parent_node,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/topics")
