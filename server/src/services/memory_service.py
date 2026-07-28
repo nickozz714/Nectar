@@ -25,10 +25,17 @@ def detect_pii(text: str) -> list[str]:
 # Purview-style sensitivity classification — deterministic and transparent. PII is
 # hard-blocked; credential-shaped content is allowed but labeled 'gevoelig' so the
 # governance dashboard surfaces it for review.
+# Sensitivity flags an actual secret VALUE, not a technical discussion that merely mentions
+# auth. So a memory about "reading the Authorization header / bearer-auth" is NOT sensitive;
+# a real token, key or `password = ...` assignment is.
 _SENSITIVE_PATTERNS = [
-    re.compile(r"(?i)\b(wachtwoord|password|passphrase|api[-_ ]?key|secret|token|bearer|"
-               r"credential|client[-_ ]?secret|private[-_ ]?key|\bPAT)\b"),
-    re.compile(r"eyJ[A-Za-z0-9_-]{20,}"),  # JWT-shaped
+    # a secret keyword actually assigned a value (password: hunter2, api_key = abc123…)
+    re.compile(r"(?i)\b(wachtwoord|password|passphrase|api[-_ ]?key|client[-_ ]?secret|secret|"
+               r"credential|private[-_ ]?key|\bPAT)\b\s*[:=]\s*['\"]?\S{6,}"),
+    re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-]{16,}"),          # a real bearer token value
+    re.compile(r"\b(gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|"
+               r"sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b"),      # common concrete token formats
+    re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),    # JWT (two segments)
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
 ]
 
@@ -94,6 +101,7 @@ def remember(
     scope: str = "team",
     model_name: str = "",
     force: bool = False,
+    tags: list[str] | None = None,
 ) -> dict:
     """Direct write through the write-gate: quality checks + PII filter + dedup.
     Hard duplicates are rejected; grey-zone lookalikes are created but flagged as a
@@ -165,6 +173,8 @@ def remember(
 
     if force:
         notes.append("created with force — dedup check skipped")
+    if tags:
+        graph_repo.set_tags(session, account.org_uid, node["uid"], tags)
     linked, topic_notes = link_topics(session, account, node["uid"], parent_topics)
     notes.extend(topic_notes)
     if not linked:

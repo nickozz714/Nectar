@@ -48,7 +48,7 @@ def _patch_embed(monkeypatch):
 
     monkeypatch.setattr(embeddings, "embed", fake_embed)
     for name in ("memory_service", "search_service", "skill_service",
-                 "reindex_service", "governance_service"):
+                 "reindex_service", "governance_service", "curation_service"):
         module = importlib.import_module(f"src.services.{name}")
         if hasattr(module, "embed"):
             monkeypatch.setattr(module, "embed", fake_embed, raising=False)

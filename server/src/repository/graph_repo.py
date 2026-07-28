@@ -307,6 +307,30 @@ def update_node(session: Session, uid: str, fields: dict, embedding: list[float]
     return record is not None
 
 
+def set_tags(session: Session, org_uid: str, uid: str, tags: list[str]) -> bool:
+    """Replace a node's tags (stored lowercased, deduped, as a native string list)."""
+    clean = sorted({t.strip().lower() for t in tags if t and t.strip()})
+    record = session.run(
+        "MATCH (n:Knowledge {uid: $uid, org_uid: $org_uid}) SET n.tags = $tags RETURN n.uid AS uid",
+        uid=uid, org_uid=org_uid, tags=clean,
+    ).single()
+    return record is not None
+
+
+def detach_topic_parents(session: Session, org_uid: str, node_uid: str) -> int:
+    """Remove the CONTAINS edges from any TOPIC parents to this node (used when moving a
+    node to a different topic). Non-topic CONTAINS/RELATES links are left untouched."""
+    record = session.run(
+        """
+        MATCH (t:Topic {org_uid: $org_uid})-[r:CONTAINS]->(n:Knowledge {uid: $uid})
+        DELETE r
+        RETURN count(r) AS removed
+        """,
+        org_uid=org_uid, uid=node_uid,
+    ).single()
+    return record["removed"] if record else 0
+
+
 def archive_node(session: Session, uid: str) -> bool:
     record = session.run(
         "MATCH (n:Knowledge {uid: $uid}) SET n.archived = true RETURN n.uid AS uid", uid=uid

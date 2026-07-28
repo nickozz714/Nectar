@@ -27,6 +27,7 @@ def search(
     anchors: list[str] | None = None,
     limit: int = 8,
     touch: bool = True,
+    tags: list[str] | None = None,
 ) -> list[dict]:
     """Ranked recall: semantic similarity (when embeddings are on) combined with
     freshness. Anchors are a preference, not a filter: nodes inside the anchored topic
@@ -46,16 +47,23 @@ def search(
         candidates = graph_repo.text_candidates(session, account, query, allowed=None)
 
     now_ms = time.time() * 1000
+    qlow = query.lower()
+    want_tags = {t.strip().lower() for t in (tags or []) if t.strip()}
     scored = [
         (
             node,
             sim * settings.SEMANTIC_WEIGHT
             + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT
             + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0)
-            + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0),
+            + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0)
+            # tags count in search: a nudge when one of the node's tags appears in the query
+            + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0),
         )
         for node, sim in candidates
     ]
+    # explicit tag filter: keep only nodes carrying ALL requested tags
+    if want_tags:
+        scored = [(n, s) for n, s in scored if want_tags.issubset(set(n.get("tags") or []))]
     scored.sort(key=lambda pair: pair[1], reverse=True)
     top = [node for node, _ in scored[:limit]]
 

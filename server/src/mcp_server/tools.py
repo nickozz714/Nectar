@@ -9,6 +9,7 @@ from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
 from src.repository import focus_repo, governance_repo, graph_repo, session_repo
 from src.services import (
+    curation_service,
     governance_service,
     kit_service,
     memory_service,
@@ -47,14 +48,16 @@ def _project() -> str:
 
 
 @mcp.tool
-def hive_search(query: str, anchors: list[str] | None = None, limit: int = 8) -> str:
+def hive_search(query: str, anchors: list[str] | None = None, limit: int = 8,
+                tags: list[str] | None = None) -> str:
     """Search the hive's shared memory. Results are ranked by semantic relevance and
     freshness (recently-used knowledge first). Pass `anchors` (topic titles, e.g. your
     project's topics from HIVE_ANCHORS) to boost that slice of the mind in the ranking —
     a preference, not a filter: knowledge from other contexts stays findable and may
-    still be the answer. Reading a memory rejuvenates it."""
+    still be the answer. Pass `tags` to restrict to nodes carrying ALL those tags; a node
+    whose tag also appears in the query gets a ranking nudge. Reading a memory rejuvenates it."""
     with _authed() as (session, account):
-        results = search_service.search(session, account, query, anchors=anchors, limit=limit)
+        results = search_service.search(session, account, query, anchors=anchors, limit=limit, tags=tags)
         text = search_service.render_results(results)
         ready = governance_repo.ready_count(session, account)
         if ready:
@@ -87,6 +90,7 @@ def hive_remember(
     scope: str = "team",
     model_name: str = "",
     force: bool = False,
+    tags: list[str] | None = None,
 ) -> dict:
     """Write reusable knowledge into the hive. type: memory | process | workflow |
     convention | decision | glossary (for file-backed skills/workflows use skill_put /
@@ -98,10 +102,10 @@ def hive_remember(
     content, no personal data (PII), and dedup — hard duplicates are rejected, close
     lookalikes are created but flagged as a dedup chore for the swarm. Pass model_name
     (your model id) for provenance. Only store knowledge that is reusable for the
-    organization — no session noise."""
+    organization — no session noise. `tags` are short labels that also count in search."""
     with _authed() as (session, account):
         return memory_service.remember(
-            session, account, type, title, content, parent_topics, scope, model_name, force
+            session, account, type, title, content, parent_topics, scope, model_name, force, tags
         )
 
 
@@ -339,6 +343,33 @@ def topic_list() -> list[dict]:
     to orient, to pick anchors, or to decide where new knowledge belongs."""
     with _authed() as (session, account):
         return graph_repo.list_topics(session, account)
+
+
+@mcp.tool
+def topic_create(title: str, parent_topic: str = "") -> dict:
+    """Create a topic to organise the mind (reuses an existing topic with the same title).
+    Optionally nest it under a parent topic, e.g. topic_create('Gemeentelijk Gegevens Model
+    (GGM)', parent_topic='Data Modelling')."""
+    with _authed() as (session, account):
+        return curation_service.create_topic(session, account, title, parent_topic)
+
+
+@mcp.tool
+def node_move(node_uid: str, to_topic: str, keep_others: bool = False) -> dict:
+    """Re-hang a node under a different topic (maintainer role). By default this REPLACES the
+    node's topic parents; keep_others=True adds the new topic while keeping existing ones
+    (multi-parent). The target topic is created if needed. E.g. move the 'ggm-export' skill
+    from 'Gemeente Krimpenerwaard' to 'Gemeentelijk Gegevens Model (GGM)'."""
+    with _authed() as (session, account):
+        return curation_service.move_node(session, account, node_uid, to_topic, keep_others)
+
+
+@mcp.tool
+def hive_tag(node_uid: str, add: list[str] | None = None, remove: list[str] | None = None) -> dict:
+    """Add and/or remove tags on a node. Tags are short lowercase labels that also count in
+    search (a query mentioning a tag boosts tagged nodes; hive_search(tags=[...]) filters)."""
+    with _authed() as (session, account):
+        return curation_service.set_tags(session, account, node_uid, add=add, remove=remove)
 
 
 @mcp.tool

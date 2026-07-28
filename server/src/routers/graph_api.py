@@ -11,7 +11,7 @@ from src.authentication.deps import AuthedAccount, has_role, require_account
 from src.db.neo4j import get_graph
 from src.repository import audit_repo, governance_repo, graph_repo
 from src.schemas.core import ChoreDecision
-from src.services import governance_service, search_service
+from src.services import curation_service, governance_service, search_service
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -47,16 +47,72 @@ def topics(
 @router.get("/search")
 def search(
     q: str,
+    tags: str = "",
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
     # Browsing in the GUI should not rejuvenate memories — only actual use does.
-    results = search_service.search(session, account, q, limit=12, touch=False)
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    results = search_service.search(session, account, q, limit=12, touch=False, tags=tag_list)
     return [
         {"uid": n["uid"], "title": n["title"], "type": n["type"],
-         "scope": n.get("scope"), "topics": n.get("topics", [])}
+         "scope": n.get("scope"), "topics": n.get("topics", []), "tags": n.get("tags", [])}
         for n in results
     ]
+
+
+class TopicCreate(BaseModel):
+    title: str
+    parent_topic: str = ""
+
+
+class NodeMove(BaseModel):
+    to_topic: str
+    keep_others: bool = False
+
+
+class TagEdit(BaseModel):
+    add: list[str] = []
+    remove: list[str] = []
+    replace: list[str] | None = None
+
+
+@router.post("/topics")
+def create_topic(
+    body: TopicCreate,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.create_topic(session, account, body.title, body.parent_topic)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/node/{uid}/move")
+def move_node(
+    uid: str,
+    body: NodeMove,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.move_node(session, account, uid, body.to_topic, body.keep_others)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/node/{uid}/tags")
+def set_tags(
+    uid: str,
+    body: TagEdit,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    try:
+        return curation_service.set_tags(session, account, uid, body.add, body.remove, body.replace)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/node/{uid}")

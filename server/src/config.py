@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     ANCHOR_BOOST: float = 0.15
     # Explicit decisions must surface faster than ordinary memories.
     DECISION_BOOST: float = 0.1
+    # A node whose tag appears in the search query gets a ranking nudge (tags count in search).
+    TAG_BOOST: float = 0.12
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
     # chore so the swarm reviews them.

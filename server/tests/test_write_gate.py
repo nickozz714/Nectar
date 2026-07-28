@@ -68,10 +68,15 @@ def test_sensitivity_classification(graph, account):
     acc = account()
     plain = _remember(graph, acc, "Gewone werkwijze zonder geheimen",
                       "Dit is een normale notitie over onze manier van werken hier.", ["T"])
-    secret = _remember(graph, acc, "Toegang tot de omgeving instellen",
-                       "Zet het api-key token in de omgeving voordat je de tool draait.", ["T"])
+    # talking ABOUT an api-key/token is not sensitive (used to be a false positive)
+    talk = _remember(graph, acc, "Toegang tot de omgeving instellen",
+                     "Zet het api-key token in de omgeving voordat je de tool draait.", ["T"])
+    # an actual secret VALUE is sensitive
+    secret = _remember(graph, acc, "Voorbeeld met een echte sleutelwaarde",
+                       "Voor de test: api_key = ABCDEF0123456789 staat hier als voorbeeld.", ["T"])
     from src.repository import graph_repo
     assert graph_repo.get_node(graph, acc, plain["uid"])["sensitivity"] == "intern"
+    assert graph_repo.get_node(graph, acc, talk["uid"])["sensitivity"] == "intern"
     assert graph_repo.get_node(graph, acc, secret["uid"])["sensitivity"] == "gevoelig"
 
 
@@ -90,3 +95,15 @@ def test_topic_reuse_prevents_sprawl(graph, account):
 def graph_repo_list_titles(graph, acc):
     from src.repository import graph_repo
     return [t["title"] for t in graph_repo.list_topics(graph, acc)]
+
+
+def test_sensitivity_is_value_based_not_keyword():
+    """Technical discussion that mentions auth is NOT sensitive; a real secret value is."""
+    from src.services.memory_service import classify_sensitivity as c
+    talk = ("fastmcp get_http_headers() gaf de Authorization-header niet terug; lees hem via "
+            "get_http_request().headers.get('authorization'). Relevant bij bearer-auth per tool-call.")
+    assert c(talk) == "intern"
+    assert c("we bespreken het password-beleid en tokenrotatie") == "intern"
+    assert c("password = hunter2secret") == "gevoelig"
+    assert c("Authorization: Bearer eyJabcdefghij.klmnopqrstuvwxyz012345") == "gevoelig"
+    assert c("token ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") == "gevoelig"

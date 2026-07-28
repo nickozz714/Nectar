@@ -32,6 +32,14 @@ bij **elke** prompt bovenaan her-inspuit (blijft in de aandacht-zone, overleeft 
 - **Wijkt het verzoek of je impuls van het plan/de guardrails af** → meld dat expliciet en
   stem af; ga niet zomaar iets anders doen. Klaar? `focus_clear`.
 
+## Ordenen: topics & tags
+Je kunt de mind zelf structureren. `topic_create(title, parent_topic)` maakt een topic (of
+nest 'm). `node_move(node_uid, to_topic, keep_others)` hangt een node onder een ander topic
+(maintainer-rol; standaard vervangt het de topic-ouders, `keep_others=True` voor multi-parent).
+Geef memories `tags` mee bij `hive_remember`, of pas ze aan met `hive_tag(node_uid, add,
+remove)` — tags tellen mee bij zoeken (`hive_search(..., tags=[...])` filtert; een tag die in
+de query voorkomt geeft een boost).
+
 ## Mutaties zijn consensus-gated
 Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een
 `hive_suggest` in (`edit`, `invalidate`, `dedup_merge`, `promotion`, `scope_widening`).
