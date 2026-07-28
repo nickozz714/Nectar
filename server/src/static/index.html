@@ -237,6 +237,7 @@ function showTab(name) {
 const nodes = new Map();   // uid -> {uid,title,type,x,y,vx,vy}
 const links = [];          // {a,b}
 const linkKeys = new Set();
+const expanded = new Set(); // uids whose neighbours are shown (double-click toggles)
 let selected = null, dragging = null, panning = null, vb = {x:-500,y:-350,w:1000,h:700};
 const svg = document.getElementById("svg");
 
@@ -329,8 +330,14 @@ svg.addEventListener("wheel", e => {
 }, { passive: false });
 svg.addEventListener("dblclick", e => {
   const g = e.target.closest("g[data-uid]");
-  if (g) expandNode(g.dataset.uid);
+  if (g) toggleNode(g.dataset.uid);
 });
+
+async function toggleNode(uid) {
+  if (uid === HIVE_UID) return;
+  if (expanded.has(uid)) collapseNode(uid);
+  else await expandNode(uid);
+}
 
 async function expandNode(uid) {
   if (uid === HIVE_UID) return;   // synthetic hub, not a real graph node
@@ -341,6 +348,40 @@ async function expandNode(uid) {
     const rel = (nb.relation || "CONTAINS").toLowerCase();
     nb.direction === "out" ? addLink(uid, nb.uid, rel) : addLink(nb.uid, uid, rel);
   }
+  expanded.add(uid);
+}
+
+function _adjacency() {
+  const m = new Map();
+  const add = (a, b) => { (m.get(a) || m.set(a, new Set()).get(a)).add(b); };
+  for (const l of links) { add(l.a, l.b); add(l.b, l.a); }
+  return m;
+}
+// nodes reachable from `start`, without ever passing THROUGH `block` (block itself stays reachable)
+function _reach(start, block) {
+  const adj = _adjacency(), seen = new Set([start]), q = [start];
+  while (q.length) {
+    const u = q.shift();
+    if (u === block) continue;
+    for (const v of (adj.get(u) || [])) if (!seen.has(v)) { seen.add(v); q.push(v); }
+  }
+  return seen;
+}
+function collapseNode(uid) {
+  // remove exactly the nodes that hang off `uid` (reachable from the hub only via `uid`)
+  const all = _reach(HIVE_UID, null), blocked = _reach(HIVE_UID, uid);
+  const remove = [...nodes.keys()].filter(k => k !== uid && all.has(k) && !blocked.has(k));
+  if (!remove.length) { expanded.delete(uid); return; }
+  const gone = new Set(remove);
+  for (const k of gone) {
+    nodes.delete(k); expanded.delete(k);
+    if (selected && selected.uid === k) { selected = null; document.getElementById("right").style.display = "none"; }
+  }
+  for (let i = links.length - 1; i >= 0; i--)
+    if (gone.has(links[i].a) || gone.has(links[i].b)) links.splice(i, 1);
+  linkKeys.clear();
+  for (const l of links) linkKeys.add(l.a < l.b ? l.a + "|" + l.b : l.b + "|" + l.a);
+  expanded.delete(uid);
 }
 
 async function selectNode(uid) {
@@ -731,7 +772,8 @@ function boot() {
   document.getElementById("choreBadge").innerHTML = ME.ready_chores ? `<span class="badge">${ME.ready_chores}</span>` : "";
   if (ME.can_review) document.getElementById("reviewTab").style.display = "";
   document.getElementById("legend").innerHTML = Object.entries(COLORS).map(([t, c]) =>
-    `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("");
+    `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("")
+    + `<span style="opacity:.6">· dubbelklik knoop: uit-/inklappen</span>`;
   renderTypeFilter();
   loadTopics();
   requestAnimationFrame(tick);
