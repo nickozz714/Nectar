@@ -201,10 +201,15 @@ def resolve_chore(
     chore_uid: str,
     body: ChoreDecision,
     action: str = "apply",
+    direct: bool = False,
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
+    """Resolve a chore. `direct=true` is the org_admin bypass for chores that never reached
+    consensus ('open'); otherwise a maintainer resolves a 'ready' chore the normal way."""
     try:
+        if direct:
+            return governance_service.admin_resolve(session, account, chore_uid, action, body.note)
         return governance_service.resolve(session, account, chore_uid, action, body.note)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

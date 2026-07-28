@@ -549,11 +549,18 @@ async function loadChores() {
   const data = await api("/graph/chores");
   const page = document.getElementById("choresPage");
   const fmt = ms => ms ? new Date(ms).toLocaleString("nl-NL") : "";
-  const btns = c => ME.can_maintain && c.status === "ready"
-    ? `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply')">Toepassen</button>
-       <button class="ghost" onclick="resolveChore('${c.uid}','reject')">Afwijzen</button></div>`
-    : (c.status === "ready" ? `<div class="t" style="color:var(--dim);margin-top:8px">maintainer-rol nodig om af te handelen</div>`
-       : `<div class="t" style="color:var(--dim);margin-top:8px">wacht op meer stemmen (consensus)</div>`);
+  const btns = c => {
+    if (c.status === "ready" && ME.can_maintain)
+      return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',false)">Toepassen</button>
+        <button class="ghost" onclick="resolveChore('${c.uid}','reject',false)">Afwijzen</button></div>`;
+    if (c.status === "ready")
+      return `<div class="t" style="color:var(--dim);margin-top:8px">maintainer-rol nodig om af te handelen</div>`;
+    if (ME.role === "org_admin")   // open, geen consensus — org_admin mag direct
+      return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',true)">Direct toepassen</button>
+        <button class="ghost danger" onclick="resolveChore('${c.uid}','reject',true)">Afwijzen</button></div>
+        <div class="t" style="color:var(--dim);margin-top:4px">org_admin — bypasst consensus (geaudit)</div>`;
+    return `<div class="t" style="color:var(--dim);margin-top:8px">wacht op meer stemmen (consensus)</div>`;
+  };
   const openCards = data.chores.map(c => `<div class="card">
       <div class="meta">${esc(c.type)} · <span style="color:${c.status === "ready" ? "var(--honey)" : "var(--dim)"}">${esc(c.status)}</span> · ${c.votes} stem(men)</div>
       <div><strong>${esc(c.node_title || "")}</strong></div>
@@ -571,8 +578,9 @@ async function loadChores() {
     <h3 style="margin:4px 0 8px;color:var(--dim)">Open / actief</h3>${openCards}
     <h3 style="margin:22px 0 8px;color:var(--dim)">Afgehandeld <span class="t">(${resolved.length})</span></h3>${doneCards}`;
 }
-async function resolveChore(uid, action) {
-  try { await api(`/graph/chores/${uid}/resolve?action=${action}`, { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }
+async function resolveChore(uid, action, direct) {
+  try { await api(`/graph/chores/${uid}/resolve?action=${action}${direct ? "&direct=true" : ""}`,
+    { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }
   catch (e) { alert(e.message); }
   loadChores();
 }

@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     MIN_TITLE_LENGTH: int = 8
     MIN_CONTENT_LENGTH: int = 40
 
-    # Governance: distinct votes (account+model) before a mutation chore is actionable
+    # Governance: distinct votes (account+model) before a mutation chore is actionable.
+    # Set to 1 for a small/solo org so a single suggestion becomes 'ready' immediately.
+    # (An org_admin can also directly resolve an 'open' chore, bypassing this — audited.)
     CONSENSUS_THRESHOLD: int = 2
 
     @property

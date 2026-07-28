@@ -60,6 +60,37 @@ def resolve(
     return {"status": "resolved", "applied": applied}
 
 
+def admin_resolve(
+    session: Session, account: AuthedAccount, chore_uid: str, action: str, note: str
+) -> dict:
+    """org_admin escape hatch: resolve a chore that has NOT reached consensus ('open') or is
+    'ready', directly — for small/solo orgs where the 2-vote threshold never triggers.
+    Audited as a bypass. scope_widening still goes through the human review queue."""
+    assert_role(account, "org_admin", "Directly resolving chores")
+    chore = governance_repo.get_chore(session, account.org_uid, chore_uid)
+    if chore is None:
+        raise ValueError("Chore not found")
+    if chore["status"] not in ("open", "ready"):
+        raise ValueError(f"Chore is '{chore['status']}' — already handled")
+    if chore["type"] == "scope_widening":
+        raise ValueError("scope_widening is decided by a human via the admin review queue")
+    if action == "reject":
+        governance_repo.close_chore(session, chore_uid, "rejected", account.uid, note or "org_admin afgewezen")
+        audit_repo.log(session, account.org_uid, account.uid, "admin_resolve_chore", chore_uid,
+                       {"kind": chore["type"], "action": "reject", "bypass": "consensus"})
+        return {"status": "rejected"}
+    if action != "apply":
+        raise ValueError("action must be apply or reject")
+
+    payload = json.loads(chore["payload"] or "{}")
+    applied = _apply(session, account, chore, payload)
+    governance_repo.close_chore(session, chore_uid, "resolved", account.uid, note or applied)
+    audit_repo.log(session, account.org_uid, account.uid, "admin_resolve_chore", chore_uid,
+                   {"kind": chore["type"], "node": chore["node_uid"], "result": applied,
+                    "bypass": "consensus"})
+    return {"status": "resolved", "applied": applied}
+
+
 def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict) -> str:
     kind, node_uid = chore["type"], chore["node_uid"]
     if kind == "edit":

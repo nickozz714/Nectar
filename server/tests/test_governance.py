@@ -81,3 +81,28 @@ def test_resolved_chores_lists_handled(graph, account):
     assert len(done) == 1
     assert done[0]["status"] == "resolved" and done[0]["resolution"] == "prima gepromoot"
     assert done[0]["node_title"].startswith("Nog een generieke")
+
+
+def test_org_admin_direct_resolves_open_chore(graph, account):
+    """A single 'open' chore (no consensus) can be resolved directly by an org_admin,
+    bypassing the 2-vote gate. Members/maintainers cannot use the bypass."""
+    from src.repository import governance_repo, graph_repo
+    admin = account("nick", role="org_admin")
+    maint = account("collega", role="maintainer")
+    node = _mem(graph, admin, "Promoveer deze werkwijze direct als admin",
+                "Werkwijze die als solo-admin zonder consensus gepromoot moet kunnen worden.", ["Swinkels"])
+    payload = {"target_topic": "Directe werkwijzen"}
+
+    s = governance_service.suggest(graph, admin, "promotion", node["uid"], payload, "want handig", "m-a")
+    assert s["status"] == "open"  # only one vote, never ready
+
+    # maintainer (not org_admin) may not use the bypass
+    with pytest.raises(ValueError, match="org_admin"):
+        governance_service.admin_resolve(graph, maint, s["uid"], "apply", "nee")
+
+    out = governance_service.admin_resolve(graph, admin, s["uid"], "apply", "direct toegepast")
+    assert out["status"] == "resolved"
+    done = governance_repo.resolved_chores(graph, admin)
+    assert any(d["uid"] == s["uid"] and d["resolution"] == "direct toegepast" for d in done)
+    parents = {p["title"] for p in graph_repo.get_node(graph, admin, node["uid"])["parents"]}
+    assert "Directe werkwijzen" in parents
