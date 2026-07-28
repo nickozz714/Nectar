@@ -61,3 +61,23 @@ def test_scope_widening_needs_human(graph, account):
     res = governance_service.approve_scope_widening(graph, s2["uid"], a1.org_uid, "akkoord",
                                                     reviewed_by="nick")
     assert res["scope"] == "org"
+
+
+def test_resolved_chores_lists_handled(graph, account):
+    from src.repository import governance_repo
+    author = account("nick", role="member")
+    maint = account("collega", role="maintainer")
+    node = _mem(graph, author, "Nog een generieke werkwijze om te promoten",
+                "Breed toepasbare werkwijze die na consensus gepromoot wordt.", ["Swinkels"])
+    payload = {"target_topic": "Algemene werkwijzen"}
+    governance_service.suggest(graph, author, "promotion", node["uid"], payload, "generiek", "m-a")
+    ready = governance_service.suggest(graph, maint, "promotion", node["uid"], payload, "eens", "m-b")
+
+    # before resolving: nothing handled yet
+    assert governance_repo.resolved_chores(graph, maint) == []
+
+    governance_service.resolve(graph, maint, ready["uid"], "apply", "prima gepromoot")
+    done = governance_repo.resolved_chores(graph, maint)
+    assert len(done) == 1
+    assert done[0]["status"] == "resolved" and done[0]["resolution"] == "prima gepromoot"
+    assert done[0]["node_title"].startswith("Nog een generieke")

@@ -548,16 +548,28 @@ async function loadGovernance() {
 async function loadChores() {
   const data = await api("/graph/chores");
   const page = document.getElementById("choresPage");
+  const fmt = ms => ms ? new Date(ms).toLocaleString("nl-NL") : "";
   const btns = c => ME.can_maintain && c.status === "ready"
-    ? `<button class="action" onclick="resolveChore('${c.uid}','apply')">Toepassen</button>
-       <button class="ghost" onclick="resolveChore('${c.uid}','reject')">Afwijzen</button>`
-    : (c.status === "ready" ? `<span class="t" style="color:var(--dim)">maintainer-rol nodig om af te handelen</span>` : "");
-  page.innerHTML = `<h2 style="margin-bottom:12px">Zwerm-klussen <span class="badge">${data.ready} ready</span></h2>` +
-    (data.chores.map(c => `<div class="card">
-      <div class="meta">${esc(c.type)} · ${esc(c.status)} · ${c.votes} stem(men)</div>
+    ? `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply')">Toepassen</button>
+       <button class="ghost" onclick="resolveChore('${c.uid}','reject')">Afwijzen</button></div>`
+    : (c.status === "ready" ? `<div class="t" style="color:var(--dim);margin-top:8px">maintainer-rol nodig om af te handelen</div>`
+       : `<div class="t" style="color:var(--dim);margin-top:8px">wacht op meer stemmen (consensus)</div>`);
+  const openCards = data.chores.map(c => `<div class="card">
+      <div class="meta">${esc(c.type)} · <span style="color:${c.status === "ready" ? "var(--honey)" : "var(--dim)"}">${esc(c.status)}</span> · ${c.votes} stem(men)</div>
       <div><strong>${esc(c.node_title || "")}</strong></div>
-      <pre>${esc(c.payload || "")}</pre>${btns(c)}</div>`).join("")
-     || `<p style="color:var(--dim)">Geen open klussen — de hive is bij. 🐝</p>`);
+      ${c.payload ? `<pre>${esc(c.payload)}</pre>` : ""}${btns(c)}</div>`).join("")
+    || `<p style="color:var(--dim)">Geen open klussen — de hive is bij. 🐝</p>`;
+  const resolved = data.resolved || [];
+  const doneCards = resolved.map(c => {
+    const ok = c.status === "resolved";
+    return `<div class="card" style="opacity:.85">
+      <div class="meta">${ok ? "✓" : "✗"} ${esc(c.type)} · ${ok ? "toegepast" : "afgewezen"}${c.resolved ? " · " + fmt(c.resolved) : ""}</div>
+      <div><strong>${esc(c.node_title || "")}</strong></div>
+      ${c.resolution ? `<div class="t" style="margin-top:4px">${esc(c.resolution)}</div>` : ""}</div>`;
+  }).join("") || `<p style="color:var(--dim)">Nog niets afgehandeld.</p>`;
+  page.innerHTML = `<h2 style="margin-bottom:12px">Zwerm-klussen <span class="badge">${data.ready} ready</span></h2>
+    <h3 style="margin:4px 0 8px;color:var(--dim)">Open / actief</h3>${openCards}
+    <h3 style="margin:22px 0 8px;color:var(--dim)">Afgehandeld <span class="t">(${resolved.length})</span></h3>${doneCards}`;
 }
 async function resolveChore(uid, action) {
   try { await api(`/graph/chores/${uid}/resolve?action=${action}`, { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }

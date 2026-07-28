@@ -94,6 +94,7 @@ def chores(
     return {
         "ready": governance_repo.ready_count(session, account),
         "chores": governance_repo.open_chores(session, account, limit=25),
+        "resolved": governance_repo.resolved_chores(session, account, limit=25),
     }
 
 

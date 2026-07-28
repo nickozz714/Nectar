@@ -82,6 +82,25 @@ def open_chores(session: Session, account: AuthedAccount, limit: int = 5) -> lis
     return [dict(r) for r in result]
 
 
+def resolved_chores(session: Session, account: AuthedAccount, limit: int = 25) -> list[dict]:
+    """Recently handled chores (applied/rejected) about nodes visible to this account —
+    the 'done' side of the swarm queue for the GUI."""
+    result = session.run(
+        f"""
+        MATCH (c:Chore {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
+        WHERE c.status IN ['resolved', 'rejected'] AND {VISIBLE}
+        RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
+               c.resolution AS resolution, c.resolved_by AS resolved_by,
+               c.resolved AS resolved, n.uid AS node_uid, n.title AS node_title
+        ORDER BY c.resolved DESC
+        LIMIT $limit
+        """,
+        limit=limit,
+        **_acc_params(account),
+    )
+    return [dict(r) for r in result]
+
+
 def ready_count(session: Session, account: AuthedAccount) -> int:
     record = session.run(
         f"""
