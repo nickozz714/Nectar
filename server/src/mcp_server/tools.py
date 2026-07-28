@@ -7,7 +7,9 @@ from fastmcp.server.dependencies import get_http_request
 
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
-from src.repository import focus_repo, governance_repo, graph_repo, session_repo
+from src.repository import (
+    attachment_repo, focus_repo, governance_repo, graph_repo, session_repo,
+)
 from src.services import (
     curation_service,
     governance_service,
@@ -77,8 +79,22 @@ def hive_get(node_uid: str) -> dict:
         files = graph_repo.node_files(session, account, node_uid)
         if files:
             node["files"] = files
+        attachments = attachment_repo.list_for(session, account, node_uid)
+        if attachments:
+            node["attachments"] = attachments  # metadata only; fetch bytes via /attachments/{uid}
         graph_repo.touch_nodes(session, [node_uid])
         return node
+
+
+@mcp.tool
+def hive_attachments(node_uid: str) -> list[dict]:
+    """List the artifacts (files) attached to a node — filename, size, type, uid. Attachments
+    live centrally in the hive, so a machine that did not create them can still get them.
+    Download one to the local machine with the bundled helper:
+    `~/.hivemind/scripts/hive-attach get <attachment_uid> [outfile]` (or GET /attachments/{uid}
+    with your bearer). Add one with `hive-attach add <node_uid> <path>`."""
+    with _authed() as (session, account):
+        return attachment_repo.list_for(session, account, node_uid)
 
 
 @mcp.tool
@@ -91,9 +107,10 @@ def hive_remember(
     model_name: str = "",
     force: bool = False,
     tags: list[str] | None = None,
+    parent_node: str = "",
 ) -> dict:
     """Write reusable knowledge into the hive. type: memory | process | workflow |
-    convention | decision | glossary (for file-backed skills/workflows use skill_put /
+    convention | decision | glossary | learning (for file-backed skills/workflows use skill_put /
     workflow_put). Set force=True to create anyway when a previous call was rejected as a
     near-duplicate but it is genuinely new (a dedup false positive). Link it under parent topics
     (subjects, projects or systems — e.g. 'Data Modelling', 'Swinkels'); semantically
@@ -102,10 +119,34 @@ def hive_remember(
     content, no personal data (PII), and dedup — hard duplicates are rejected, close
     lookalikes are created but flagged as a dedup chore for the swarm. Pass model_name
     (your model id) for provenance. Only store knowledge that is reusable for the
-    organization — no session noise. `tags` are short labels that also count in search."""
+    organization — no session noise. `tags` are short labels that also count in search.
+    `parent_node` (a node uid) hangs this node as a CONTAINS child of that memory/skill/workflow."""
     with _authed() as (session, account):
         return memory_service.remember(
-            session, account, type, title, content, parent_topics, scope, model_name, force, tags
+            session, account, type, title, content, parent_topics, scope, model_name, force,
+            tags, parent_node
+        )
+
+
+@mcp.tool
+def hive_learn(
+    title: str,
+    content: str,
+    parent_node: str = "",
+    parent_topics: list[str] | None = None,
+    tags: list[str] | None = None,
+    scope: str = "team",
+    model_name: str = "",
+) -> dict:
+    """Record a LEARNING — a hard-won lesson that must always surface with high priority
+    (e.g. a mistake and how to avoid it, a non-obvious gotcha). Learnings get a strong recall
+    boost and decay slowly. Optionally hang it as a child of the memory, skill or workflow it
+    came from via `parent_node` (that node's uid). Keep it self-contained: what went wrong /
+    what we learned, and what to do instead."""
+    with _authed() as (session, account):
+        return memory_service.remember(
+            session, account, "learning", title, content, parent_topics or [], scope,
+            model_name, False, tags, parent_node
         )
 
 

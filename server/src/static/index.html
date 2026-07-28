@@ -153,7 +153,8 @@
 
 <script>
 const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:"#3fc1c9",
-                 skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae" };
+                 skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae",
+                 learning:"#f15bb5" };
 const HIVE_UID = "__hive__";       // synthetic central node all top-level topics hang off
 const HIVE_COLOR = "#f6c85f";
 let TOPICS = [];                   // topic titles, for the move-to-topic select
@@ -409,6 +410,11 @@ async function selectNode(uid) {
     ${n.content ? `<pre>${esc(n.content)}</pre>` : ""}
     ${chips(n.parents, "Valt onder")}${chips(n.children, "Bevat")}${chips(n.related, "Gerelateerd")}
     ${(n.files || []).map(f => `<div class="section"><h3>📄 ${esc(f.path)}</h3><pre>${esc(f.content)}</pre></div>`).join("")}
+    <div class="section"><h3>Bijlagen</h3>
+      <div id="attList"></div>
+      <input type="file" id="attFile">
+      <button class="ghost" onclick="uploadAttachment('${uid}')">Bijlage toevoegen</button>
+      <div class="t" style="color:var(--dim);margin-top:4px">Artefacten (exports, scripts, screenshots) centraal in de hive — ophaalbaar op elke pc.</div></div>
     ${n.type !== "topic" ? `<div class="section"><h3>Tags</h3>
       <div style="margin-bottom:6px">${(n.tags || []).map(t => `<span class="chip">#${esc(t)}</span>`).join("") || '<span class="t" style="color:var(--dim)">geen</span>'}</div>
       <input id="tagInput" placeholder="tags, komma-gescheiden" value="${esc((n.tags || []).join(", "))}">
@@ -434,8 +440,43 @@ async function selectNode(uid) {
     </div>
     <div id="suggestBox"></div>
     <div id="lineage"></div>`;
+  loadAttachments(uid);   // attachments work on any node — topics included
 }
 async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
+async function loadAttachments(uid) {
+  const el = document.getElementById("attList"); if (!el) return;
+  try {
+    const list = await api(`/graph/node/${uid}/attachments`);
+    el.innerHTML = list.map(a => `<div class="t" style="padding:2px 0">📎
+      <a href="#" onclick='downloadAttachment("${a.uid}", ${JSON.stringify(a.filename)});return false'>${esc(a.filename)}</a>
+      <span style="color:var(--dim)">(${(a.size/1024).toFixed(1)} kB)</span>
+      ${ME.can_maintain ? `<a href="#" style="color:var(--red);margin-left:6px" onclick='deleteAttachment("${a.uid}","${uid}");return false'>×</a>` : ""}</div>`).join("")
+      || `<div class="t" style="color:var(--dim)">geen bijlagen</div>`;
+  } catch (e) { el.innerHTML = ""; }
+}
+async function uploadAttachment(uid) {
+  const f = document.getElementById("attFile").files[0];
+  if (!f) { alert("Kies eerst een bestand"); return; }
+  try {
+    const r = await fetch(`/graph/node/${uid}/attachments?filename=${encodeURIComponent(f.name)}`, {
+      method: "POST", body: f,
+      headers: { "Authorization": "Bearer " + TOKEN, "Content-Type": f.type || "application/octet-stream" } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    document.getElementById("attFile").value = ""; loadAttachments(uid);
+  } catch (e) { alert(e.message); }
+}
+async function downloadAttachment(attUid, filename) {
+  const r = await fetch(`/attachments/${attUid}`, { headers: { "Authorization": "Bearer " + TOKEN } });
+  if (!r.ok) { alert("download mislukt"); return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(await r.blob()); a.download = filename || "bijlage"; a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function deleteAttachment(attUid, nodeUid) {
+  if (!confirm("Bijlage verwijderen?")) return;
+  try { await api(`/attachments/${attUid}`, { method: "DELETE" }); loadAttachments(nodeUid); }
+  catch (e) { alert(e.message); }
+}
 async function saveTags(uid) {
   const tags = document.getElementById("tagInput").value.split(",").map(s => s.trim()).filter(Boolean);
   try { await api(`/graph/node/${uid}/tags`, { method: "POST", body: JSON.stringify({ replace: tags }) }); selectNode(uid); }

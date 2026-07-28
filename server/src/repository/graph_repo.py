@@ -13,8 +13,10 @@ KNOWLEDGE_TYPES = {
     "convention": "Convention",
     "decision": "Decision",
     "glossary": "Glossary",
+    "learning": "Learning",
 }
-STABLE_TYPES = {"convention", "decision"}
+# Learnings and conventions/decisions are durable — their value is stability, so they decay slowly.
+STABLE_TYPES = {"convention", "decision", "learning"}
 
 # Visibility: org-wide, own team, or own account. Comparisons with NULL are falsy in Cypher.
 VISIBLE = (

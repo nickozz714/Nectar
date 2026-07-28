@@ -30,6 +30,7 @@ _PURPOSE = {
     "hive-update.sh": "Shell fallback for this same update (re-fetches the install package).",
     "hive-secret": "Fetch a vault secret into an env var (never prints values).",
     "hive-enable.sh": "Turn HiveMind on for a project (wires .claude/settings.json + .mcp.json).",
+    "hive-attach.sh": "Attach a local artifact to a node, or fetch one (add/list/get).",
 }
 
 _APPLY = (

@@ -48,8 +48,13 @@ class Settings(BaseSettings):
     ANCHOR_BOOST: float = 0.15
     # Explicit decisions must surface faster than ordinary memories.
     DECISION_BOOST: float = 0.1
+    # Learnings are always high priority — a hard-won lesson must surface above ordinary recall.
+    LEARNING_BOOST: float = 0.3
     # A node whose tag appears in the search query gets a ranking nudge (tags count in search).
     TAG_BOOST: float = 0.12
+    # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
+    # bytes live in Neo4j (single store); link, don't attach, for anything larger.
+    ATTACHMENT_MAX_MB: int = 15
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
     # chore so the swarm reviews them.

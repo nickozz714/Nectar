@@ -102,6 +102,7 @@ def remember(
     model_name: str = "",
     force: bool = False,
     tags: list[str] | None = None,
+    parent_node: str = "",
 ) -> dict:
     """Direct write through the write-gate: quality checks + PII filter + dedup.
     Hard duplicates are rejected; grey-zone lookalikes are created but flagged as a
@@ -177,7 +178,15 @@ def remember(
         graph_repo.set_tags(session, account.org_uid, node["uid"], tags)
     linked, topic_notes = link_topics(session, account, node["uid"], parent_topics)
     notes.extend(topic_notes)
-    if not linked:
+    # Optionally hang this node under a specific parent node (e.g. a learning under the
+    # memory/skill/workflow it came from), as a CONTAINS child.
+    if parent_node.strip():
+        try:
+            graph_repo.link(session, account, parent_node.strip(), node["uid"], "contains")
+            notes.append(f"linked as a child of node {parent_node.strip()}")
+        except ValueError as exc:
+            notes.append(f"could not link under parent node: {exc}")
+    if not linked and not parent_node.strip():
         notes.append("no parent topics given — link it later with hive_relate")
 
     audit_repo.log(

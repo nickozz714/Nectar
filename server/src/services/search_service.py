@@ -56,6 +56,7 @@ def search(
             + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT
             + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0)
             + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0)
+            + (settings.LEARNING_BOOST if node.get("type") == "learning" else 0.0)
             # tags count in search: a nudge when one of the node's tags appears in the query
             + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0),
         )

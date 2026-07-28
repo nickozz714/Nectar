@@ -40,6 +40,18 @@ Geef memories `tags` mee bij `hive_remember`, of pas ze aan met `hive_tag(node_u
 remove)` — tags tellen mee bij zoeken (`hive_search(..., tags=[...])` filtert; een tag die in
 de query voorkomt geeft een boost).
 
+## Learnings & bijlagen
+- **Learnings** (`hive_learn`) — een hard geleerde les (een fout + hoe je 'm voorkomt, een
+  niet-voor-de-hand-liggende valkuil). Krijgt **altijd hoge prioriteit** in recall en vervaagt
+  traag. Hang 'm zo nodig als childnode aan de memory/skill/workflow waar hij uit voortkwam via
+  `parent_node` (de uid van dat knooppunt).
+- **Bijlagen** — verwijst een node naar een lokaal artefact (export, script, screenshot), dan
+  staat dat bestand alleen op één pc. Voeg het als **bijlage** toe aan de betreffende node —
+  dat mag een memory, skill, workflow **of een topic** zijn — zodat elke machine het kan
+  ophalen: `~/.hivemind/scripts/hive-attach add <node_uid> <pad>`. Op verzoek tonen/ophalen:
+  `hive_attachments(node_uid)` (of `hive-attach list <node_uid>`) → `hive-attach get <att_uid>`.
+  Bijlagen worden **niet** automatisch in recall gespoten — alleen op aanvraag.
+
 ## Mutaties zijn consensus-gated
 Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een
 `hive_suggest` in (`edit`, `invalidate`, `dedup_merge`, `promotion`, `scope_widening`).

@@ -10,8 +10,8 @@ from src.authentication.deps import AuthedAccount, require_account
 from src.db.neo4j import close_driver, graph_session, init_db
 from src.mcp_server.tools import mcp
 from src.routers import (
-    admin, auth, entra, focus_api, graph_api, kit_api, manage, recall, review, secrets,
-    signup, skills,
+    admin, attachments_api, auth, entra, focus_api, graph_api, kit_api, manage, recall,
+    review, secrets, signup, skills,
 )
 from src.services.embeddings import warmup
 
@@ -48,6 +48,7 @@ app.include_router(entra.router)
 app.include_router(skills.router)
 app.include_router(focus_api.router)
 app.include_router(kit_api.router)
+app.include_router(attachments_api.router)
 
 
 @app.get("/health")
