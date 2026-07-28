@@ -303,21 +303,14 @@ function render() {
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
     if (!typeVisible(p.type) || !typeVisible(q.type)) continue;
-    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4" marker-end="url(#arw)"/>`;
+    const dashed = l.rel === "relates" ? ` stroke-dasharray="5 4"` : "";   // RELATES = relaterend
+    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} marker-end="url(#arw)"/>`;
     if (showEdgeLabels) {
       const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
       out += `<text x="${mx}" y="${my - 4}" text-anchor="middle" font-size="9"
         fill="#8d8471" paint-order="stroke" stroke="#14120e" stroke-width="3">${l.rel}</text>`;
     }
   }
-  // Declutter labels: at overview zoom only topics/hub/selection (+its neighbours) get a
-  // label; zoom in (or select a node) to reveal the rest. Keeps a big project readable.
-  const nbrsOfSel = new Set();
-  if (selected) for (const l of links) {
-    if (l.a === selected.uid) nbrsOfSel.add(l.b);
-    if (l.b === selected.uid) nbrsOfSel.add(l.a);
-  }
-  const zoomedIn = vb.w < 950;
   for (const n of nodes.values()) {
     if (!typeVisible(n.type)) continue;
     const isHive = n.type === "hive", isAtt = n.type === "attachment";
@@ -327,11 +320,8 @@ function render() {
     const shape = isAtt
       ? `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${sel}/>`
       : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${sel}/>`;
-    const showLabel = isHive || n.type === "topic" || n === selected || nbrsOfSel.has(n.uid) || zoomedIn;
-    const label = showLabel
-      ? `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="#ded6c4"
-          paint-order="stroke" stroke="#14120e" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 26 ? n.title.slice(0,25)+"…" : n.title))}</text>`
-      : "";
+    const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="#ded6c4"
+        paint-order="stroke" stroke="#14120e" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
     out += `<g data-uid="${n.uid}" style="cursor:pointer">${shape}${isHive ? `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15">🐝</text>` : ""}${label}</g>`;
   }
   svg.innerHTML = out;
@@ -349,7 +339,7 @@ svg.addEventListener("pointermove", e => {
 });
 svg.addEventListener("pointerup", async e => {
   const g = e.target.closest("g[data-uid]");
-  if (dragging && g && nodes.get(g.dataset.uid) === dragging) await selectNode(dragging.uid);
+  if (dragging && g && nodes.get(g.dataset.uid) === dragging) await clickNode(dragging.uid);
   dragging = null; panning = null;
 });
 svg.addEventListener("wheel", e => {
@@ -357,15 +347,20 @@ svg.addEventListener("wheel", e => {
   const f = e.deltaY > 0 ? 1.1 : 0.9;
   vb = { x: vb.x + vb.w*(1-f)/2, y: vb.y + vb.h*(1-f)/2, w: vb.w*f, h: vb.h*f };
 }, { passive: false });
-svg.addEventListener("dblclick", e => {
+svg.addEventListener("dblclick", e => {   // double-click collapses (single-click expands)
   const g = e.target.closest("g[data-uid]");
-  if (g) toggleNode(g.dataset.uid);
+  if (g && !g.dataset.uid.startsWith("att:") && g.dataset.uid !== HIVE_UID) collapseNode(g.dataset.uid);
 });
 
-async function toggleNode(uid) {
-  if (uid === HIVE_UID) return;
-  if (expanded.has(uid)) collapseNode(uid);
-  else await expandNode(uid);
+// Single click: attachment → preview it; any other node → show its panel AND expand it.
+async function clickNode(uid) {
+  if (uid.startsWith("att:")) {
+    const a = nodes.get(uid); if (a) showAttachment(a.attUid, a.filename);
+    return;
+  }
+  if (uid === HIVE_UID) { selected = nodes.get(uid) || null; return; }
+  await selectNode(uid);
+  await expandNode(uid);
 }
 
 async function expandNode(uid) {
@@ -447,12 +442,12 @@ function collapseNode(uid) {
 
 async function selectNode(uid) {
   if (uid === HIVE_UID) { selected = nodes.get(uid) || null; return; }
-  if (uid.startsWith("att:")) {   // attachment node — download instead of selecting
+  if (uid.startsWith("att:")) {   // attachment node — preview it, don't download yet
     const a = nodes.get(uid);
-    if (a) downloadAttachment(a.attUid, a.filename);
+    if (a) showAttachment(a.attUid, a.filename);
     return;
   }
-  selected = nodes.get(uid) || null;   // select only — expanding is double-click
+  selected = nodes.get(uid) || null;
   const n = await api("/graph/node/" + uid);
   const right = document.getElementById("right");
   right.style.display = "block";
@@ -526,6 +521,38 @@ async function downloadAttachment(attUid, filename) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(await r.blob()); a.download = filename || "bijlage"; a.click();
   URL.revokeObjectURL(a.href);
+}
+// Preview an attachment in the panel (text/image), with an explicit Download button —
+// clicking an attachment node does NOT auto-download.
+async function showAttachment(attUid, filename) {
+  const right = document.getElementById("right");
+  right.style.display = "block";
+  right.innerHTML = `<div class="section"><h3>📎 Bijlage</h3><strong>${esc(filename)}</strong>
+    <div class="t" id="attMeta" style="color:var(--dim);margin-top:6px">laden…</div></div>`;
+  try {
+    const r = await fetch(`/attachments/${attUid}`, { headers: { "Authorization": "Bearer " + TOKEN } });
+    if (!r.ok) throw new Error("kon bijlage niet laden");
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const textish = ct.startsWith("text/") || /json|sql|xml|csv|javascript|x-python|yaml|markdown|x-sh|plain/.test(ct)
+      || /\.(txt|md|json|sql|xml|csv|ya?ml|py|js|ts|sh|log|conf|ini|ipynb)$/i.test(filename);
+    let preview;
+    if (ct.startsWith("image/")) preview = `<img src="${url}" style="max-width:100%;border-radius:8px">`;
+    else if (textish) {
+      const text = await blob.text();
+      preview = `<pre style="max-height:60vh;overflow:auto">${esc(text.slice(0, 20000))}${text.length > 20000 ? "\n… (afgekapt, download voor het geheel)" : ""}</pre>`;
+    } else preview = `<div class="t" style="color:var(--dim)">Binair bestand — geen preview. Gebruik Download.</div>`;
+    right.innerHTML = `<div class="section"><h3>📎 Bijlage</h3><strong>${esc(filename)}</strong>
+      <div class="t" style="color:var(--dim);margin:4px 0 10px">${esc(ct || "onbekend type")} · ${(blob.size/1024).toFixed(1)} kB</div>
+      <button class="action" id="attDl">Download</button></div>
+      <div class="section">${preview}</div>`;
+    document.getElementById("attDl").onclick = () => {
+      const a = document.createElement("a"); a.href = url; a.download = filename || "bijlage"; a.click();
+    };
+  } catch (e) {
+    const m = document.getElementById("attMeta"); if (m) m.textContent = e.message;
+  }
 }
 async function deleteAttachment(attUid, nodeUid) {
   if (!confirm("Bijlage verwijderen?")) return;

@@ -32,13 +32,23 @@ bij **elke** prompt bovenaan her-inspuit (blijft in de aandacht-zone, overleeft 
 - **Wijkt het verzoek of je impuls van het plan/de guardrails af** → meld dat expliciet en
   stem af; ga niet zomaar iets anders doen. Klaar? `focus_clear`.
 
-## Ordenen: topics & tags
+## Ordenen: topics, hiërarchie & tags
 Je kunt de mind zelf structureren. `topic_create(title, parent_topic)` maakt een topic (of
 nest 'm). `node_move(node_uid, to_topic, keep_others)` hangt een node onder een ander topic
 (maintainer-rol; standaard vervangt het de topic-ouders, `keep_others=True` voor multi-parent).
 Geef memories `tags` mee bij `hive_remember`, of pas ze aan met `hive_tag(node_uid, add,
 remove)` — tags tellen mee bij zoeken (`hive_search(..., tags=[...])` filtert; een tag die in
 de query voorkomt geeft een boost).
+
+**Bouw hiërarchie, niet één platte lijst.** Tientallen memories los onder één topic is een
+warboel. Structureer met **`hive_relate(parent_uid, child_uid, relation)`**:
+- `relation="contains"` → een **parent→child**-hiërarchie (cyclus-gecheckt). Zo maak je
+  ketens: topic → child → child → child. Wordt een topic te vol, maak dan een **tussenliggende
+  groepeer-node** (een topic of een memory) en hang de bij elkaar horende nodes daaronder.
+- `relation="relates"` → een **kruisverwijzing** tussen twee nodes die bij elkaar horen maar
+  geen strikte ouder/kind zijn (in de GUI gestippeld getekend).
+Nieuwe nodes aanmaken om als groepering te dienen mag: liever een nette boom dan een platte
+kluwen. De GUI klapt deze ketens uit bij aanklikken, dus goede hiërarchie = een leesbare graph.
 
 ## Learnings & bijlagen
 - **Learnings** (`hive_learn`) — een hard geleerde les (een fout + hoe je 'm voorkomt, een

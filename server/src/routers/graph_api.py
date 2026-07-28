@@ -109,6 +109,30 @@ def remember(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+class RelateBody(BaseModel):
+    parent_uid: str
+    child_uid: str
+    relation: str = "contains"   # contains (hierarchy) or relates (cross-link)
+
+
+@router.post("/relate")
+def relate(
+    body: RelateBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Link two nodes: contains (parent→child hierarchy) or relates (cross-reference). Lets
+    you build parent→child→child chains. Maintainer role; cycle-checked for contains."""
+    from src.authentication.deps import assert_role
+    assert_role(account, "maintainer", "Linking nodes")
+    try:
+        if not graph_repo.link(session, account, body.parent_uid, body.child_uid, body.relation):
+            raise HTTPException(status_code=404, detail="One of the nodes was not found")
+        return {"linked": True, "relation": body.relation}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/topics")
 def create_topic(
     body: TopicCreate,
