@@ -5,7 +5,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
 from src.db.neo4j import get_graph
-from src.repository import governance_repo, graph_repo
+from src.repository import focus_repo, governance_repo, graph_repo
 from src.schemas.core import RecallRequest, RecallResponse
 from src.services import search_service
 
@@ -33,6 +33,11 @@ def recall(
 
     ready = governance_repo.ready_count(session, account)
     parts = []
+    # Active focus first: the current task/plan/guardrails, re-injected every prompt to
+    # keep a long session on course (anti-drift, survives compaction).
+    focus = focus_repo.get_focus(session, account)
+    if focus and focus.get("goal"):
+        parts.append("## ▶ Actieve taak — blijf hierbij\n" + search_service.render_focus(focus))
     if system:
         parts.append("## HiveMind — vaste instructies (altijd van toepassing)\n"
                      + search_service.render_system(system))

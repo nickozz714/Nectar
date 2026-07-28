@@ -76,6 +76,21 @@ The three layers update differently — know which is which:
 When the user says "update HiveMind" / "haal de nieuwste versie", call `hive_update` and
 apply the manifest as above.
 
+## Staying on course in long sessions (`focus_set` / `focus_advance`)
+
+Long sessions drift: "lost in the middle" and compaction drop the plan from context and the
+model wanders off (e.g. tries to do everything in a GUI it doesn't know instead of the
+backend it was using). Antidote: the **active focus**, re-injected at the top of recall on
+every prompt (stays in the high-attention zone, survives compaction).
+
+- Starting a multi-step task or one with constraints → `focus_set(goal, steps, guardrails,
+  done_when)`. Put the hard do/don't rules in `guardrails` (e.g. "work in the BACKEND via the
+  API; the frontend is only for step 3 — a few clicks; nothing else there").
+- When a "## ▶ Actieve taak" block is in your context, it is authoritative: re-read it before
+  each step, and call `focus_advance(completed_step, note)` when a step is done.
+- If the request or your impulse departs from the plan/guardrails, say so and confirm — do
+  not silently switch tasks. Finished? `focus_clear`.
+
 ## Knowledge transfer & promotion
 
 The mind works like a human brain: knowledge from one context applies elsewhere. If you

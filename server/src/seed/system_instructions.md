@@ -19,6 +19,19 @@ Niet: sessiedetails, persoonsgegevens, eenmalige trivia. Expliciete keuzes van d
 leg je vast als een eigen `decision`. Titels zijn specifiek en zoekbaar; inhoud is
 zelfstandig leesbaar. De write-gate bewaakt kwaliteit, PII en duplicaten.
 
+## Actieve taak — blijf op koers (`focus_set` / `focus_advance`)
+Lange sessies driften: door "lost in the middle" en compaction verdwijnt het plan uit de
+context en gaat het model iets anders doen. Tegengif: de **actieve focus**, die de recall-hook
+bij **elke** prompt bovenaan her-inspuit (blijft in de aandacht-zone, overleeft compaction).
+- **Begin je aan een taak met meerdere stappen of met randvoorwaarden** → leg 'm vast met
+  `focus_set(goal, steps, guardrails, done_when)`. Zet in `guardrails` de harde wel/niet-regels
+  die drift voorkomen (bv. *"werk in de BACK-END via de API; de front-end is alléén voor stap 3,
+  een paar klikjes — verder niets daar"*).
+- **Staat er een "## ▶ Actieve taak" in je context** → dat is leidend. Herlees het vóór elke
+  stap. Vink af met `focus_advance(completed_step, note)` zodra een stap klaar is.
+- **Wijkt het verzoek of je impuls van het plan/de guardrails af** → meld dat expliciet en
+  stem af; ga niet zomaar iets anders doen. Klaar? `focus_clear`.
+
 ## Mutaties zijn consensus-gated
 Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een
 `hive_suggest` in (`edit`, `invalidate`, `dedup_merge`, `promotion`, `scope_widening`).

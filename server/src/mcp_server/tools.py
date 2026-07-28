@@ -7,7 +7,7 @@ from fastmcp.server.dependencies import get_http_request
 
 from src.authentication.deps import AuthedAccount, account_from_token
 from src.db.neo4j import graph_session
-from src.repository import governance_repo, graph_repo, session_repo
+from src.repository import focus_repo, governance_repo, graph_repo, session_repo
 from src.services import (
     governance_service,
     kit_service,
@@ -272,6 +272,54 @@ def session_delete(name: str) -> dict:
         if not session_repo.delete(session, account, name):
             raise ValueError(f"No saved session '{name}' for this account")
         return {"deleted": True, "name": name}
+
+
+@mcp.tool
+def focus_set(goal: str, steps: list, guardrails: list[str] | None = None,
+              done_when: str = "") -> dict:
+    """Set (or replace) your ACTIVE FOCUS: the current multi-step task. It is re-injected at
+    the top of recall on EVERY prompt, so it stays in the model's high-attention zone and
+    survives compaction — the fix for long sessions drifting off-course. Use it whenever a
+    task needs several steps or has constraints worth holding.
+    - goal: one sentence — what we're achieving.
+    - steps: ordered list of short step strings (the first becomes the current step).
+    - guardrails: hard do/don't rules that prevent drift, e.g. "work in the BACKEND via the
+      API; the frontend is only for step 3 (a few clicks), nothing else there".
+    - done_when: how you know it's finished.
+    Update progress with focus_advance as you go; clear it with focus_clear when done."""
+    with _authed() as (session, account):
+        if not goal.strip():
+            raise ValueError("goal is required")
+        return focus_repo.set_focus(session, account, goal, steps, guardrails, done_when)
+
+
+@mcp.tool
+def focus_advance(completed_step: str | int | None = None, note: str | None = None) -> dict:
+    """Update your active focus as you make progress: mark a step done (by its 1-based number
+    or its text) — the next open step becomes current — and/or append a short progress note.
+    Call this at the end of each step so the re-injected plan always reflects where you are."""
+    with _authed() as (session, account):
+        updated = focus_repo.advance_focus(session, account, completed_step, note)
+        if updated is None:
+            raise ValueError("No active focus — set one with focus_set first")
+        return updated
+
+
+@mcp.tool
+def focus_get() -> dict:
+    """Return your current active focus (goal, steps with status, guardrails, notes)."""
+    with _authed() as (session, account):
+        focus = focus_repo.get_focus(session, account)
+        if focus is None:
+            return {"active": False}
+        return {"active": True, **focus}
+
+
+@mcp.tool
+def focus_clear() -> dict:
+    """Clear your active focus — the task is done or abandoned, stop re-injecting it."""
+    with _authed() as (session, account):
+        return {"cleared": focus_repo.clear_focus(session, account)}
 
 
 @mcp.tool

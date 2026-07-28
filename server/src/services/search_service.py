@@ -67,6 +67,34 @@ def search(
     return top
 
 
+_STEP_ICON = {"done": "✓", "current": "▶", "open": "○"}
+
+
+def render_focus(focus: dict) -> str:
+    """Render the active focus as a compact, unmissable block. Injected FIRST on every
+    prompt so the goal, plan and guardrails stay in the high-attention zone and survive
+    compaction — the antidote to mid-session drift."""
+    lines = [f"**Doel:** {focus.get('goal', '').strip()}"]
+    steps = focus.get("steps") or []
+    if steps:
+        lines.append("**Stappen:**")
+        for i, s in enumerate(steps, 1):
+            icon = _STEP_ICON.get(s.get("status"), "○")
+            lines.append(f"  {icon} {i}. {s.get('text', '')}")
+    guardrails = focus.get("guardrails") or []
+    if guardrails:
+        lines.append("**Guardrails (niet afwijken):**")
+        lines += [f"  - {g}" for g in guardrails]
+    if focus.get("done_when"):
+        lines.append(f"**Klaar wanneer:** {focus['done_when']}")
+    notes = focus.get("notes") or []
+    if notes:
+        lines.append("**Laatste voortgang:** " + notes[-1])
+    lines.append("_Herlees dit vóór elke stap. Wijkt de vraag hiervan af? Meld het eerst — "
+                 "ga niet zomaar iets anders doen. Werk je stap af? Update met `focus_advance`._")
+    return "\n".join(lines)
+
+
 def render_system(results: list[dict]) -> str:
     """Render standing (system) memories with their FULL content — these are instructions
     the model must actually follow, so they are never truncated the way search hits are."""
