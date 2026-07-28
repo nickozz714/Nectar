@@ -382,6 +382,20 @@ def reparent_all_children(session: Session, org_uid: str, src_uid: str, dst_uid:
     return record["moved"] if record else 0
 
 
+def unlink(session: Session, org_uid: str, parent_uid: str, child_uid: str) -> int:
+    """Remove the CONTAINS/RELATES edge from parent to child (a specific link only, so other
+    parents/relations are kept). Returns how many edges were removed."""
+    record = session.run(
+        """
+        MATCH (p:Knowledge {uid: $p, org_uid: $org_uid})-[r:CONTAINS|RELATES]->(c:Knowledge {uid: $c})
+        DELETE r
+        RETURN count(r) AS n
+        """,
+        p=parent_uid, c=child_uid, org_uid=org_uid,
+    ).single()
+    return record["n"] if record else 0
+
+
 def detach_topic_parents(session: Session, org_uid: str, node_uid: str) -> int:
     """Remove the CONTAINS edges from any TOPIC parents to this node (used when moving a
     node to a different topic). Non-topic CONTAINS/RELATES links are left untouched."""

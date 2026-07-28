@@ -133,6 +133,18 @@ def relate(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/unlink")
+def unlink(
+    body: RelateBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Remove a specific parent→child link (keeps other parents/relations). Maintainer role."""
+    from src.authentication.deps import assert_role
+    assert_role(account, "maintainer", "Unlinking nodes")
+    return {"removed": graph_repo.unlink(session, account.org_uid, body.parent_uid, body.child_uid)}
+
+
 @router.post("/topics")
 def create_topic(
     body: TopicCreate,
