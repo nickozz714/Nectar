@@ -47,6 +47,48 @@ def test_focus_injected_into_recall(client, graph, account):
     assert "Niet in de front-end klooien" in ctx  # guardrail is present
 
 
+def test_focus_is_scoped_per_project(graph, account):
+    me = account("nick", role="member")
+    focus_repo.set_focus(graph, me, "Doel A", ["a1"], None, "", project="proj-a")
+    focus_repo.set_focus(graph, me, "Doel B", ["b1"], None, "", project="proj-b")
+
+    assert focus_repo.get_focus(graph, me, "proj-a")["goal"] == "Doel A"
+    assert focus_repo.get_focus(graph, me, "proj-b")["goal"] == "Doel B"
+    assert focus_repo.get_focus(graph, me, "onbekend") is None
+    assert {f["project"] for f in focus_repo.list_for(graph, me)} == {"proj-a", "proj-b"}
+
+
+def test_recall_scopes_focus_by_project(client, graph, account):
+    from src.repository import tenancy_repo
+    me = account("nick", role="member")
+    focus_repo.set_focus(graph, me, "Alleen in A", ["x"], None, "", project="proj-a")
+    token = tenancy_repo.create_token(graph, me.uid, "t", None, role="member")["token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    in_a = client.post("/recall", headers=h, json={"query": "q", "project": "proj-a"}).json()["context"]
+    in_b = client.post("/recall", headers=h, json={"query": "q", "project": "proj-b"}).json()["context"]
+    assert "Alleen in A" in in_a
+    assert "Alleen in A" not in in_b
+
+
+def test_focus_http_endpoints(client, graph, account):
+    from src.repository import tenancy_repo
+    me = account("nick", role="member")
+    token = tenancy_repo.create_token(graph, me.uid, "t", None, role="member")["token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    client.post("/focus", headers=h, json={"project": "p", "goal": "GUI-doel",
+                "steps": ["s1", "s2"], "guardrails": ["regel"], "done_when": "af"})
+    lst = client.get("/focus", headers=h).json()
+    assert any(f["goal"] == "GUI-doel" and f["project"] == "p" for f in lst)
+
+    adv = client.post("/focus/advance", headers=h, json={"project": "p", "completed_step": 1}).json()
+    assert [s["status"] for s in adv["steps"]] == ["done", "current"]
+
+    assert client.request("DELETE", "/focus", headers=h, params={"project": "p"}).json()["cleared"] is True
+    assert client.get("/focus", headers=h).json() == []
+
+
 def test_clear_removes_focus(graph, account):
     me = account("nick", role="member")
     focus_repo.set_focus(graph, me, "Doel", ["a"], None, "")

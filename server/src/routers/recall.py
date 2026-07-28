@@ -35,7 +35,7 @@ def recall(
     parts = []
     # Active focus first: the current task/plan/guardrails, re-injected every prompt to
     # keep a long session on course (anti-drift, survives compaction).
-    focus = focus_repo.get_focus(session, account)
+    focus = focus_repo.get_focus(session, account, project=body.project or "")
     if focus and focus.get("goal"):
         parts.append("## ▶ Actieve taak — blijf hierbij\n" + search_service.render_focus(focus))
     if system:

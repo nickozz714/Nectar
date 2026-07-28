@@ -68,6 +68,8 @@ _CONFIG = {
             "env.HIVE_ENABLED must equal \"1\".",
             "env.HIVE_URL and env.HIVE_TOKEN must be present — PRESERVE existing values, "
             "never overwrite or print them. env.HIVE_ANCHORS may exist; keep it.",
+            "env.HIVE_PROJECT must be a project slug (scopes the active focus). If missing, "
+            "set it to the lowercased, dash-sanitized basename of the project directory.",
             "hooks.UserPromptSubmit must contain a command hook whose command ends with "
             "\".hivemind/scripts/hive_recall.sh\". Add it if missing; fix the path if it "
             "points at an old location; do not duplicate it.",
@@ -81,6 +83,9 @@ _CONFIG = {
             "of \"Bearer <token>\". PRESERVE the existing url and token exactly (the url may "
             "be a http://localhost:<port>/mcp tunnel on macOS); only add the entry if it is "
             "entirely missing.",
+            "mcpServers.hivemind.headers.\"X-Hive-Project\" must equal env.HIVE_PROJECT from "
+            ".claude/settings.json (binds the active focus to this project). Add/fix it to "
+            "match; do not touch the Authorization header.",
         ],
     },
 }

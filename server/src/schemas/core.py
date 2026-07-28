@@ -106,6 +106,7 @@ class RecallRequest(BaseModel):
     query: str
     anchors: list[str] = []
     limit: int = 8
+    project: str = ""  # project slug (HIVE_PROJECT) — scopes the active focus
 
 
 class RecallResponse(BaseModel):

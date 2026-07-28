@@ -22,7 +22,8 @@ prompt = json.load(sys.stdin).get("prompt", "").strip()
 if not prompt:
     sys.exit(1)
 anchors = [a.strip() for a in os.environ.get("HIVE_ANCHORS", "").split(",") if a.strip()]
-print(json.dumps({"query": prompt, "anchors": anchors}))
+project = os.environ.get("HIVE_PROJECT", "").strip()
+print(json.dumps({"query": prompt, "anchors": anchors, "project": project}))
 ') || exit 0
 
 RESPONSE=$(curl -sf -m 10 -X POST "$HIVE_URL/recall" \

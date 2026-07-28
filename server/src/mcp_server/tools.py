@@ -37,6 +37,15 @@ def _authed():
         yield session, account
 
 
+def _project() -> str:
+    """The current project slug, from the X-Hive-Project header set per project in .mcp.json.
+    Empty when not project-scoped — so the active focus is bound to (account, project)."""
+    try:
+        return (get_http_request().headers.get("x-hive-project", "") or "").strip()
+    except Exception:
+        return ""
+
+
 @mcp.tool
 def hive_search(query: str, anchors: list[str] | None = None, limit: int = 8) -> str:
     """Search the hive's shared memory. Results are ranked by semantic relevance and
@@ -290,7 +299,8 @@ def focus_set(goal: str, steps: list, guardrails: list[str] | None = None,
     with _authed() as (session, account):
         if not goal.strip():
             raise ValueError("goal is required")
-        return focus_repo.set_focus(session, account, goal, steps, guardrails, done_when)
+        return focus_repo.set_focus(session, account, goal, steps, guardrails,
+                                    done_when, project=_project())
 
 
 @mcp.tool
@@ -299,7 +309,8 @@ def focus_advance(completed_step: str | int | None = None, note: str | None = No
     or its text) — the next open step becomes current — and/or append a short progress note.
     Call this at the end of each step so the re-injected plan always reflects where you are."""
     with _authed() as (session, account):
-        updated = focus_repo.advance_focus(session, account, completed_step, note)
+        updated = focus_repo.advance_focus(session, account, completed_step, note,
+                                           project=_project())
         if updated is None:
             raise ValueError("No active focus — set one with focus_set first")
         return updated
@@ -309,7 +320,7 @@ def focus_advance(completed_step: str | int | None = None, note: str | None = No
 def focus_get() -> dict:
     """Return your current active focus (goal, steps with status, guardrails, notes)."""
     with _authed() as (session, account):
-        focus = focus_repo.get_focus(session, account)
+        focus = focus_repo.get_focus(session, account, project=_project())
         if focus is None:
             return {"active": False}
         return {"active": True, **focus}
@@ -319,7 +330,7 @@ def focus_get() -> dict:
 def focus_clear() -> dict:
     """Clear your active focus — the task is done or abandoned, stop re-injecting it."""
     with _authed() as (session, account):
-        return {"cleared": focus_repo.clear_focus(session, account)}
+        return {"cleared": focus_repo.clear_focus(session, account, project=_project())}
 
 
 @mcp.tool
