@@ -28,7 +28,8 @@ def test_manifest_lists_scripts_with_content_and_hashes():
     files = {f["path"]: f for f in manifest["files"]}
 
     # scripts are FETCHED, not inlined — no bodies routed through the model
-    assert manifest["bootstrap"] and "install.zip" in manifest["bootstrap"]
+    assert manifest["command"] == "bash ~/.hivemind/scripts/hive-update.sh"
+    assert manifest["bootstrap"] and "kit/file/hive-update.sh" in manifest["bootstrap"]
     for name in ("hive_recall.sh", "hive-skill-install.sh", "hive-update.sh", "hive-enable.sh"):
         path = f"~/.hivemind/scripts/{name}"
         assert path in files, f"{path} missing from manifest"
