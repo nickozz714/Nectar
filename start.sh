@@ -12,4 +12,4 @@ export NEO4J_USER="${NEO4J_USER:-neo4j}"
 env -u NEO4J_URI -u NEO4J_USER -u NEO4J_PASSWORD /startup/docker-entrypoint.sh neo4j &
 
 cd /app
-exec uvicorn src.main:app --host 0.0.0.0 --port 8000
+exec uvicorn src.server:app --host 0.0.0.0 --port 8000

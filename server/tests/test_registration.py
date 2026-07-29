@@ -57,7 +57,7 @@ def test_member_cannot_create_invite(client):
 
 
 def test_admin_api_disabled_without_admin_token(client, monkeypatch):
-    from src.config import get_settings
+    from src.components.config import get_settings
 
     monkeypatch.setattr(get_settings(), "ADMIN_TOKEN", "")  # simulate operator not setting it
     assert client.post("/admin/orgs", json={"name": "x"},

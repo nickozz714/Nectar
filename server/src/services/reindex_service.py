@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from neo4j import Session
 
-from src.config import get_settings
-from src.services.embeddings import embed
+from src.components.config import get_settings
+from src.components.embeddings import embed
 
 
 def reembed(session: Session, org_uid: str | None = None, batch: int = 100) -> dict:

@@ -6,7 +6,7 @@ from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
 
 from src.authentication.deps import AuthedAccount, account_from_token
-from src.db.neo4j import graph_session
+from src.components.db import graph_session
 from src.repository import (
     attachment_repo, focus_repo, governance_repo, graph_repo, session_repo,
 )

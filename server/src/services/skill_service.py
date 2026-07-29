@@ -4,7 +4,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
 from src.repository import audit_repo, graph_repo
-from src.services.embeddings import embed
+from src.components.embeddings import embed
 from src.services.memory_service import assert_no_pii, classify_sensitivity, link_topics
 
 

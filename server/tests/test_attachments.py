@@ -41,7 +41,7 @@ def test_attach_to_topic(graph, account):
 
 def test_attachment_size_cap(graph, account):
     import pytest
-    from src.config import get_settings
+    from src.components.config import get_settings
     acc = account("nick", role="member")
     node = _mem(graph, acc, "Node voor de groottetest hierzo",
                 "Inhoud die zeker lang genoeg is voor de write-gate hier.", ["T"])

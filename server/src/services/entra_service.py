@@ -5,7 +5,7 @@ import time
 
 from neo4j import Session
 
-from src.config import get_settings
+from src.components.config import get_settings
 from src.repository import audit_repo, registration_repo, tenancy_repo
 
 _SCOPES = ["User.Read"]

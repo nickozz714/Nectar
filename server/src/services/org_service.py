@@ -3,7 +3,7 @@ from __future__ import annotations
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, assert_role
-from src.config import get_settings
+from src.components.config import get_settings
 from src.repository import audit_repo, registration_repo, tenancy_repo
 
 VALID_ROLES = registration_repo.VALID_ROLES

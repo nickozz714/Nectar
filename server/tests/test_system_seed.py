@@ -4,7 +4,7 @@ hand-made system node with the same title instead of duplicating it."""
 from __future__ import annotations
 
 from src.repository import graph_repo
-from src.services import seed_service
+from src.components import seed as seed_service
 
 
 def _count_with_title(graph, org_uid, title):

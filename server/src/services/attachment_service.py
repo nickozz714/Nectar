@@ -6,7 +6,7 @@ import hashlib
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
-from src.config import get_settings
+from src.components.config import get_settings
 from src.repository import attachment_repo, audit_repo
 
 

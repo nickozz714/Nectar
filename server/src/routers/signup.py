@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
-from src.config import get_settings
-from src.db.neo4j import get_graph
-from src.schemas.core import RegisterBody
+from src.components.config import get_settings
+from src.components.db import get_graph
+from src.models.core import RegisterBody
 from src.repository import registration_repo
 
 router = APIRouter(tags=["registration"])

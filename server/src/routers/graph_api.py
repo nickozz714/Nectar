@@ -8,9 +8,9 @@ from collections import Counter
 from pydantic import BaseModel
 
 from src.authentication.deps import AuthedAccount, has_role, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import audit_repo, governance_repo, graph_repo
-from src.schemas.core import ChoreDecision
+from src.models.core import ChoreDecision
 from src.services import curation_service, governance_service, memory_service, search_service
 
 router = APIRouter(prefix="/graph", tags=["graph"])

@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import attachment_repo
 from src.services import attachment_service
 

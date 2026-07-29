@@ -5,9 +5,9 @@ import time
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
-from src.config import get_settings
+from src.components.config import get_settings
 from src.repository import graph_repo
-from src.services.embeddings import embed
+from src.components.embeddings import embed
 
 
 def _freshness(node: dict, now_ms: float) -> float:

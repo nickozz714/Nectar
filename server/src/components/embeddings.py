@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 
-from src.config import get_settings
+from src.components.config import get_settings
 
 _local_model = None
 

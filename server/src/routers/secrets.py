@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.services import vault_service
 
 router = APIRouter(prefix="/secrets", tags=["vault"])

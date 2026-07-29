@@ -7,13 +7,13 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import close_driver, graph_session, init_db
-from src.mcp_server.tools import mcp
+from src.components.db import close_driver, graph_session, init_db
+from src.tools.registry import mcp
 from src.routers import (
     admin, attachments_api, auth, entra, focus_api, graph_api, kit_api, manage, recall,
     review, secrets, signup, skills,
 )
-from src.services.embeddings import warmup
+from src.components.embeddings import warmup
 
 _STATIC = Path(__file__).parent / "static"
 _INSTALL_ZIP = Path(__file__).parent.parent / "hivemind-install.zip"
@@ -25,7 +25,7 @@ mcp_app = mcp.http_app(path="/mcp")
 async def lifespan(app: FastAPI):
     init_db()
     # System instructions are repo-maintained: refresh the seeded system memory in every org.
-    from src.services import seed_service
+    from src.components import seed as seed_service
     with graph_session() as session:
         seed_service.seed_all(session)
     warmup()

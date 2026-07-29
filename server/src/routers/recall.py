@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import focus_repo, governance_repo, graph_repo
-from src.schemas.core import RecallRequest, RecallResponse
+from src.models.core import RecallRequest, RecallResponse
 from src.services import search_service
 
 router = APIRouter(tags=["hive"])

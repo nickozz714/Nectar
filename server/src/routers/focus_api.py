@@ -5,7 +5,7 @@ from neo4j import Session
 from pydantic import BaseModel
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import focus_repo
 
 # Read/steer the active focus from the GUI. Everything is scoped to the caller's own account

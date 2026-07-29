@@ -5,9 +5,9 @@ import re
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
-from src.config import get_settings
+from src.components.config import get_settings
 from src.repository import audit_repo, governance_repo, graph_repo
-from src.services.embeddings import embed
+from src.components.embeddings import embed
 
 # Deterministic write-gate: the server holds no judgement, only hard checks.
 _PII_PATTERNS: list[tuple[str, re.Pattern]] = [

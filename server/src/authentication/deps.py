@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from fastapi import Depends, Header, HTTPException, status
 from neo4j import Session
 
-from src.config import get_settings
-from src.db.neo4j import get_graph
+from src.components.config import get_settings
+from src.components.db import get_graph
 
 
 ROLES = ("member", "maintainer", "org_admin")

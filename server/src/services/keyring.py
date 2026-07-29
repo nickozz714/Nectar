@@ -4,7 +4,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-from src.config import get_settings
+from src.components.config import get_settings
 
 # Persist an auto-generated vault key on the data volume so the hive can run with zero
 # required secrets while staying decryptable across restarts.

@@ -44,7 +44,7 @@ def fake_embed(text: str) -> list[float]:
 
 @pytest.fixture(autouse=True)
 def _patch_embed(monkeypatch):
-    from src.services import embeddings
+    from src.components import embeddings
 
     monkeypatch.setattr(embeddings, "embed", fake_embed)
     for name in ("memory_service", "search_service", "skill_service",
@@ -56,7 +56,7 @@ def _patch_embed(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _clean_db():
-    from src.db.neo4j import graph_session, init_db
+    from src.components.db import graph_session, init_db
 
     init_db()  # constraints + vector index (idempotent)
     with graph_session() as session:
@@ -66,7 +66,7 @@ def _clean_db():
 
 @pytest.fixture
 def graph():
-    from src.db.neo4j import graph_session
+    from src.components.db import graph_session
 
     with graph_session() as session:
         yield session
@@ -103,7 +103,7 @@ def client():
     load the real embedding model) does not run; init_db is handled by the fixture."""
     from fastapi.testclient import TestClient
 
-    from src.main import app
+    from src.server import app
 
     return TestClient(app)
 

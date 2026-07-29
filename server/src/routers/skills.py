@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import graph_repo
 
 # Read-only HTTP access to shared skills, so a Claude Code CLI (or the installer helper)

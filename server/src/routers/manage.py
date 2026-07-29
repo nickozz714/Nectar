@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
 from src.authentication.deps import ROLES, AuthedAccount, require_role
-from src.db.neo4j import get_graph
+from src.components.db import get_graph
 from src.repository import registration_repo, tenancy_repo
-from src.schemas.core import (
+from src.models.core import (
     AccountOut,
     InviteCreate,
     OrgAccountCreate,

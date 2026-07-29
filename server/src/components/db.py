@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from neo4j import Driver, GraphDatabase
 
-from src.config import get_settings
+from src.components.config import get_settings
 
 _driver: Driver | None = None
 

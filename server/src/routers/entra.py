@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from neo4j import Session
 
-from src.config import get_settings
-from src.db.neo4j import get_graph
+from src.components.config import get_settings
+from src.components.db import get_graph
 from src.services import entra_service
 
 router = APIRouter(prefix="/auth/entra", tags=["auth"])
