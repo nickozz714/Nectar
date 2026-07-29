@@ -23,4 +23,10 @@ COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 8000 7474 7687
+
+# Container health = the API answers /health (neo4j + embeddings up). Generous start-period
+# because Neo4j boot + embedding warmup take a while on first start.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD /opt/venv/bin/python -c "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health',timeout=3).status==200 else 1)" || exit 1
+
 ENTRYPOINT ["/start.sh"]

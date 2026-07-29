@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Runtime environment: "production" (default) or "development". Drives log format and
+    # a couple of safety checks; keep prod defaults safe.
+    ENV: str = "production"
+    LOG_LEVEL: str = "INFO"
+
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "change-me-neo4j"
@@ -73,6 +78,10 @@ class Settings(BaseSettings):
     @property
     def embeddings_enabled(self) -> bool:
         return bool(self.EMBEDDINGS_MODEL) and (bool(self.EMBEDDINGS_BASE_URL) or self.EMBEDDINGS_LOCAL)
+
+    @property
+    def is_dev(self) -> bool:
+        return self.ENV.lower().startswith("dev")
 
 
 @lru_cache

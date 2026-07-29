@@ -12,4 +12,8 @@ export NEO4J_USER="${NEO4J_USER:-neo4j}"
 env -u NEO4J_URI -u NEO4J_USER -u NEO4J_PASSWORD /startup/docker-entrypoint.sh neo4j &
 
 cd /app
-exec uvicorn src.server:app --host 0.0.0.0 --port 8000
+# Single worker on purpose: the MCP session state + Entra login state live in-process.
+# Behind the Caddy sidecar → trust forwarded headers. Our middleware logs requests, so the
+# uvicorn access log is disabled to avoid double logging.
+exec uvicorn src.server:app --host 0.0.0.0 --port 8000 \
+  --proxy-headers --forwarded-allow-ips='*' --no-access-log
