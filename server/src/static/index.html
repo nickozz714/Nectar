@@ -449,7 +449,7 @@ async function openHistory() {
   const body = document.getElementById("histBody");
   body.innerHTML = `<div class="t" style="color:var(--dim)">laden…</div>`;
   try {
-    const ev = await api("/audit?limit=200");
+    const ev = await api("/graph/audit?limit=200");
     body.innerHTML = ev.length ? ev.map(e => {
       const t = (e.target || "").length > 46 ? e.target.slice(0,45) + "…" : (e.target || "");
       return `<div class="hevent"><div class="when">${timeAgo(e.at)} · ${esc(e.account || "systeem")}</div>
