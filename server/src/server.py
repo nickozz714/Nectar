@@ -14,8 +14,8 @@ from src.components.db import close_driver, graph_session, init_db
 from src.components.logging import configure_logging
 from src.tools.registry import mcp
 from src.routers import (
-    admin, attachments_api, auth, entra, focus_api, graph_api, kit_api, manage, recall,
-    review, secrets, signup, skills,
+    admin, attachments_api, auth, backup_api, entra, focus_api, graph_api, kit_api, manage,
+    recall, review, secrets, signup, skills,
 )
 from src.components.embeddings import warmup
 
@@ -81,6 +81,7 @@ app.include_router(skills.router)
 app.include_router(focus_api.router)
 app.include_router(kit_api.router)
 app.include_router(attachments_api.router)
+app.include_router(backup_api.router)
 
 
 @app.get("/health")

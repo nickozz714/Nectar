@@ -822,6 +822,14 @@ function renderBeheer() {
     <div class="card"><h3 style="margin-bottom:8px">Onderhoud</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span></div>
+    <div class="card"><h3 style="margin-bottom:8px">Back-up &amp; restore</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Volledige export van de hele hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <em>samenvoegen</em> (upsert) of <em>vervangen</em> (hive eerst leegmaken = echte restore).</p>
+      <button class="action" onclick="exportBackup()">Exporteren (download)</button> <span id="expOut" class="ok"></span>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <input id="importFile" type="file" accept="application/json,.json" style="margin-bottom:8px">
+        <select id="importMode"><option value="merge">samenvoegen (upsert)</option>
+          <option value="replace">vervangen (wipe + restore)</option></select>
+        <button class="ghost" onclick="importBackup()">Importeren</button> <span id="impOut" class="ok"></span></div></div>
     <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>` + `
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
       <input id="accName" placeholder="accountnaam">
@@ -866,6 +874,38 @@ async function reclassifySensitivity() {
   try {
     const r = await api("/graph/reclassify-sensitivity", { method: "POST" });
     out.textContent = ` ✓ ${r.scanned} beoordeeld, ${r.changed} aangepast (${r.now_internal} → intern, ${r.now_sensitive} → gevoelig)`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function exportBackup() {
+  const out = document.getElementById("expOut");
+  out.textContent = " bezig…";
+  try {
+    const r = await fetch("/export", { headers: { "Authorization": "Bearer " + TOKEN } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status);
+    const blob = await r.blob();
+    const cd = r.headers.get("Content-Disposition") || "";
+    const name = (cd.match(/filename="([^"]+)"/) || [])[1] || "hivemind-backup.json";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+    out.textContent = ` ✓ ${(blob.size / 1024).toFixed(0)} KB`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function importBackup() {
+  const f = document.getElementById("importFile").files[0];
+  const mode = document.getElementById("importMode").value;
+  const out = document.getElementById("impOut");
+  if (!f) { alert("Kies eerst een back-up-bestand."); return; }
+  if (mode === "replace" && !confirm("VERVANGEN maakt de hele hive eerst leeg en zet daarna de back-up terug. Doorgaan?")) return;
+  out.textContent = " bezig…";
+  try {
+    const body = await f.text();
+    const r = await fetch("/import?mode=" + mode, {
+      method: "POST", headers: { "Authorization": "Bearer " + TOKEN, "Content-Type": "application/json" }, body });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.status);
+    const c = j.imported;
+    out.textContent = ` ✓ ${c.nodes} nodes, ${c.relationships} relaties, ${c.attachments} bijlagen`;
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function loadAccounts() {
