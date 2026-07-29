@@ -89,6 +89,8 @@
   .hevent .when { color: var(--dim); font-size: 11px; margin-bottom: 2px; }
   .hevent .act { font-weight: 600; color: #ded6c4; }
   .hevent .tgt { color: var(--dim); word-break: break-word; }
+  .hevent a.tgt { color: var(--honey2); cursor: pointer; text-decoration: none; }
+  .hevent a.tgt:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -451,9 +453,16 @@ async function openHistory() {
   try {
     const ev = await api("/graph/audit?limit=200");
     body.innerHTML = ev.length ? ev.map(e => {
-      const t = (e.target || "").length > 46 ? e.target.slice(0,45) + "…" : (e.target || "");
+      let detail = {}; try { detail = JSON.parse(e.detail || "{}"); } catch (_) {}
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(e.target || "");
+      // prefer the live node title, then the title captured in the event, then the raw target
+      const name = e.target_title || detail.title || (isGuid ? "(verwijderd)" : (e.target || ""));
+      const shown = name.length > 58 ? name.slice(0,57) + "…" : name;
+      const tgt = e.target_title   // still exists → clickable, jumps to it in the graph
+        ? `<a href="#" class="tgt" onclick='histJump("${e.target}");return false'>${esc(shown)}</a>`
+        : `<span class="tgt">${esc(shown)}</span>`;
       return `<div class="hevent"><div class="when">${timeAgo(e.at)} · ${esc(e.account || "systeem")}</div>
-        <div><span class="act">${esc(histLabel(e.action))}</span> <span class="tgt">${esc(t)}</span></div></div>`;
+        <div><span class="act">${esc(histLabel(e.action))}</span> ${tgt}</div></div>`;
     }).join("") : `<div class="t" style="color:var(--dim)">nog geen gebeurtenissen</div>`;
   } catch (err) {
     body.innerHTML = `<div class="t" style="color:var(--red)">${esc(err.message)}</div>`
@@ -461,6 +470,7 @@ async function openHistory() {
   }
 }
 function closeHistory() { document.getElementById("histDrawer").classList.remove("open"); }
+async function histJump(uid) { closeHistory(); try { await jumpTo(uid); } catch (_) {} }
 
 // Single click: attachment → preview it; any other node → show its panel AND expand it.
 async function clickNode(uid) {

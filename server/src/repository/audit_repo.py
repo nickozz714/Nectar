@@ -52,8 +52,10 @@ def recent(session: Session, org_uid: str, limit: int = 100) -> list[dict]:
         """
         MATCH (e:Audit {org_uid: $org_uid})
         OPTIONAL MATCH (a:Account)-[:DID]->(e)
+        OPTIONAL MATCH (kn:Knowledge {uid: e.target, org_uid: $org_uid})
         RETURN e.at AS at, e.action AS action, e.target AS target,
-               e.detail AS detail, a.name AS account
+               e.detail AS detail, a.name AS account,
+               kn.title AS target_title, kn.type AS target_type
         ORDER BY e.at DESC LIMIT $limit
         """,
         org_uid=org_uid,
