@@ -402,13 +402,11 @@ function render() {
       if (isHive) shape = `<circle cx="${n.x}" cy="${n.y}" r="17" fill="url(#core)"/><circle cx="${n.x}" cy="${n.y}" r="6.5" fill="#eaffff" filter="url(#glow)"/>`;
       else if (isAtt) shape = `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${st} filter="url(#glow)"/>`;
       else shape = `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${st} filter="url(#glow)"/>`;
-      if (isHive) extra = `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="13">🐝</text>`;
     } else {
       const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
       shape = isAtt
         ? `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${sel}/>`
         : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${sel}/>`;
-      if (isHive) extra = `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15">🐝</text>`;
     }
     const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="${sf ? "#dff4ff" : "#ded6c4"}"
         paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
