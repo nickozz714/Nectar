@@ -364,10 +364,28 @@ function render() {
         paint-order="stroke" stroke="#14120e" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
     out += `<g data-uid="${n.uid}" style="cursor:pointer">${shape}${isHive ? `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15">🐝</text>` : ""}${label}</g>`;
   }
+  // Subtle collapse affordance: a small "−" badge on the selected node when it has visible
+  // children (topics and anything else). Click it to fold the subtree back in.
+  if (selected && selected.uid !== HIVE_UID && typeVisible(selected.type) && hasVisibleChildren(selected.uid)) {
+    const n = selected, r = _nodeRadius(n), bx = n.x + r + 9, by = n.y - r - 9;
+    out += `<g data-collapse="${n.uid}" style="cursor:pointer"><title>Inklappen</title>
+      <circle cx="${bx}" cy="${by}" r="8.5" fill="#26221a" stroke="#f6c85f" stroke-width="1.3" opacity="0.95"/>
+      <line x1="${bx - 4}" y1="${by}" x2="${bx + 4}" y2="${by}" stroke="#f6c85f" stroke-width="1.7"/></g>`;
+  }
   svg.innerHTML = out;
 }
+function _nodeRadius(n) {
+  return n.type === "hive" ? 26 : n.type === "attachment" ? 7 : n.type === "topic" ? 16 : 10;
+}
+// A node is collapsible when it currently has a visible child hanging off it (directed child link).
+function hasVisibleChildren(uid) {
+  return links.some(l => l.a === uid && nodes.has(l.b) && typeVisible(nodes.get(l.b).type));
+}
 
+let pendingCollapse = null;   // set when the pointer goes down on a collapse badge
 svg.addEventListener("pointerdown", e => {
+  const cb = e.target.closest("[data-collapse]");
+  if (cb) { pendingCollapse = cb.getAttribute("data-collapse"); return; }  // don't drag/pan
   const g = e.target.closest("g[data-uid]");
   if (g) { dragging = nodes.get(g.dataset.uid); }
   else panning = { x: e.clientX, y: e.clientY };
@@ -379,6 +397,7 @@ svg.addEventListener("pointermove", e => {
 });
 let clickTimer = null;   // defer the single-click expand so a double-click can cancel it
 svg.addEventListener("pointerup", e => {
+  if (pendingCollapse) { const u = pendingCollapse; pendingCollapse = null; collapseNode(u); return; }
   const g = e.target.closest("g[data-uid]");
   const isClick = dragging && g && nodes.get(g.dataset.uid) === dragging;
   const uid = isClick ? dragging.uid : null;
@@ -724,11 +743,13 @@ async function loadTopics() {
   const hasParent = new Set(data.edges.map(e => e.child));
   PROJECTS = data.topics.filter(t => !hasParent.has(t.uid)).sort((a, b) => a.title.localeCompare(b.title, "nl"));
   renderProjectFilter();
-  // One central HiveMind hub; every top-level topic hangs off it.
+  // One central HiveMind hub. Default view = ONLY the top-level topics hang off it;
+  // sub-topics and member nodes stay hidden until you click a topic to expand it.
   addNode({ uid: HIVE_UID, title: "HiveMind", type: "hive" });
-  for (const t of data.topics) addNode({ uid: t.uid, title: t.title, type: "topic" });
-  for (const e of data.edges) addLink(e.parent, e.child, "contains");
-  for (const t of data.topics) if (!hasParent.has(t.uid)) addLink(HIVE_UID, t.uid, "bevat");
+  for (const t of data.topics) if (!hasParent.has(t.uid)) {
+    addNode({ uid: t.uid, title: t.title, type: "topic" });
+    addLink(HIVE_UID, t.uid, "bevat");
+  }
   document.getElementById("topicList").innerHTML = data.topics.map(t =>
     `<div class="item" onclick="jumpTo('${t.uid}')">${esc(t.title)} <span class="t">${t.children} items</span></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Nog geen topics — de eerste hive_remember maakt ze.</div>`;
