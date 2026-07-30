@@ -91,6 +91,14 @@
   .hevent .tgt { color: var(--dim); word-break: break-word; }
   .hevent a.tgt { color: var(--honey2); cursor: pointer; text-decoration: none; }
   .hevent a.tgt:hover { text-decoration: underline; }
+  /* sci-fi graph theme (toggle) — only the canvas changes, so it reverts instantly */
+  #center { transition: background .5s ease; }
+  #center.scifi { background:
+     radial-gradient(ellipse 60% 55% at 50% 46%, #0d3358 0%, #08203a 42%, #030c18 78%, #01060d 100%); }
+  #center.scifi .legend { background: rgba(6,20,36,.82); border-color: #17466b; color: #9fc7e6; }
+  #center.scifi .gtoolbar button, #center.scifi .edgetab {
+     background: rgba(6,22,40,.9); border-color: #17466b; color: #bfe8ff; }
+  #center.scifi .gtoolbar button:hover, #center.scifi .edgetab:hover { border-color: #3fb0ff; color: #eaffff; }
 </style>
 </head>
 <body>
@@ -176,6 +184,7 @@
       <button title="Uitzoomen" onclick="zoomBy(1.25)">−</button>
       <button title="Alles passend" onclick="fitView()">⤢</button>
       <button id="histBtn" class="wide" title="Historie" onclick="openHistory()">🕘 Historie</button>
+      <button id="sciBtn" title="Sci-fi thema aan/uit" onclick="toggleSciFi()">🌌</button>
     </div>
     <button class="edgetab left" id="leftTab" title="Zijpaneel in-/uitklappen" onclick="toggleLeft()">‹</button>
     <button class="edgetab right" id="rightTab" title="Detailpaneel in-/uitklappen" onclick="toggleRight()">›</button>
@@ -296,6 +305,7 @@ const linkKeys = new Set();
 const expanded = new Set(); // uids whose neighbours are shown (double-click toggles)
 let selected = null, dragging = null, panning = null, vb = {x:-500,y:-350,w:1000,h:700};
 let projectRoot = null;   // uid of the pinned project-topic centre (project filter), or null
+let sciFi = localStorage.getItem("hive_scifi") !== "off";   // sci-fi graph theme (default on, toggleable)
 const svg = document.getElementById("svg");
 
 function addNode(n) {
@@ -337,42 +347,82 @@ function tick() {
 function render() {
   svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   const showEdgeLabels = vb.w < 1600;  // hide relation labels when zoomed far out
+  const sf = sciFi, T = Date.now() / 1000;
   let out = `<defs><marker id="arw" viewBox="0 0 10 10" refX="19" refY="5"
     markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-    <path d="M0,0L10,5L0,10z" fill="#5c523f"/></marker></defs>`;
+    <path d="M0,0L10,5L0,10z" fill="${sf ? "#2f9fd8" : "#5c523f"}"/></marker>`;
+  if (sf) out += `<filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eaffff" stop-opacity="0.9"/>
+      <stop offset="32%" stop-color="#4fd6ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0a3a66" stop-opacity="0"/></radialGradient>`;
+  out += `</defs>`;
+  // edges
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
     if (!typeVisible(p.type) || !typeVisible(q.type)) continue;
-    const dashed = l.rel === "relates" ? ` stroke-dasharray="5 4"` : "";   // RELATES = relaterend
-    out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} marker-end="url(#arw)"/>`;
+    if (sf) {
+      const dash = l.rel === "relates" ? "3 9" : "7 7";   // animated energy flowing along the link
+      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3aa8e0" stroke-width="1.5" stroke-dasharray="${dash}" stroke-dashoffset="${((-T * 22) % 14).toFixed(1)}" opacity="0.6" marker-end="url(#arw)"/>`;
+    } else {
+      const dashed = l.rel === "relates" ? ` stroke-dasharray="5 4"` : "";   // RELATES = relaterend
+      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} marker-end="url(#arw)"/>`;
+    }
     if (showEdgeLabels) {
       const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
       out += `<text x="${mx}" y="${my - 4}" text-anchor="middle" font-size="9"
-        fill="#8d8471" paint-order="stroke" stroke="#14120e" stroke-width="3">${l.rel}</text>`;
+        fill="${sf ? "#6fb9dd" : "#8d8471"}" paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${l.rel}</text>`;
     }
+  }
+  // the living reactor core (the "brain") behind the nodes, on the pinned hub / project root
+  if (sf) {
+    const c = nodes.get(HIVE_UID) || (projectRoot && nodes.get(projectRoot));
+    if (c) out += _sciCore(c.x, c.y, T);
   }
   for (const n of nodes.values()) {
     if (!typeVisible(n.type)) continue;
     const isHive = n.type === "hive", isAtt = n.type === "attachment";
     const r = isHive ? 26 : isAtt ? 7 : n.type === "topic" ? 16 : 10;
-    const fill = isHive ? HIVE_COLOR : isAtt ? ATT_COLOR : (COLORS[n.type] || "#8d99ae");
-    const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
-    const shape = isAtt
-      ? `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${sel}/>`
-      : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${sel}/>`;
-    const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="#ded6c4"
-        paint-order="stroke" stroke="#14120e" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
-    out += `<g data-uid="${n.uid}" style="cursor:pointer">${shape}${isHive ? `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15">🐝</text>` : ""}${label}</g>`;
+    const fill = isHive ? (sf ? "#eaffff" : HIVE_COLOR) : isAtt ? ATT_COLOR : (COLORS[n.type] || "#8d99ae");
+    let shape, extra = "";
+    if (sf) {
+      const st = n === selected ? `stroke="#eaffff" stroke-width="2.4"` : `stroke="#bff0ff" stroke-width="1"`;
+      if (isHive) shape = `<circle cx="${n.x}" cy="${n.y}" r="17" fill="url(#core)"/><circle cx="${n.x}" cy="${n.y}" r="6.5" fill="#eaffff" filter="url(#glow)"/>`;
+      else if (isAtt) shape = `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${st} filter="url(#glow)"/>`;
+      else shape = `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${st} filter="url(#glow)"/>`;
+      if (isHive) extra = `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="13">🐝</text>`;
+    } else {
+      const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
+      shape = isAtt
+        ? `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${sel}/>`
+        : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${sel}/>`;
+      if (isHive) extra = `<text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="15">🐝</text>`;
+    }
+    const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="${sf ? "#dff4ff" : "#ded6c4"}"
+        paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
+    out += `<g data-uid="${n.uid}" style="cursor:pointer">${shape}${extra}${label}</g>`;
   }
-  // Subtle collapse affordance: a small "−" badge on the selected node when it has visible
-  // children (topics and anything else). Click it to fold the subtree back in.
+  // Subtle collapse affordance: a small "−" badge on the selected node when it has visible children.
   if (selected && selected.uid !== HIVE_UID && typeVisible(selected.type) && hasVisibleChildren(selected.uid)) {
     const n = selected, r = _nodeRadius(n), bx = n.x + r + 9, by = n.y - r - 9;
+    const bc = sf ? "#4fd6ff" : "#f6c85f", bg = sf ? "#04121f" : "#26221a";
     out += `<g data-collapse="${n.uid}" style="cursor:pointer"><title>Inklappen</title>
-      <circle cx="${bx}" cy="${by}" r="8.5" fill="#26221a" stroke="#f6c85f" stroke-width="1.3" opacity="0.95"/>
-      <line x1="${bx - 4}" y1="${by}" x2="${bx + 4}" y2="${by}" stroke="#f6c85f" stroke-width="1.7"/></g>`;
+      <circle cx="${bx}" cy="${by}" r="8.5" fill="${bg}" stroke="${bc}" stroke-width="1.3" opacity="0.95"/>
+      <line x1="${bx - 4}" y1="${by}" x2="${bx + 4}" y2="${by}" stroke="${bc}" stroke-width="1.7"/></g>`;
   }
   svg.innerHTML = out;
+}
+// The living reactor core (HUD rings + pulsing glow) drawn around the hub — the "brain".
+function _sciCore(cx, cy, T) {
+  const pulse = 0.6 + 0.4 * Math.sin(T * 1.6);
+  const rot = s => ((T * s) % 360).toFixed(1);
+  let s = `<circle cx="${cx}" cy="${cy}" r="165" fill="url(#core)" opacity="${(0.20 + 0.12 * pulse).toFixed(3)}"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="40" fill="none" stroke="#8fe9ff" stroke-width="1.6" opacity="0.85" filter="url(#glow)"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="#38b6ff" stroke-width="3" stroke-dasharray="14 10" opacity="0.7" filter="url(#glow)" transform="rotate(${rot(16)} ${cx} ${cy})"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="76" fill="none" stroke="#2b9fe6" stroke-width="2" stroke-dasharray="4 13" opacity="0.6" transform="rotate(${rot(-11)} ${cx} ${cy})"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="95" fill="none" stroke="#1f7fc0" stroke-width="6" stroke-dasharray="2 28" opacity="0.5" filter="url(#glow)" transform="rotate(${rot(7)} ${cx} ${cy})"/>`;
+  return s;
 }
 function _nodeRadius(n) {
   return n.type === "hive" ? 26 : n.type === "attachment" ? 7 : n.type === "topic" ? 16 : 10;
@@ -416,7 +466,16 @@ svg.addEventListener("dblclick", e => {   // double-click collapses (single-clic
   if (g && !g.dataset.uid.startsWith("att:") && g.dataset.uid !== HIVE_UID) collapseNode(g.dataset.uid);
 });
 
-/* ---------- zoom & panel controls ---------- */
+/* ---------- theme + zoom & panel controls ---------- */
+function applySciFi() {
+  const c = document.getElementById("center"); if (c) c.classList.toggle("scifi", sciFi);
+  const b = document.getElementById("sciBtn"); if (b) b.style.color = sciFi ? "#4fd6ff" : "";
+}
+function toggleSciFi() {
+  sciFi = !sciFi;
+  localStorage.setItem("hive_scifi", sciFi ? "on" : "off");
+  applySciFi();
+}
 function zoomBy(f) {   // f<1 zooms in, f>1 zooms out; keeps the viewBox centre fixed
   vb = { x: vb.x + vb.w*(1-f)/2, y: vb.y + vb.h*(1-f)/2, w: vb.w*f, h: vb.h*f };
 }
@@ -1207,6 +1266,7 @@ function boot() {
   document.getElementById("choreBadge").innerHTML = ME.ready_chores ? `<span class="badge">${ME.ready_chores}</span>` : "";
   if (ME.can_review) document.getElementById("reviewTab").style.display = "";
   document.getElementById("histBtn").style.display = ME.role === "org_admin" ? "" : "none";
+  applySciFi();
   document.getElementById("legend").innerHTML = Object.entries(COLORS).map(([t, c]) =>
     `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("")
     + `<span style="opacity:.6">· dubbelklik knoop: uit-/inklappen</span>`;
