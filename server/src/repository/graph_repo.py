@@ -648,3 +648,17 @@ def topic_embeddings(session: Session, org_uid: str) -> list[dict]:
         o=org_uid,
     )
     return [dict(r) for r in rows]
+
+
+def topic_member_embeddings(session: Session, org_uid: str) -> list[dict]:
+    """(topic_uid, embedding) for every non-topic node a topic directly CONTAINS — so a caller
+    can build each topic's semantic centroid (a far better 'home' signal than the title alone)."""
+    rows = session.run(
+        """
+        MATCH (t:Knowledge {org_uid: $o})-[:CONTAINS]->(n:Knowledge {org_uid: $o})
+        WHERE t.type = 'topic' AND n.type <> 'topic' AND n.embedding IS NOT NULL
+        RETURN t.uid AS topic_uid, n.embedding AS embedding
+        """,
+        o=org_uid,
+    )
+    return [dict(r) for r in rows]

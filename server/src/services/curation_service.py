@@ -160,11 +160,33 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
     Idempotent: the chore's suggestion_key means re-scanning won't create duplicates. This is
     the recurring 'tidy & re-organise the hive' loop. Maintainer role."""
     assert_role(account, "maintainer", "Running the tidy scan")
+    from collections import defaultdict
     from src.repository import governance_repo
     from src.components.config import get_settings
 
-    topics = [t for t in graph_repo.topic_embeddings(session, account.org_uid)
-              if t.get("embedding") and not _is_generic(t["title"])]
+    MIN_SCORE = 0.14   # below this the best topic is a weak guess → leave the node alone
+
+    topics = {t["uid"]: t for t in graph_repo.topic_embeddings(session, account.org_uid)
+              if t.get("embedding") and not _is_generic(t["title"])}
+    # A topic's semantic centre = the centroid of the nodes it already holds — a much better
+    # "does this belong here?" signal than its title. Fall back to the title when it's empty.
+    sums, cnt = {}, defaultdict(int)
+    for m in graph_repo.topic_member_embeddings(session, account.org_uid):
+        tid, e = m["topic_uid"], m["embedding"]
+        if tid not in topics or not e:
+            continue
+        sums.setdefault(tid, [0.0] * len(e))
+        for i, x in enumerate(e):
+            sums[tid][i] += x
+        cnt[tid] += 1
+    centroid = {tid: [x / cnt[tid] for x in s] for tid, s in sums.items()}
+
+    def score(emb, tid):
+        t = topics[tid]
+        s_title = _cosine(emb, t["embedding"])
+        s_cent = _cosine(emb, centroid[tid]) if tid in centroid else -1.0
+        return max(s_cent, 0.6 * s_title)   # members dominate; title is a fallback/boost
+
     candidates = graph_repo.homeless_candidates(session, account.org_uid)
     opened = []
     for n in candidates:
@@ -174,19 +196,24 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
         emb = n.get("embedding")
         if not emb:
             continue
-        ranked = sorted(topics, key=lambda t: _cosine(emb, t["embedding"]), reverse=True)
-        best = next((t for t in ranked if t["title"] not in (n.get("topics") or [])), None)
+        best, best_s = None, MIN_SCORE
+        for tid, t in topics.items():
+            if t["title"] in (n.get("topics") or []):
+                continue
+            s = score(emb, tid)
+            if s > best_s:
+                best, best_s = t, s
         if best is None:
-            continue
+            continue   # no topic scores above the threshold → don't guess
         res = governance_repo.suggest(
             session, account, "promotion", n["uid"], {"target_topic": best["title"]},
             rationale=f"Opruim-scan: '{n['title'][:60]}' hangt niet onder een topic — "
-                      f"voorgesteld huis: '{best['title']}'.",
+                      f"voorgesteld huis: '{best['title']}' (score {best_s:.2f}).",
             model_name="tidy-scan", threshold=get_settings().CONSENSUS_THRESHOLD,
         )
         if res:
-            opened.append({"node": n["title"], "type": n["type"],
-                           "target": best["title"], "chore": res["uid"], "status": res["status"]})
+            opened.append({"node": n["title"], "type": n["type"], "target": best["title"],
+                           "score": round(best_s, 3), "chore": res["uid"], "status": res["status"]})
     audit_repo.log(session, account.org_uid, account.uid, "tidy_scan", account.org_uid,
                    {"scanned": len(candidates), "opened": len(opened)})
     return {"scanned": len(candidates), "homeless": len(opened), "chores": opened}
