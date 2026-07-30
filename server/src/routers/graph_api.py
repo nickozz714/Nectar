@@ -218,6 +218,19 @@ def reclassify_sensitivity(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/tidy-scan")
+def tidy_scan(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Housekeeping scan: file loose knowledge under the nearest topic by opening (safe,
+    non-destructive) promotion chores. Part of the recurring tidy/re-organise loop."""
+    try:
+        return curation_service.tidy_scan(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/node/{uid}/tags")
 def set_tags(
     uid: str,

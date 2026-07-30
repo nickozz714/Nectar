@@ -137,3 +137,56 @@ def set_tags(
     graph_repo.set_tags(session, account.org_uid, node_uid, sorted(tags))
     audit_repo.log(session, account.org_uid, account.uid, "set_tags", node_uid, {"tags": sorted(tags)})
     return {"node_uid": node_uid, "tags": sorted(tags)}
+
+
+def _cosine(a, b) -> float:
+    if not a or not b or len(a) != len(b):
+        return -1.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    return dot / (na * nb) if na and nb else -1.0
+
+
+def _is_generic(title: str) -> bool:
+    t = (title or "").strip().lower()
+    return t.startswith("overig")
+
+
+def tidy_scan(session: Session, account: AuthedAccount) -> dict:
+    """Housekeeping: find knowledge that isn't filed under a real topic and open a `promotion`
+    chore proposing the nearest topic as its home. Non-destructive by construction — resolving
+    a promotion only ADDS a CONTAINS link (origin links + scope are kept, nothing is deleted).
+    Idempotent: the chore's suggestion_key means re-scanning won't create duplicates. This is
+    the recurring 'tidy & re-organise the hive' loop. Maintainer role."""
+    assert_role(account, "maintainer", "Running the tidy scan")
+    from src.repository import governance_repo
+    from src.components.config import get_settings
+
+    topics = [t for t in graph_repo.topic_embeddings(session, account.org_uid)
+              if t.get("embedding") and not _is_generic(t["title"])]
+    candidates = graph_repo.homeless_candidates(session, account.org_uid)
+    opened = []
+    for n in candidates:
+        real_parents = [p for p in (n.get("topics") or []) if not _is_generic(p)]
+        if real_parents:
+            continue   # already filed under a real topic
+        emb = n.get("embedding")
+        if not emb:
+            continue
+        ranked = sorted(topics, key=lambda t: _cosine(emb, t["embedding"]), reverse=True)
+        best = next((t for t in ranked if t["title"] not in (n.get("topics") or [])), None)
+        if best is None:
+            continue
+        res = governance_repo.suggest(
+            session, account, "promotion", n["uid"], {"target_topic": best["title"]},
+            rationale=f"Opruim-scan: '{n['title'][:60]}' hangt niet onder een topic — "
+                      f"voorgesteld huis: '{best['title']}'.",
+            model_name="tidy-scan", threshold=get_settings().CONSENSUS_THRESHOLD,
+        )
+        if res:
+            opened.append({"node": n["title"], "type": n["type"],
+                           "target": best["title"], "chore": res["uid"], "status": res["status"]})
+    audit_repo.log(session, account.org_uid, account.uid, "tidy_scan", account.org_uid,
+                   {"scanned": len(candidates), "opened": len(opened)})
+    return {"scanned": len(candidates), "homeless": len(opened), "chores": opened}

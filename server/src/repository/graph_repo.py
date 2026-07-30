@@ -617,3 +617,34 @@ def node_files(session: Session, account: AuthedAccount, node_uid: str) -> list[
         **_acc_params(account),
     )
     return [dict(r) for r in result]
+
+
+def homeless_candidates(session: Session, org_uid: str) -> list[dict]:
+    """Every non-topic knowledge node with the titles of its topic parents. A node with no
+    topic parent (or only generic 'Overig …' buckets) is a tidy candidate: it should be
+    filed under a real topic. Returns embeddings so a caller can pick the nearest topic."""
+    rows = session.run(
+        """
+        MATCH (n:Knowledge {org_uid: $o})
+        WHERE n.type <> 'topic' AND coalesce(n.archived, false) = false
+        OPTIONAL MATCH (t:Knowledge {org_uid: $o})-[:CONTAINS]->(n)
+        WHERE t.type = 'topic'
+        WITH n, collect(t.title) AS topics
+        RETURN n.uid AS uid, n.title AS title, n.type AS type,
+               n.embedding AS embedding, topics AS topics
+        """,
+        o=org_uid,
+    )
+    return [dict(r) for r in rows]
+
+
+def topic_embeddings(session: Session, org_uid: str) -> list[dict]:
+    """All topics with their embedding vectors (for nearest-topic matching)."""
+    rows = session.run(
+        """
+        MATCH (t:Knowledge {org_uid: $o}) WHERE t.type = 'topic'
+        RETURN t.uid AS uid, t.title AS title, t.embedding AS embedding
+        """,
+        o=org_uid,
+    )
+    return [dict(r) for r in rows]

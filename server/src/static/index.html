@@ -1045,7 +1045,9 @@ function renderBeheer() {
     ${isAdmin ? `
     <div class="card"><h3 style="margin-bottom:8px">Onderhoud</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
-      <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span></div>
+      <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
+      <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) chores die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de chores.</p>
+      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Back-up &amp; restore</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Volledige export van de hele hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <em>samenvoegen</em> (upsert) of <em>vervangen</em> (hive eerst leegmaken = echte restore).</p>
       <button class="action" onclick="exportBackup()">Exporteren (download)</button> <span id="expOut" class="ok"></span>
@@ -1098,6 +1100,14 @@ async function reclassifySensitivity() {
   try {
     const r = await api("/graph/reclassify-sensitivity", { method: "POST" });
     out.textContent = ` ✓ ${r.scanned} beoordeeld, ${r.changed} aangepast (${r.now_internal} → intern, ${r.now_sensitive} → gevoelig)`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function tidyScan() {
+  const out = document.getElementById("tidyOut");
+  out.textContent = " bezig…";
+  try {
+    const r = await api("/graph/tidy-scan", { method: "POST" });
+    out.textContent = ` ✓ ${r.scanned} bekeken, ${r.homeless} chore(s) aangemaakt — zie de Chores-tab`;
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function exportBackup() {
