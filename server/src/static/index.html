@@ -449,23 +449,28 @@ svg.addEventListener("pointerdown", e => {
   if (cb) { pendingCollapse = cb.getAttribute("data-collapse"); return; }  // don't drag/pan
   const g = e.target.closest("g[data-uid]");
   if (g) { dragging = nodes.get(g.dataset.uid); }
-  else panning = { x: e.clientX, y: e.clientY };
+  else panning = { dx: 0, dy: 0 };   // track movement so a still click ≠ a pan
 });
 svg.addEventListener("pointermove", e => {
   const scale = vb.w / svg.clientWidth;
   if (dragging) { dragging.x += e.movementX*scale; dragging.y += e.movementY*scale; }
-  else if (panning) { vb.x -= e.movementX*scale; vb.y -= e.movementY*scale; }
+  else if (panning) { panning.dx += e.movementX; panning.dy += e.movementY; vb.x -= e.movementX*scale; vb.y -= e.movementY*scale; }
 });
 let clickTimer = null;   // defer the single-click expand so a double-click can cancel it
 svg.addEventListener("pointerup", e => {
-  if (pendingCollapse) { const u = pendingCollapse; pendingCollapse = null; collapseNode(u); return; }
+  if (pendingCollapse) { const u = pendingCollapse; pendingCollapse = null; collapseAndFocusParent(u); return; }
+  const wasPan = panning;
   const g = e.target.closest("g[data-uid]");
   const isClick = dragging && g && nodes.get(g.dataset.uid) === dragging;
   const uid = isClick ? dragging.uid : null;
   dragging = null; panning = null;
-  if (!isClick) return;
-  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
-  clickTimer = setTimeout(() => { clickTimer = null; clickNode(uid); }, 220);
+  if (isClick) {
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+    clickTimer = setTimeout(() => { clickTimer = null; clickNode(uid); }, 220);
+    return;
+  }
+  // a click in empty space (a pan that didn't really move) → drop focus, whole model back
+  if (wasPan && Math.hypot(wasPan.dx, wasPan.dy) < 4) clearGraphFocus();
 });
 svg.addEventListener("wheel", e => {
   e.preventDefault();
@@ -474,7 +479,7 @@ svg.addEventListener("wheel", e => {
 svg.addEventListener("dblclick", e => {   // double-click collapses (single-click expands)
   if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }   // cancel the pending expand
   const g = e.target.closest("g[data-uid]");
-  if (g && !g.dataset.uid.startsWith("att:") && g.dataset.uid !== HIVE_UID) collapseNode(g.dataset.uid);
+  if (g && !g.dataset.uid.startsWith("att:") && g.dataset.uid !== HIVE_UID) collapseAndFocusParent(g.dataset.uid);
 });
 
 /* ---------- theme + zoom & panel controls ---------- */
@@ -640,6 +645,22 @@ function _reach(start, block) {
     for (const v of (adj.get(u) || [])) if (!seen.has(v)) { seen.add(v); q.push(v); }
   }
   return seen;
+}
+function _parentUid(uid) {   // the node this one hangs off (first visible CONTAINS/RELATES parent)
+  for (const l of links) if (l.b === uid && l.a !== uid && nodes.has(l.a)) return l.a;
+  return null;
+}
+function clearGraphFocus() {   // deselect → render dims nothing, whole model visible again
+  selected = null;
+  document.getElementById("right").style.display = "none";
+}
+// Collapse a node's subtree and move the focus to its parent (so you walk back up the branch).
+function collapseAndFocusParent(uid) {
+  const parentUid = _parentUid(uid);   // capture before collapsing changes the graph
+  collapseNode(uid);
+  if (parentUid && parentUid !== HIVE_UID && nodes.has(parentUid)) selectNode(parentUid);
+  else if (parentUid === HIVE_UID) { selected = nodes.get(HIVE_UID) || null; document.getElementById("right").style.display = "none"; }
+  else clearGraphFocus();
 }
 function collapseNode(uid) {
   // descendants of uid via directed child links (a = parent)
