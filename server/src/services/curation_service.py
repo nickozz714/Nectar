@@ -190,9 +190,9 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
     candidates = graph_repo.homeless_candidates(session, account.org_uid)
     opened = []
     for n in candidates:
-        real_parents = [p for p in (n.get("topics") or []) if not _is_generic(p)]
-        if real_parents:
-            continue   # already filed under a real topic
+        if n.get("topics"):
+            continue   # any topic parent (incl. a generic 'Overig' bucket) counts as filed —
+                       # getting things OUT of Overig is a manual choice, not something to nag about
         emb = n.get("embedding")
         if not emb:
             continue
