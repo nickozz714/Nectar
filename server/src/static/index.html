@@ -331,7 +331,7 @@ function tick() {
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
     let dx = q.x-p.x, dy = q.y-p.y, d = Math.sqrt(dx*dx+dy*dy) || 1;
-    const f = (d-160)*0.02; dx /= d; dy /= d;   // longer rest length
+    const f = (d-205)*0.02; dx /= d; dy /= d;   // longer rest length → more air, less clutter
     p.vx += dx*f; p.vy += dy*f; q.vx -= dx*f; q.vy -= dy*f;
   }
   for (const n of ns) {
@@ -348,6 +348,16 @@ function render() {
   svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   const showEdgeLabels = vb.w < 1600;  // hide relation labels when zoomed far out
   const sf = sciFi, T = Date.now() / 1000;
+  // Soft focus: when a node is selected, dim everything that isn't it or a direct neighbour —
+  // enough to draw the eye, not so much that the rest disappears or becomes unclickable.
+  const focusUid = selected ? selected.uid : null;
+  let focusSet = null;
+  if (focusUid) {
+    focusSet = new Set([focusUid]);
+    for (const l of links) { if (l.a === focusUid) focusSet.add(l.b); if (l.b === focusUid) focusSet.add(l.a); }
+  }
+  const nodeOp = uid => (!focusSet || focusSet.has(uid)) ? 1 : 0.3;
+  const edgeLit = l => !focusSet || l.a === focusUid || l.b === focusUid;
   let out = `<defs><marker id="arw" viewBox="0 0 10 10" refX="19" refY="5"
     markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
     <path d="M0,0L10,5L0,10z" fill="${sf ? "#2f9fd8" : "#5c523f"}"/></marker>`;
@@ -362,14 +372,15 @@ function render() {
   for (const l of links) {
     const p = nodes.get(l.a), q = nodes.get(l.b);
     if (!typeVisible(p.type) || !typeVisible(q.type)) continue;
+    const lit = edgeLit(l);
     if (sf) {
       const dash = l.rel === "relates" ? "3 9" : "7 7";   // animated energy flowing along the link
-      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3aa8e0" stroke-width="1.5" stroke-dasharray="${dash}" stroke-dashoffset="${((-T * 22) % 14).toFixed(1)}" opacity="0.6" marker-end="url(#arw)"/>`;
+      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3aa8e0" stroke-width="1.5" stroke-dasharray="${dash}" stroke-dashoffset="${((-T * 22) % 14).toFixed(1)}" opacity="${lit ? 0.6 : 0.13}" marker-end="url(#arw)"/>`;
     } else {
       const dashed = l.rel === "relates" ? ` stroke-dasharray="5 4"` : "";   // RELATES = relaterend
-      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} marker-end="url(#arw)"/>`;
+      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} opacity="${lit ? 1 : 0.15}" marker-end="url(#arw)"/>`;
     }
-    if (showEdgeLabels) {
+    if (showEdgeLabels && lit) {
       const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
       out += `<text x="${mx}" y="${my - 4}" text-anchor="middle" font-size="9"
         fill="${sf ? "#6fb9dd" : "#8d8471"}" paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${l.rel}</text>`;
@@ -401,7 +412,7 @@ function render() {
     }
     const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="${sf ? "#dff4ff" : "#ded6c4"}"
         paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
-    out += `<g data-uid="${n.uid}" style="cursor:pointer">${shape}${extra}${label}</g>`;
+    out += `<g data-uid="${n.uid}" style="cursor:pointer" opacity="${nodeOp(n.uid)}">${shape}${extra}${label}</g>`;
   }
   // Subtle collapse affordance: a small "−" badge on the selected node when it has visible children.
   if (selected && selected.uid !== HIVE_UID && typeVisible(selected.type) && hasVisibleChildren(selected.uid)) {
@@ -597,7 +608,7 @@ function _parentAnchor(uid) {
 function placeRadially(parentUid, childUids) {
   const p = nodes.get(parentUid); if (!p || !childUids.length) return;
   const n = childUids.length;
-  const radius = Math.max(160, 60 + n * 22);
+  const radius = Math.max(230, 120 + n * 26);
   // outward direction = from the node's own parent (or the centre) toward this node
   const anchor = _parentAnchor(parentUid);
   let dx = p.x - anchor.x, dy = p.y - anchor.y, len = Math.hypot(dx, dy);
