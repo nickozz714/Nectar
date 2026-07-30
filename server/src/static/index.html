@@ -310,8 +310,7 @@ const svg = document.getElementById("svg");
 
 function addNode(n) {
   if (nodes.has(n.uid)) return nodes.get(n.uid);
-  const x = (Math.random()-.5)*400, y = (Math.random()-.5)*300;
-  const node = { ...n, x, y, vx:0, vy:0, hx:x, hy:y };   // hx/hy = fixed "home" it springs to
+  const node = { ...n, x: (Math.random()-.5)*400, y: (Math.random()-.5)*300, vx:0, vy:0 };
   nodes.set(n.uid, node); return node;
 }
 function addLink(a, b, rel) {
@@ -321,15 +320,25 @@ function addLink(a, b, rel) {
 }
 
 function tick() {
-  // Deterministic layout: every node springs to a FIXED home (branches fan outward, top-level
-  // topics sit on a ring). No pairwise repulsion or centre pull — so nothing drifts inward or
-  // re-rings around its parent; a branch keeps the shape it was expanded into.
-  for (const n of nodes.values()) {
+  const ns = [...nodes.values()];
+  for (let i = 0; i < ns.length; i++) for (let j = i+1; j < ns.length; j++) {
+    const p = ns[i], q = ns[j];
+    let dx = q.x-p.x, dy = q.y-p.y, d2 = dx*dx+dy*dy || 1, d = Math.sqrt(d2);
+    const f = Math.min(3600/d2, 12);   // stronger repulsion — more air between nodes
+    dx /= d; dy /= d;
+    p.vx -= dx*f; p.vy -= dy*f; q.vx += dx*f; q.vy += dy*f;
+  }
+  for (const l of links) {
+    const p = nodes.get(l.a), q = nodes.get(l.b);
+    let dx = q.x-p.x, dy = q.y-p.y, d = Math.sqrt(dx*dx+dy*dy) || 1;
+    const f = (d-205)*0.02; dx /= d; dy /= d;   // longer rest length → more air, less clutter
+    p.vx += dx*f; p.vy += dy*f; q.vx -= dx*f; q.vy -= dy*f;
+  }
+  for (const n of ns) {
     if (n.uid === HIVE_UID || n.uid === projectRoot) { n.x = 0; n.y = 0; n.vx = 0; n.vy = 0; continue; }  // pinned centre
     if (n === dragging) continue;
-    if (n.hx === undefined) { n.hx = n.x; n.hy = n.y; }
-    n.vx += (n.hx - n.x) * 0.09; n.vy += (n.hy - n.y) * 0.09;
-    n.vx *= 0.72; n.vy *= 0.72; n.x += n.vx; n.y += n.vy;
+    n.vx -= n.x*0.0015; n.vy -= n.y*0.0015;
+    n.vx *= 0.85; n.vy *= 0.85; n.x += n.vx; n.y += n.vy;
   }
   render();
   requestAnimationFrame(tick);
@@ -444,7 +453,7 @@ svg.addEventListener("pointerdown", e => {
 });
 svg.addEventListener("pointermove", e => {
   const scale = vb.w / svg.clientWidth;
-  if (dragging) { dragging.x += e.movementX*scale; dragging.y += e.movementY*scale; dragging.hx = dragging.x; dragging.hy = dragging.y; }
+  if (dragging) { dragging.x += e.movementX*scale; dragging.y += e.movementY*scale; }
   else if (panning) { panning.dx += e.movementX; panning.dy += e.movementY; vb.x -= e.movementX*scale; vb.y -= e.movementY*scale; }
 });
 let clickTimer = null;   // defer the single-click expand so a double-click can cancel it
@@ -615,8 +624,8 @@ function placeRadially(parentUid, childUids) {
   childUids.forEach((k, i) => {
     const node = nodes.get(k); if (!node) return;
     const ang = base + (i - (n - 1) / 2) * step;   // centred on the outward direction
-    node.x = node.hx = p.x + radius * Math.cos(ang);
-    node.y = node.hy = p.y + radius * Math.sin(ang);   // this fan position becomes its home
+    node.x = p.x + radius * Math.cos(ang);
+    node.y = p.y + radius * Math.sin(ang);
     node.vx = node.vy = 0;
   });
 }
@@ -841,16 +850,10 @@ async function loadTopics() {
   // One central HiveMind hub. Default view = ONLY the top-level topics hang off it;
   // sub-topics and member nodes stay hidden until you click a topic to expand it.
   addNode({ uid: HIVE_UID, title: "HiveMind", type: "hive" });
-  const tops = data.topics.filter(t => !hasParent.has(t.uid));
-  const R0 = Math.max(340, 90 + tops.length * 26);   // ring radius grows with the count
-  tops.forEach((t, i) => {
-    const node = addNode({ uid: t.uid, title: t.title, type: "topic" });
-    const ang = -Math.PI / 2 + (i / tops.length) * Math.PI * 2;   // evenly around the hub
-    node.x = node.hx = R0 * Math.cos(ang);
-    node.y = node.hy = R0 * Math.sin(ang);
-    node.vx = node.vy = 0;
+  for (const t of data.topics) if (!hasParent.has(t.uid)) {
+    addNode({ uid: t.uid, title: t.title, type: "topic" });
     addLink(HIVE_UID, t.uid, "bevat");
-  });
+  }
   document.getElementById("topicList").innerHTML = data.topics.map(t =>
     `<div class="item" onclick="jumpTo('${t.uid}')">${esc(t.title)} <span class="t">${t.children} items</span></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Nog geen topics — de eerste hive_remember maakt ze.</div>`;
