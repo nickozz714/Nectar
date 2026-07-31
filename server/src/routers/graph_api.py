@@ -219,6 +219,22 @@ def reclassify_sensitivity(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/reindex")
+def reindex(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Recompute contextual embeddings for this org's knowledge (org_admin). Run after
+    enabling contextual embeddings or switching the embedding model."""
+    from src.authentication.deps import assert_role
+    from src.services import reindex_service
+    try:
+        assert_role(account, "org_admin", "Reindexing embeddings")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    return reindex_service.reembed(session, account.org_uid)
+
+
 @router.post("/tidy-scan")
 def tidy_scan(
     account: AuthedAccount = Depends(require_account),

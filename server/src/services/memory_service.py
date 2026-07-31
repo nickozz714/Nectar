@@ -10,6 +10,8 @@ from src.repository import audit_repo, governance_repo, graph_repo, tenancy_repo
 from src.components.embeddings import embed
 
 # Deterministic write-gate: the server holds no judgement, only hard checks.
+
+
 _PII_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("email", re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")),
     ("phone", re.compile(r"(\+31|0031|\b06)[\s-]?\d{8,9}\b")),
