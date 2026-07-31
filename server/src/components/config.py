@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     # fraction of the top hit) so weak near-misses never eat the context window.
     RECALL_MAX_MEMORIES: int = 6
     RECALL_REL_FLOOR: float = 0.45
+    # A superseded memory (an older fact a newer one replaced) stays findable but is pushed
+    # down hard in ranking, so the current truth wins deterministically — never by asking the
+    # model to guess which is newest.
+    SUPERSEDE_PENALTY: float = 0.6
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

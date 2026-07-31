@@ -110,6 +110,30 @@ def remember(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+class SupersedeBody(BaseModel):
+    old_uid: str
+    new_uid: str
+
+
+@router.post("/supersede")
+def supersede(
+    body: SupersedeBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Record that `new_uid` supersedes `old_uid` (a newer fact replaces an older one). The old
+    node stays findable but recall ranks it far below the current truth. Maintainer role."""
+    from src.authentication.deps import assert_role
+    try:
+        assert_role(account, "maintainer", "Superseding a memory")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    result = graph_repo.supersede(session, account, body.old_uid, body.new_uid)
+    if not result:
+        raise HTTPException(status_code=404, detail="One of the nodes was not found or not visible")
+    return result
+
+
 class RelateBody(BaseModel):
     parent_uid: str
     child_uid: str

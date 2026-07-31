@@ -79,7 +79,9 @@ def search(
             + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0)
             + (settings.LEARNING_BOOST if node.get("type") == "learning" else 0.0)
             # tags count in search: a nudge when one of the node's tags appears in the query
-            + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0),
+            + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0)
+            # superseded facts stay findable but drop far below the current truth
+            - (settings.SUPERSEDE_PENALTY if node.get("superseded_by") else 0.0),
         )
         for node, sim in candidates
     ]

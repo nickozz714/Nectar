@@ -689,3 +689,22 @@ def fulltext_candidates(
         return [(node_to_dict(r["n"]), float(r["score"])) for r in result]
     except Exception:  # index still building / unavailable → sparse half simply contributes nothing
         return []
+
+
+def supersede(session: Session, account: AuthedAccount, old_uid: str, new_uid: str) -> dict:
+    """Mark `old_uid` as superseded by `new_uid`: create (new)-[:SUPERSEDES]->(old) and stamp
+    the old node. Non-destructive — the old fact stays findable (audit/history) but recall
+    ranks it far below the current one. Both nodes must be visible to the account."""
+    record = session.run(
+        f"""
+        MATCH (old:Knowledge {{uid: $old, org_uid: $org_uid}}), (new:Knowledge {{uid: $new, org_uid: $org_uid}})
+        WHERE {VISIBLE.replace('n.', 'old.')} AND {VISIBLE.replace('n.', 'new.')}
+        MERGE (new)-[:SUPERSEDES]->(old)
+        SET old.superseded_by = $new, old.superseded_at = timestamp()
+        RETURN old.uid AS old_uid, old.title AS old_title, new.uid AS new_uid, new.title AS new_title
+        """,
+        old=old_uid, new=new_uid, **_acc_params(account),
+    ).single()
+    if record is None:
+        return {}
+    return dict(record)
