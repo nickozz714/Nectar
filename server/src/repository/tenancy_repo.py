@@ -271,3 +271,11 @@ def get_consensus_threshold(session: Session, org_uid: str, default: int) -> int
 def set_consensus_threshold(session: Session, org_uid: str, n: int) -> int:
     session.run("MATCH (o:Org {uid: $u}) SET o.consensus_threshold = $n", u=org_uid, n=int(n))
     return int(n)
+
+
+def list_teams(session: Session, org_uid: str) -> list[dict]:
+    rows = session.run(
+        "MATCH (t:Team {org_uid: $o}) RETURN t.uid AS uid, t.name AS name ORDER BY t.name",
+        o=org_uid,
+    )
+    return [dict(r) for r in rows]

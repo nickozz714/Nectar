@@ -21,7 +21,7 @@ def create_invite(
 
 def list_members(session: Session, account: AuthedAccount) -> list[dict]:
     assert_role(account, "org_admin", "Listing members")
-    return [{"name": a["name"], "person": a["person"], "role": a["role"],
+    return [{"uid": a["uid"], "name": a["name"], "person": a["person"], "role": a["role"],
              "active_tokens": a["active"]}
             for a in tenancy_repo.list_accounts(session, account.org_uid)]
 

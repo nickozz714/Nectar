@@ -27,6 +27,15 @@ class ConsensusBody(BaseModel):
     threshold: int
 
 
+@router.get("/teams")
+def list_teams(
+    account: AuthedAccount = Depends(require_role("org_admin")),
+    session: Session = Depends(get_graph),
+):
+    """Teams in the org (name + uid) — for name-based pickers in the GUI."""
+    return tenancy_repo.list_teams(session, account.org_uid)
+
+
 @router.get("/swarm")
 def swarm_settings(
     account: AuthedAccount = Depends(require_account),

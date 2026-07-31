@@ -91,6 +91,13 @@
   .hevent .tgt { color: var(--dim); word-break: break-word; }
   .hevent a.tgt { color: var(--honey2); cursor: pointer; text-decoration: none; }
   .hevent a.tgt:hover { text-decoration: underline; }
+  /* searchable name-picker (never expose uids in the UI) */
+  .picker { border: 1px solid var(--line); border-radius: 8px; margin-top: 4px; max-height: 200px;
+    overflow-y: auto; background: var(--panel2); display: none; }
+  .picker.open { display: block; }
+  .pickitem { padding: 6px 10px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .pickitem:hover { background: var(--panel); }
+  .picked { font-size: 12px; color: var(--green); margin-top: 4px; }
   /* sci-fi graph theme (toggle) — only the canvas changes, so it reverts instantly */
   #center { transition: background .5s ease; }
   #center.scifi { background:
@@ -706,9 +713,12 @@ async function selectNode(uid) {
         <select id="lifecycleSel" style="width:auto;margin:0">
           ${["captured","validated","mature","deprecated"].map(s => `<option value="${s}"${(n.lifecycle||"captured")===s?" selected":""}>${s}</option>`).join("")}</select>
         <button class="ghost" onclick="setLifecycle('${uid}')">Status opslaan</button></div>
-        <div style="display:flex;gap:6px;margin-top:6px">
-          <input id="supersedeBy" placeholder="uid van nieuwere node" style="margin:0">
-          <button class="ghost" onclick="supersedeNode('${uid}')">Markeer als vervangen</button></div>
+        <div style="margin-top:6px">
+          <input id="supersedeInput" placeholder="zoek de nieuwere node op naam…" autocomplete="off"
+                 oninput="searchPicker(this.value,'supersedePick','supersedeInput')" style="margin:0">
+          <div id="supersedePick" class="picker"></div>
+          <div id="supersedePick_sel" class="picked"></div>
+          <button class="ghost" style="margin-top:6px" onclick="supersedeNode('${uid}')">Markeer als vervangen</button></div>
         <div class="t" style="color:var(--dim);margin-top:4px">Vervangen = het oude feit blijft vindbaar maar zakt in recall; het nieuwste wint.</div>` : ""}
     </div>` : ""}
     ${chips(n.parents, "Valt onder")}${chips(n.children, "Bevat")}${chips(n.related, "Gerelateerd")}
@@ -745,6 +755,32 @@ async function selectNode(uid) {
     <div id="lineage"></div>`;
   loadAttachments(uid);   // attachments work on any node — topics included
 }
+// Reusable searchable name-picker: type a name, pick from live search results. Never a uid.
+const PICK = {};            // pickId -> {uid, title}
+const PICK_RESULTS = {};    // pickId -> last search results
+async function searchPicker(q, pickId, inputId) {
+  const box = document.getElementById(pickId);
+  PICK[pickId] = null;
+  const done = document.getElementById(pickId + "_sel"); if (done) done.textContent = "";
+  if (!q || q.trim().length < 2) { box.classList.remove("open"); box.innerHTML = ""; return; }
+  try {
+    const rs = (await api("/graph/search?q=" + encodeURIComponent(q))).slice(0, 8);
+    PICK_RESULTS[pickId] = rs;
+    box.innerHTML = rs.length ? rs.map((r, i) =>
+      `<div class="pickitem" onclick="pickNode('${pickId}','${inputId}',${i})">
+         <span class="dot" style="background:${COLORS[r.type] || '#8d99ae'}"></span>
+         ${esc(r.title)} <span class="t" style="color:var(--dim)">· ${esc(r.type)}</span></div>`).join("")
+      : `<div class="pickitem" style="color:var(--dim)">niets gevonden</div>`;
+    box.classList.add("open");
+  } catch (e) {}
+}
+function pickNode(pickId, inputId, i) {
+  const r = PICK_RESULTS[pickId][i];
+  PICK[pickId] = { uid: r.uid, title: r.title };
+  document.getElementById(inputId).value = r.title;
+  const box = document.getElementById(pickId); box.classList.remove("open"); box.innerHTML = "";
+  const done = document.getElementById(pickId + "_sel"); if (done) done.textContent = "✓ gekozen: " + r.title;
+}
 const BLOOM_STYLE = { captured:"#8d99ae", validated:"#5aa9e6", mature:"#6cc551", deprecated:"#e4572e" };
 function bloomBadge(state) {
   const s = state || "captured";
@@ -757,9 +793,9 @@ async function setLifecycle(uid) {
   catch (e) { alert(e.message); }
 }
 async function supersedeNode(oldUid) {
-  const newUid = document.getElementById("supersedeBy").value.trim();
-  if (!newUid) { alert("Geef de uid van de nieuwere node"); return; }
-  try { await api("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: oldUid, new_uid: newUid }) }); await selectNode(oldUid); }
+  const sel = PICK["supersedePick"];
+  if (!sel) { alert("Zoek en kies eerst de nieuwere node op naam"); return; }
+  try { await api("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: oldUid, new_uid: sel.uid }) }); await selectNode(oldUid); }
   catch (e) { alert(e.message); }
 }
 async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
@@ -1111,13 +1147,13 @@ function renderBeheer() {
     <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
       <input id="accName" placeholder="accountnaam">
       <input id="accPerson" placeholder="persoon (de mens achter dit account)">
-      <input id="accTeam" placeholder="team uid (leeg = geen team)">
+      <select id="accTeam"><option value="">— geen team —</option></select>
       <select id="accRole"><option value="member">member — lezen &amp; schrijven</option>
         <option value="maintainer">maintainer — + onderhoud</option>
         <option value="org_admin">org_admin — + reviewen</option></select>
       <button class="action" onclick="createAccount()">Aanmaken</button><span id="accOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Nieuw token voor account</h3>
-      <input id="tokAcc" placeholder="account uid">
+      <select id="tokAcc"><option value="">— kies account —</option></select>
       <input id="tokLabel" placeholder="label (bv. laptop)">
       <button class="action" onclick="createToken()">Token maken</button>
       <pre id="tokOut" style="display:none"></pre></div>
@@ -1126,7 +1162,21 @@ function renderBeheer() {
       <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
       <div id="accList"></div></div>`
     : `<p style="color:var(--dim)">Accountbeheer is voorbehouden aan org_admins. Vraag een org_admin om een account of token.</p>`}`;
-  if (isAdmin) loadConsensus();
+  if (isAdmin) { loadConsensus(); loadBeheerOptions(); }
+}
+async function loadBeheerOptions() {
+  try {
+    const accs = await api("/manage/accounts");
+    const opts = accs.map(a => `<option value="${a.uid}">${esc(a.name)}${a.person ? " (" + esc(a.person) + ")" : ""}</option>`).join("");
+    const ta = document.getElementById("tokAcc");
+    if (ta) ta.innerHTML = `<option value="">— kies account —</option>` + opts;
+  } catch (e) {}
+  try {
+    const teams = await api("/manage/teams");
+    const at = document.getElementById("accTeam");
+    if (at) at.innerHTML = `<option value="">— geen team —</option>` +
+      teams.map(t => `<option value="${t.uid}">${esc(t.name)}</option>`).join("");
+  } catch (e) {}
 }
 async function loadSkills() {
   try {
