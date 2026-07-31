@@ -31,6 +31,8 @@ def recall(
     system = graph_repo.list_system(session, account)
     seen = {n["uid"] for n in system}
     results = [n for n in results if n["uid"] not in seen]
+    # Anti context-rot: inject only a few, highly-relevant memories, strongest at the ends.
+    results = search_service.cap_and_order(results)
 
     ready = governance_repo.ready_count(session, account)
     parts = []

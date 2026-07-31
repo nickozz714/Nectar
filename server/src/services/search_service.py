@@ -66,7 +66,10 @@ def search(
     if want_tags:
         scored = [(n, s) for n, s in scored if want_tags.issubset(set(n.get("tags") or []))]
     scored.sort(key=lambda pair: pair[1], reverse=True)
-    top = [node for node, _ in scored[:limit]]
+    top = []
+    for node, sc in scored[:limit]:
+        node["_score"] = sc   # carried so the recall hook can relevance-cap + position-order
+        top.append(node)
 
     breadcrumbs = graph_repo.parent_titles(session, [n["uid"] for n in top])
     for node in top:
@@ -127,3 +130,17 @@ def render_results(results: list[dict]) -> str:
         lines.append(f"- [{node.get('type')}] **{node.get('title')}** ({topics}) — {snippet} "
                      f"(uid: {node.get('uid')})")
     return "\n".join(lines)
+
+
+def cap_and_order(results: list[dict]) -> list[dict]:
+    """Anti context-rot for the recall hook: keep only a few, highly-relevant memories, then
+    order them so the strongest sit at the START and END of the injected block (mitigates
+    'lost in the middle'). Relies on the `_score` search() attaches."""
+    settings = get_settings()
+    if not results:
+        return results
+    top_score = results[0].get("_score", 0.0)
+    floor = top_score * settings.RECALL_REL_FLOOR if top_score > 0 else float("-inf")
+    kept = [r for r in results if r.get("_score", 0.0) >= floor][: settings.RECALL_MAX_MEMORIES]
+    # bracket the strongest at both ends: [r0, r2, r4, …, r5, r3, r1]
+    return kept[0::2] + kept[1::2][::-1]

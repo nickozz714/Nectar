@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     LEARNING_BOOST: float = 0.3
     # A node whose tag appears in the search query gets a ranking nudge (tags count in search).
     TAG_BOOST: float = 0.12
+    # Recall-hook injection budget (anti "context rot"): inject only a FEW, highly-relevant
+    # memories. Hard cap on how many, plus a relative floor (drop anything scoring below this
+    # fraction of the top hit) so weak near-misses never eat the context window.
+    RECALL_MAX_MEMORIES: int = 6
+    RECALL_REL_FLOOR: float = 0.45
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

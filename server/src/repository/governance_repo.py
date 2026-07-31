@@ -43,8 +43,9 @@ def suggest(
         MERGE (a)-[v:VOTED {{model: $model_name}}]->(c)
         ON CREATE SET v.rationale = $rationale, v.at = timestamp()
         WITH c
-        MATCH ()-[v:VOTED]->(c)
-        WITH c, count(v) AS votes
+        MATCH (voter:Account)-[v:VOTED]->(c)
+        WITH c, count(DISTINCT voter) AS votes   // correlation-aware: one account = one vote,
+                                                 // however many models/CLIs it runs
         SET c.status = CASE
             WHEN c.status = 'open' AND votes >= $threshold THEN
                 CASE WHEN c.type = 'scope_widening' THEN 'awaiting_human' ELSE 'ready' END
@@ -69,8 +70,8 @@ def open_chores(session: Session, account: AuthedAccount, limit: int = 5) -> lis
         f"""
         MATCH (c:Pollen {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
         WHERE c.status IN ['open', 'ready'] AND {VISIBLE}
-        OPTIONAL MATCH ()-[v:VOTED]->(c)
-        WITH c, n, count(v) AS votes
+        OPTIONAL MATCH (voter:Account)-[v:VOTED]->(c)
+        WITH c, n, count(DISTINCT voter) AS votes
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
                votes, n.uid AS node_uid, n.title AS node_title
         ORDER BY CASE c.status WHEN 'ready' THEN 0 ELSE 1 END, c.created
