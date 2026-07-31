@@ -699,6 +699,18 @@ async function selectNode(uid) {
     <div class="section"><h3>${esc(n.type)} · scope ${esc(n.scope)}</h3>
       <strong style="font-size:16px">${esc(n.title)}</strong></div>
     ${n.content ? `<pre>${esc(n.content)}</pre>` : ""}
+    ${n.type !== "topic" ? `<div class="section"><h3>Status (Bloom)</h3>
+      <div>${bloomBadge(n.lifecycle)}
+        ${n.superseded_by ? `<a href="#" class="chip" style="border-color:var(--red);color:var(--red)" onclick='jumpTo("${n.superseded_by}");return false'>⤳ vervangen — toon nieuwste</a>` : ""}</div>
+      ${ME.can_maintain ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <select id="lifecycleSel" style="width:auto;margin:0">
+          ${["captured","validated","mature","deprecated"].map(s => `<option value="${s}"${(n.lifecycle||"captured")===s?" selected":""}>${s}</option>`).join("")}</select>
+        <button class="ghost" onclick="setLifecycle('${uid}')">Status opslaan</button></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input id="supersedeBy" placeholder="uid van nieuwere node" style="margin:0">
+          <button class="ghost" onclick="supersedeNode('${uid}')">Markeer als vervangen</button></div>
+        <div class="t" style="color:var(--dim);margin-top:4px">Vervangen = het oude feit blijft vindbaar maar zakt in recall; het nieuwste wint.</div>` : ""}
+    </div>` : ""}
     ${chips(n.parents, "Valt onder")}${chips(n.children, "Bevat")}${chips(n.related, "Gerelateerd")}
     ${(n.files || []).map(f => `<div class="section"><h3>📄 ${esc(f.path)}</h3><pre>${esc(f.content)}</pre></div>`).join("")}
     <div class="section"><h3>Bijlagen</h3>
@@ -732,6 +744,23 @@ async function selectNode(uid) {
     <div id="suggestBox"></div>
     <div id="lineage"></div>`;
   loadAttachments(uid);   // attachments work on any node — topics included
+}
+const BLOOM_STYLE = { captured:"#8d99ae", validated:"#5aa9e6", mature:"#6cc551", deprecated:"#e4572e" };
+function bloomBadge(state) {
+  const s = state || "captured";
+  const c = BLOOM_STYLE[s] || "#8d99ae";
+  return `<span class="badge" style="background:${c};color:#0d1117">${s}</span>`;
+}
+async function setLifecycle(uid) {
+  const state = document.getElementById("lifecycleSel").value;
+  try { await api("/graph/lifecycle", { method: "POST", body: JSON.stringify({ uid, state }) }); await selectNode(uid); }
+  catch (e) { alert(e.message); }
+}
+async function supersedeNode(oldUid) {
+  const newUid = document.getElementById("supersedeBy").value.trim();
+  if (!newUid) { alert("Geef de uid van de nieuwere node"); return; }
+  try { await api("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: oldUid, new_uid: newUid }) }); await selectNode(oldUid); }
+  catch (e) { alert(e.message); }
 }
 async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
 async function loadAttachments(uid) {
