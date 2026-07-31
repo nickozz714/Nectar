@@ -1,6 +1,6 @@
-# HiveMind 🐝
+# Nectar 🐝
 
-**The shared mind of an organization.** Claude models are the **bees**; HiveMind is the
+**The shared mind of an organization.** Claude models are the **bees**; Nectar is the
 **hive** they collectively maintain — one shared, scoped, self-curating memory with skills,
 workflows and an account-bound secrets vault, exposed over MCP. Every Claude Code CLI logs
 in with an account token and gets the org's knowledge, ranked toward whatever project it is

@@ -1,4 +1,4 @@
-# HiveMind — Installation & first use
+# Nectar — Installation & first use
 
 From zero to a working, connected hive. Assumes Docker and a recent Claude Code CLI.
 
@@ -7,8 +7,8 @@ From zero to a working, connected hive. Assumes Docker and a recent Claude Code 
 ## 1. Run the hive (one container, zero config)
 
 ```bash
-git clone https://github.com/nickozz714/HiveMind.git
-cd HiveMind
+git clone https://github.com/nickozz714/Nectar.git
+cd Nectar
 docker compose up -d --build           # first build bakes in the embedding model (a few min)
 curl -s localhost:8642/health          # -> {"status":"ok"}
 ```
@@ -51,7 +51,7 @@ also in the GUI **Beheer** tab. Teams are optional (`/admin/teams`, needs the op
 
 ## 3. Connect a project (opt-in, per directory)
 
-HiveMind does **nothing** until a project opts in — so other projects and ad-hoc Claude
+Nectar does **nothing** until a project opts in — so other projects and ad-hoc Claude
 sessions stay hive-free.
 
 **Easiest: the self-install kit** (`hivemind-install.zip` from the repo root). Drop it in
@@ -78,11 +78,11 @@ export HIVE_URL=http://localhost:8642
 cd ~/projects/mycompany-dataplatform
 
 # register a user and store the token in one go (first user needs no invite):
-/path/to/HiveMind/plugin/scripts/hive-init "Data Modelling,MyCompany" \
+/path/to/Nectar/plugin/scripts/hive-init "Data Modelling,MyCompany" \
     --register "The Nectar authors" you@example.com [invite-code-if-not-first]
 
 # ...or, if you already have a token:
-#   HIVE_TOKEN=<token> /path/to/HiveMind/plugin/scripts/hive-init "Data Modelling,MyCompany"
+#   HIVE_TOKEN=<token> /path/to/Nectar/plugin/scripts/hive-init "Data Modelling,MyCompany"
 ```
 
 `hive-init` writes `HIVE_ENABLED`, your anchor topics and the token into this project's
@@ -94,7 +94,7 @@ cd ~/projects/mycompany-dataplatform
   `hive_suggest`, `hive_chores`, `skill_put`, `workflow_put`, `skill_list/get`,
   `topic_list`, `hive_resolve_chore`;
 - can fetch secrets into env without leaking them into chat:
-  `export MY_KEY=$(/path/to/HiveMind/plugin/scripts/hive-secret MY_KEY)`.
+  `export MY_KEY=$(/path/to/Nectar/plugin/scripts/hive-secret MY_KEY)`.
 
 That's it — start Claude in that directory and the hive is live.
 

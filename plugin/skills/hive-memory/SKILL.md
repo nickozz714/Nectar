@@ -1,9 +1,9 @@
 ---
 name: hive-memory
-description: How to work with the HiveMind — writing good memories, relating and promoting knowledge, and maintaining the hive as a bee. Use whenever you learn something reusable, apply hive knowledge in a new context, or see a ready chore.
+description: How to work with the Nectar — writing good memories, relating and promoting knowledge, and maintaining the hive as a bee. Use whenever you learn something reusable, apply hive knowledge in a new context, or see a ready chore.
 ---
 
-# Working with the HiveMind
+# Working with the Nectar
 
 Relevant hive memories are injected automatically on every prompt (the recall hook) —
 you never need to decide *whether* to consult the hive. This skill covers the *how* of
@@ -73,7 +73,7 @@ The three layers update differently — know which is which:
   HIVE_TOKEN, HIVE_URL, Authorization, the MCP url; never overwrite or print them). It does
   NOT manage CLAUDE.md. Report what you added/updated/left unchanged for both parts.
 
-When the user says "update HiveMind" / "haal de nieuwste versie", call `hive_update` and
+When the user says "update Nectar" / "haal de nieuwste versie", call `hive_update` and
 apply the manifest as above.
 
 ## Staying on course in long sessions (`focus_set` / `focus_advance`)

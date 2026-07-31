@@ -7,7 +7,7 @@ from neo4j import Session
 
 from src.repository import graph_repo, tenancy_repo
 
-# System-level content (the always-injected "how to work with HiveMind" instructions) is
+# System-level content (the always-injected "how to work with Nectar" instructions) is
 # maintained IN THE REPO, not by hand in the hive. This file is the single source of truth;
 # on startup the seed upserts it as a SYSTEM memory in every org. Edit the .md + redeploy.
 _SEED_KEY = "hive-usage-instructions"

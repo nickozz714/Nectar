@@ -1,6 +1,6 @@
-# HiveMind op Azure Container Apps
+# Nectar op Azure Container Apps
 
-Ja, dit kan. HiveMind is één image (Neo4j + API + lokale embeddings), volledig
+Ja, dit kan. Nectar is één image (Neo4j + API + lokale embeddings), volledig
 env-gestuurd, met alle state op één volume (`/data`) — precies wat Azure Container Apps
 (ACA) nodig heeft. Bonus: ACA geeft een echte **HTTPS-hostname**, wat meteen twee dingen
 oplost:

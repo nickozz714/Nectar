@@ -1,4 +1,4 @@
-# HiveMind plugin for Claude Code
+# Nectar plugin for Claude Code
 
 One package that turns any Claude Code CLI into a bee:
 

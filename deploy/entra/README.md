@@ -1,23 +1,23 @@
-# Microsoft Entra (Azure AD) SSO voor HiveMind
+# Microsoft Entra (Azure AD) SSO voor Nectar
 
-Laat mensen inloggen met hun **Microsoft organisatie-account**. Optioneel — HiveMind werkt
+Laat mensen inloggen met hun **Microsoft organisatie-account**. Optioneel — Nectar werkt
 zonder; is het niet geconfigureerd, dan is de Microsoft-knop simpelweg verborgen.
 
 ## Hoe het werkt
 - GUI toont "Inloggen met Microsoft" → `/auth/entra/login` → Microsoft-login →
-  `/auth/entra/callback` → HiveMind wisselt de code in, leest **e-mail/naam** uit het
+  `/auth/entra/callback` → Nectar wisselt de code in, leest **e-mail/naam** uit het
   id-token, en logt de gebruiker in — **het Microsoft-account IS de identiteit**:
   - bestaat er al een account met die e-mail → inloggen (token, 30 dagen);
   - is de hive nog leeg (first run) → die persoon wordt org_admin;
   - anders → **automatisch een member-account aangemaakt** (auto-provisioning). Omdat je
     app single-tenant is, is de Microsoft-tenant de toegangsgrens: alleen jouw org-leden
     kunnen inloggen, en iedereen die inlogt krijgt vanzelf een account.
-- Het HiveMind-token gaat via de URL-fragment terug naar de GUI (nooit server-side gelogd).
+- Het Nectar-token gaat via de URL-fragment terug naar de GUI (nooit server-side gelogd).
 - Auto-provisioning uitzetten (invite-only-met-SSO)? Zet `ENTRA_AUTO_PROVISION=false`.
 
 ## 1. App-registratie in Entra
 In het Azure-portaal → **Microsoft Entra ID → App registrations → New registration**:
-- Naam: `HiveMind`.
+- Naam: `Nectar`.
 - Supported account types: *Accounts in this organizational directory only* (single tenant)
   — of multi-tenant als je dat wilt.
 - Redirect URI (type **Web**): `https://<jouw-host>/auth/entra/callback`
@@ -28,7 +28,7 @@ In het Azure-portaal → **Microsoft Entra ID → App registrations → New regi
 Scopes: de standaard `User.Read` (delegated) volstaat — geen admin-consent nodig voor
 alleen e-mail/naam.
 
-## 2. HiveMind configureren
+## 2. Nectar configureren
 Zet deze env-vars (server-`.env` of ACA-secrets):
 ```ini
 ENTRA_TENANT_ID=<Directory (tenant) ID>
@@ -49,6 +49,6 @@ Microsoft-knop verschijnt in de GUI.
   account hebben (admin-API/`/manage`/Beheer-tab); onbekende e-mails worden geweigerd.
 
 ## Noten
-- De redirect-URI in Entra moet **exact** matchen met wat HiveMind gebruikt (schema, host,
+- De redirect-URI in Entra moet **exact** matchen met wat Nectar gebruikt (schema, host,
   pad). Achter een reverse proxy: zet `PUBLIC_BASE_URL` op de publieke URL.
 - Wachtwoord-login en token-login blijven gewoon werken naast SSO.

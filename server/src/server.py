@@ -30,7 +30,7 @@ mcp_app = mcp.http_app(path="/mcp")
 async def lifespan(app: FastAPI):
     configure_logging()
     settings = get_settings()
-    _log.info("HiveMind starting", extra={"path": f"env={settings.ENV}"})
+    _log.info("Nectar starting", extra={"path": f"env={settings.ENV}"})
     if not settings.is_dev and settings.NEO4J_PASSWORD in ("", "change-me-neo4j", "test", "testpassword"):
         _log.warning("NEO4J_PASSWORD is a weak/default value in a non-dev environment — set a strong one")
     init_db()
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     close_driver()
 
 
-app = FastAPI(title="HiveMind", lifespan=lifespan)
+app = FastAPI(title="Nectar", lifespan=lifespan)
 
 
 @app.middleware("http")

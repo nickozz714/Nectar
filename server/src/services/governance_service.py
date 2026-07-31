@@ -132,7 +132,7 @@ def admin_delete(session: Session, account: AuthedAccount, uid: str) -> dict:
 
 def set_system(session: Session, account: AuthedAccount, uid: str, on: bool) -> dict:
     """org_admin: mark a node as a SYSTEM memory (always injected into recall) or unmark it.
-    Use for standing instructions like 'how to work with the HiveMind'."""
+    Use for standing instructions like 'how to work with the Nectar'."""
     assert_role(account, "org_admin", "Setting system memories")
     node = graph_repo.get_node(session, account, uid)
     if node is None:

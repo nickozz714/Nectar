@@ -1,4 +1,4 @@
-# Hoe werk je met de HiveMind — werkinstructies voor elke aangesloten Claude
+# Hoe werk je met de Nectar — werkinstructies voor elke aangesloten Claude
 
 <!--
   DIT IS DE BRON VAN WAARHEID voor de systeem-memory die bij ELKE prompt wordt ingespoten.
@@ -7,7 +7,7 @@
   De H1 hierboven is de titel; alles onder deze comment is de inhoud.
 -->
 
-De HiveMind is het gedeelde brein van de organisatie: memories, processen, besluiten,
+De Nectar is het gedeelde brein van de organisatie: memories, processen, besluiten,
 conventies, skills en workflows, plus per-account secrets. Relevante hive-kennis wordt
 automatisch bij elke prompt ingespoten (de recall-hook) — je hoeft nooit te beslissen *of*
 je de hive raadpleegt.
@@ -76,7 +76,7 @@ Haal secrets alleen via `hive-secret` in een env-var (`export X=$(hive-secret X)
 via de chat, nooit printen.
 
 ## Installatiemodel: globaal + per project
-HiveMind installeer je **één keer globaal per machine** (`hive-install-global.sh`): de
+Nectar installeer je **één keer globaal per machine** (`hive-install-global.sh`): de
 helper-scripts komen in `~/.hivemind/scripts/`, de connectie in `~/.hivemind/config.json`, en
 op macOS wordt de localhost-tunnel **één keer** opgezet. Daarna zet je het **per project aan
 waar relevant** met `~/.hivemind/scripts/hive-enable.sh [anchors]` (wiret `.claude/settings.json`
@@ -89,7 +89,7 @@ De client kent drie lagen die elk anders updaten:
 - **Tools/endpoints** worden live bij een server-redeploy; nieuwe MCP-tools bij reconnect.
 - **Globale scripts** (in `~/.hivemind/scripts/`) zijn gedeeld door alle aangezette projecten.
 
-**Bijwerken** — vraagt de gebruiker "update HiveMind" / "haal de nieuwste versie": roep de
+**Bijwerken** — vraagt de gebruiker "update Nectar" / "haal de nieuwste versie": roep de
 MCP-tool **`hive_update`** aan. Het manifest heeft twee delen en `apply_instructions`:
 - `files` — de helper-scripts. **Schrijf de inhoud NIET zelf uit** (dat is onnodig en triggert
   de veiligheids-classifier). Draai gewoon `bash ~/.hivemind/scripts/hive-update.sh`; bestaat

@@ -36,7 +36,7 @@ def login_url(redirect_uri: str) -> str:
 
 
 def complete(session: Session, code: str, state: str, redirect_uri: str) -> dict:
-    """Validate the Entra auth-code callback, map the user to a HiveMind account by email,
+    """Validate the Entra auth-code callback, map the user to a Nectar account by email,
     and mint a login token. First Entra user of an empty hive becomes org_admin; others
     must already have an account with that email (an admin created/invited them)."""
     if state not in _states:

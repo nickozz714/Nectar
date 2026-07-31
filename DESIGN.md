@@ -1,13 +1,13 @@
-# HiveMind — Design
+# Nectar — Design
 
-> The shared mind of an organization. Claude models are the **bees**; HiveMind is the **hive**
+> The shared mind of an organization. Claude models are the **bees**; Nectar is the **hive**
 > they collectively maintain. At the same time it is a *hive mind* in the Stranger Things
 > sense: one shared memory all connected minds draw from.
 
 ## 1. Vision
 
 Organizations do a lot of the same work but have no way to share, frame and organize
-**work processes, experiences (memories) and skills** org-wide. HiveMind is a standalone
+**work processes, experiences (memories) and skills** org-wide. Nectar is a standalone
 product: a shared "company mind" that a Claude Code CLI (or any client) logs into with an
 **account token**. The token gives scoped access to the org's memories, processes, skills
 and account-bound secrets. It must genuinely *work* as a memory — like a human brain, not

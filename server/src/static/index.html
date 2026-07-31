@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HiveMind</title>
+<title>Nectar</title>
 <style>
   :root {
     --bg: #14120e; --panel: #1e1b15; --panel2: #26221a; --line: #3a342a;
@@ -104,7 +104,7 @@
 <body>
 <div id="overlay">
   <div class="box">
-    <h2>🐝 HiveMind</h2>
+    <h2>🐝 Nectar</h2>
 
     <div id="wizard" style="display:none">
       <p style="color:var(--dim);font-size:13px;margin-bottom:12px">Welkom! De hive is nog leeg.
@@ -142,11 +142,11 @@
 </div>
 
 <header>
-  <h1>🐝 HiveMind</h1>
+  <h1>🐝 Nectar</h1>
   <div class="tabs">
     <button data-tab="mind" class="active" onclick="showTab('mind')">Mind</button>
     <button data-tab="focus" onclick="showTab('focus')">Focus</button>
-    <button data-tab="chores" onclick="showTab('chores')">Chores <span id="choreBadge"></span></button>
+    <button data-tab="chores" onclick="showTab('chores')">Pollen <span id="choreBadge"></span></button>
     <button data-tab="review" id="reviewTab" style="display:none" onclick="showTab('review')">Review</button>
     <button data-tab="governance" onclick="showTab('governance')">Governance</button>
     <button data-tab="beheer" onclick="showTab('beheer')">Beheer</button>
@@ -845,9 +845,9 @@ async function loadTopics() {
   const hasParent = new Set(data.edges.map(e => e.child));
   PROJECTS = data.topics.filter(t => !hasParent.has(t.uid)).sort((a, b) => a.title.localeCompare(b.title, "nl"));
   renderProjectFilter();
-  // One central HiveMind hub. Default view = ONLY the top-level topics hang off it;
+  // One central Nectar hub. Default view = ONLY the top-level topics hang off it;
   // sub-topics and member nodes stay hidden until you click a topic to expand it.
-  addNode({ uid: HIVE_UID, title: "HiveMind", type: "hive" });
+  addNode({ uid: HIVE_UID, title: "Nectar", type: "hive" });
   for (const t of data.topics) if (!hasParent.has(t.uid)) {
     addNode({ uid: t.uid, title: t.title, type: "topic" });
     addLink(HIVE_UID, t.uid, "bevat");
@@ -1008,7 +1008,7 @@ async function loadChores() {
       <div class="meta">${esc(c.type)} · <span style="color:${c.status === "ready" ? "var(--honey)" : "var(--dim)"}">${esc(c.status)}</span> · ${c.votes} stem(men)</div>
       <div><strong>${esc(c.node_title || "")}</strong></div>
       ${c.payload ? `<pre>${esc(c.payload)}</pre>` : ""}${btns(c)}</div>`).join("")
-    || `<p style="color:var(--dim)">Geen open klussen — de hive is bij. 🐝</p>`;
+    || `<p style="color:var(--dim)">Geen open Pollen — Nectar is bij.</p>`;
   const resolved = data.resolved || [];
   const doneCards = resolved.map(c => {
     const ok = c.status === "resolved";
@@ -1017,7 +1017,7 @@ async function loadChores() {
       <div><strong>${esc(c.node_title || "")}</strong></div>
       ${c.resolution ? `<div class="t" style="margin-top:4px">${esc(c.resolution)}</div>` : ""}</div>`;
   }).join("") || `<p style="color:var(--dim)">Nog niets afgehandeld.</p>`;
-  page.innerHTML = `<h2 style="margin-bottom:12px">Zwerm-klussen <span class="badge">${data.ready} ready</span></h2>
+  page.innerHTML = `<h2 style="margin-bottom:12px">Pollen <span class="t" style="font-weight:400;color:var(--dim)">— taken die de Swarm de Hive mee versterkt</span> <span class="badge">${data.ready} ready</span></h2>
     <h3 style="margin:4px 0 8px;color:var(--dim)">Open / actief</h3>${openCards}
     <h3 style="margin:22px 0 8px;color:var(--dim)">Afgehandeld <span class="t">(${resolved.length})</span></h3>${doneCards}`;
 }
@@ -1055,7 +1055,7 @@ function renderBeheer() {
   page.innerHTML = `
     <h2 style="margin-bottom:6px">Beheer</h2>
     <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert HiveMind zelf in een project.</p>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert Nectar zelf in een project.</p>
       <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
     <div class="card"><h3 style="margin-bottom:8px">Skills in de hive</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Deel-skills die je in een project kunt laden. In een hive-verbonden Claude: vraag <em>"laad skill X"</em>, of draai het commando.</p>
@@ -1065,7 +1065,7 @@ function renderBeheer() {
     <div class="card"><h3 style="margin-bottom:8px">Onderhoud</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
-      <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) chores die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de chores.</p>
+      <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
       <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Back-up &amp; restore</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Volledige export van de hele hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <em>samenvoegen</em> (upsert) of <em>vervangen</em> (hive eerst leegmaken = echte restore).</p>
@@ -1126,7 +1126,7 @@ async function tidyScan() {
   out.textContent = " bezig…";
   try {
     const r = await api("/graph/tidy-scan", { method: "POST" });
-    out.textContent = ` ✓ ${r.scanned} bekeken, ${r.homeless} chore(s) aangemaakt — zie de Chores-tab`;
+    out.textContent = ` ✓ ${r.scanned} bekeken, ${r.homeless} chore(s) aangemaakt — zie de Pollen-tab`;
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function exportBackup() {

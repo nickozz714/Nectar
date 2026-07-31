@@ -1,6 +1,6 @@
-# HiveMind — uitrol & authenticatie-configuratie
+# Nectar — uitrol & authenticatie-configuratie
 
-Hoe je HiveMind uitrolt en daarbij bepaalt *hoe* mensen inloggen. Kern: **de image is
+Hoe je Nectar uitrolt en daarbij bepaalt *hoe* mensen inloggen. Kern: **de image is
 identiek voor iedereen; authenticatie is puur configuratie bij uitrol.** De Entra-koppeling
 zit dus NIET in het image, maar geef je (of laat je weg) via environment/secrets op het
 moment dat je de app deployt.
@@ -72,5 +72,5 @@ Wil de organisatie Microsoft-login?
 ## Samengevat
 De image kent geen enkele klant-specifieke koppeling. Auth is een **uitrol-keuze**: laat de
 `ENTRA_*` weg voor een zelfstandige hive (wizard/wachtwoord/token), of geef ze mee om
-Microsoft-SSO aan te zetten. Zo rol je dezelfde HiveMind uit voor een organisatie mét of
+Microsoft-SSO aan te zetten. Zo rol je dezelfde Nectar uit voor een organisatie mét of
 zónder Entra, zonder de app te wijzigen.

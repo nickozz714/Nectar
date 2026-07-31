@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     ADMIN_TOKEN: str = ""  # operator break-glass; when empty the /admin API is disabled
     SECRET_MASTER_KEY: str = ""  # Fernet key; auto-generated + persisted when empty
-    HIVE_ORG_NAME: str = "HiveMind"  # name of the org created by the first self-registration
+    HIVE_ORG_NAME: str = "Nectar"  # name of the org created by the first self-registration
 
     # Microsoft Entra (Azure AD) SSO — optional. Configure an app registration and set these.
     ENTRA_TENANT_ID: str = ""

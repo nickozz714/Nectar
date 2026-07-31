@@ -1,4 +1,4 @@
-# HiveMind — installeren & aanzetten (instructies voor Claude)
+# Nectar — installeren & aanzetten (instructies voor Claude)
 
 Je hebt dit install-pakket (`hivemind-install.zip`) gekregen. Het model is **één keer
 globaal installeren per machine**, daarna **per project aanzetten waar relevant**. In een
@@ -52,12 +52,12 @@ en `.mcp.json` (de `hivemind` MCP-server, alleen hier). Geen tunnel-gedoe. Start
 
 ## Verifiëren
 - `claude mcp list` → `hivemind ... ✔` (op macOS pas na de tunnel + localhost-URL).
-- Of stel een projectspecifieke vraag die alleen uit de HiveMind te beantwoorden is.
+- Of stel een projectspecifieke vraag die alleen uit de Nectar te beantwoorden is.
 
 ## Belangrijk
 - **Token niet committen.** In een git-repo: `.claude/settings.json` en `.mcp.json` in
   `.gitignore` (of `settings.local.json`).
-- **In een aangezet project: geen lokale markdown-memories.** Schrijf memories in de HiveMind
+- **In een aangezet project: geen lokale markdown-memories.** Schrijf memories in de Nectar
   via `hive_remember` (type `decision` voor keuzes), skills via `skill_put`.
 - **Bijwerken** gaat via de MCP-tool `hive_update` (of `~/.hivemind/scripts/hive-update.sh`) —
   die ververst de globale scripts; je hoeft niet opnieuw te installeren.

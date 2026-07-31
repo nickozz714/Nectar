@@ -1,4 +1,4 @@
-# HiveMind — TODO
+# Nectar — TODO
 
 Status: v0.1 werkt end-to-end (27/27 smoke-checks, alles-in-één container, lokale
 embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid.

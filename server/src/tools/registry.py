@@ -21,7 +21,7 @@ from src.services import (
 )
 
 mcp = FastMCP(
-    "HiveMind",
+    "Nectar",
     instructions=(
         "The shared mind of your organization. Consult it before starting work, write "
         "back reusable knowledge, and — when a chore is ready — help maintain the hive."
@@ -277,7 +277,7 @@ def hive_set_password(password: str) -> dict:
 def hive_set_system(node_uid: str, on: bool = True) -> dict:
     """(org_admin) Mark a node as a SYSTEM memory — it is then injected into EVERY recall
     on every prompt for every connected client, regardless of relevance. Use it for
-    standing instructions (e.g. 'how to work with the HiveMind') so guidance is always
+    standing instructions (e.g. 'how to work with the Nectar') so guidance is always
     present and centrally updatable (edit the node → all clients get it next prompt).
     Set on=False to unpin."""
     with _authed() as (session, account):
@@ -446,7 +446,7 @@ def skill_get(skill_uid: str) -> dict:
 
 @mcp.tool
 def hive_update() -> dict:
-    """Update this project's HiveMind client integration to the latest maintained version.
+    """Update this project's Nectar client integration to the latest maintained version.
     Returns a self-describing manifest with `apply_instructions` and two parts:
     - `files`: the helper scripts (each with target `path`, `sha256`, and a `fetch` URL) —
       but you FETCH them, you do NOT write their bodies. Simplest: run
@@ -459,6 +459,6 @@ def hive_update() -> dict:
       HIVE_URL, Authorization, the MCP url); never overwrite or print them.
     Does not manage CLAUDE.md (instructions arrive via the recall system memory). After
     applying, report what you added/updated/left unchanged for both files and config.
-    Use this whenever the user asks to update/refresh HiveMind — no local script needed."""
+    Use this whenever the user asks to update/refresh Nectar — no local script needed."""
     with _authed() as (session, account):
         return kit_service.build_manifest()

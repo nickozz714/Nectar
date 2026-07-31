@@ -29,7 +29,7 @@ _PURPOSE = {
     "hive-skill-install.sh": "Load a shared skill from the hive into .claude/skills/ over HTTP.",
     "hive-update.sh": "Shell fallback for this same update (re-fetches the install package).",
     "hive-secret": "Fetch a vault secret into an env var (never prints values).",
-    "hive-enable.sh": "Turn HiveMind on for a project (wires .claude/settings.json + .mcp.json).",
+    "hive-enable.sh": "Turn Nectar on for a project (wires .claude/settings.json + .mcp.json).",
     "hive-attach.sh": "Attach a local artifact to a node, or fetch one (add/list/get).",
 }
 
@@ -69,7 +69,7 @@ _BOOTSTRAP = (
 )
 
 _HOW = (
-    "HiveMind installs GLOBALLY once (~/.hivemind/scripts/ + the macOS tunnel); each project "
+    "Nectar installs GLOBALLY once (~/.hivemind/scripts/ + the macOS tunnel); each project "
     "just opts in. hive_update covers the client-side integration: the global helper scripts "
     "(`files`, under ~/.hivemind/scripts/ — shared by every hive-enabled project) AND this "
     "project's Claude wiring (`config`: the recall hook in .claude/settings.json and the MCP "
@@ -144,7 +144,7 @@ def build_manifest() -> dict:
         {
             "path": f"{_SCRIPTS_DIR}/{name}",
             "name": name,
-            "purpose": _PURPOSE.get(name, "HiveMind helper script."),
+            "purpose": _PURPOSE.get(name, "Nectar helper script."),
             "mode": "0755",
             "sha256": hashlib.sha256(body).hexdigest(),
             "fetch": f"/kit/file/{name}",
