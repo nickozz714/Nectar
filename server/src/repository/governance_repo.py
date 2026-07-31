@@ -8,7 +8,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository.graph_repo import VISIBLE, _acc_params
 
-CHORE_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening"}
+POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening"}
 
 
 def suggestion_key(chore_type: str, node_uid: str, payload: dict) -> str:
@@ -34,7 +34,7 @@ def suggest(
         f"""
         MATCH (n:Knowledge {{uid: $node_uid, org_uid: $org_uid}})
         WHERE {VISIBLE}
-        MERGE (c:Chore {{org_uid: $org_uid, suggestion_key: $key}})
+        MERGE (c:Pollen {{org_uid: $org_uid, suggestion_key: $key}})
         ON CREATE SET c.uid = randomUUID(), c.type = $chore_type, c.status = 'open',
                       c.payload = $payload_json, c.created = timestamp()
         MERGE (c)-[:ABOUT]->(n)
@@ -67,7 +67,7 @@ def open_chores(session: Session, account: AuthedAccount, limit: int = 5) -> lis
     """Chores about nodes visible to this account, actionable ('ready') first."""
     result = session.run(
         f"""
-        MATCH (c:Chore {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
+        MATCH (c:Pollen {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
         WHERE c.status IN ['open', 'ready'] AND {VISIBLE}
         OPTIONAL MATCH ()-[v:VOTED]->(c)
         WITH c, n, count(v) AS votes
@@ -87,7 +87,7 @@ def resolved_chores(session: Session, account: AuthedAccount, limit: int = 25) -
     the 'done' side of the swarm queue for the GUI."""
     result = session.run(
         f"""
-        MATCH (c:Chore {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
+        MATCH (c:Pollen {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
         WHERE c.status IN ['resolved', 'rejected'] AND {VISIBLE}
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
                c.resolution AS resolution, c.resolved_by AS resolved_by,
@@ -104,7 +104,7 @@ def resolved_chores(session: Session, account: AuthedAccount, limit: int = 25) -
 def ready_count(session: Session, account: AuthedAccount) -> int:
     record = session.run(
         f"""
-        MATCH (c:Chore {{org_uid: $org_uid, status: 'ready'}})-[:ABOUT]->(n:Knowledge)
+        MATCH (c:Pollen {{org_uid: $org_uid, status: 'ready'}})-[:ABOUT]->(n:Knowledge)
         WHERE {VISIBLE}
         RETURN count(DISTINCT c) AS n
         """,
@@ -116,7 +116,7 @@ def ready_count(session: Session, account: AuthedAccount) -> int:
 def get_chore(session: Session, org_uid: str, chore_uid: str) -> dict | None:
     record = session.run(
         """
-        MATCH (c:Chore {uid: $uid, org_uid: $org_uid})
+        MATCH (c:Pollen {uid: $uid, org_uid: $org_uid})
         OPTIONAL MATCH (c)-[:ABOUT]->(n:Knowledge)
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
                n.uid AS node_uid, n.title AS node_title, n.scope AS node_scope
@@ -132,7 +132,7 @@ def close_chore(
 ) -> None:
     session.run(
         """
-        MATCH (c:Chore {uid: $uid})
+        MATCH (c:Pollen {uid: $uid})
         SET c.status = $status, c.resolved_by = $resolved_by,
             c.resolution = $note, c.resolved = timestamp()
         """,
@@ -146,7 +146,7 @@ def close_chore(
 def chores_by_status(session: Session, org_uid: str | None, status: str) -> list[dict]:
     result = session.run(
         """
-        MATCH (c:Chore {status: $status})
+        MATCH (c:Pollen {status: $status})
         WHERE $org_uid IS NULL OR c.org_uid = $org_uid
         OPTIONAL MATCH (c)-[:ABOUT]->(n:Knowledge)
         OPTIONAL MATCH (a)-[v:VOTED]->(c)
@@ -166,7 +166,7 @@ def candidate_pollen(session: Session, account: AuthedAccount, limit: int = 25) 
     can pick the one most relevant to what the agent is currently doing."""
     result = session.run(
         f"""
-        MATCH (c:Chore {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
+        MATCH (c:Pollen {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
         WHERE c.status IN ['open', 'ready'] AND {VISIBLE}
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
                n.uid AS node_uid, n.title AS node_title, n.embedding AS embedding

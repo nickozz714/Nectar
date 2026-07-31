@@ -424,7 +424,7 @@ def hard_delete(session: Session, org_uid: str, uid: str) -> bool:
         """
         MATCH (n:Knowledge {uid: $uid, org_uid: $org_uid})
         OPTIONAL MATCH (n)-[:HAS_FILE]->(f:SkillFile)
-        OPTIONAL MATCH (c:Chore)-[:ABOUT]->(n)
+        OPTIONAL MATCH (c:Pollen)-[:ABOUT]->(n)
         WITH n, collect(DISTINCT f) AS files, collect(DISTINCT c) AS chores
         FOREACH (x IN files | DETACH DELETE x)
         FOREACH (x IN chores | DETACH DELETE x)
@@ -585,7 +585,7 @@ def governance_rows(session: Session, account: AuthedAccount) -> list[dict]:
 
 def chore_status_counts(session: Session, org_uid: str) -> dict:
     result = session.run(
-        "MATCH (c:Chore {org_uid: $org_uid}) RETURN c.status AS status, count(c) AS n",
+        "MATCH (c:Pollen {org_uid: $org_uid}) RETURN c.status AS status, count(c) AS n",
         org_uid=org_uid,
     )
     return {r["status"]: r["n"] for r in result}

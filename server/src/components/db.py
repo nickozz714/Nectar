@@ -16,9 +16,15 @@ CONSTRAINTS = [
     "CREATE CONSTRAINT team_uid IF NOT EXISTS FOR (t:Team) REQUIRE t.uid IS UNIQUE",
     "CREATE CONSTRAINT token_hash IF NOT EXISTS FOR (t:Token) REQUIRE t.hash IS UNIQUE",
     "CREATE CONSTRAINT knowledge_uid IF NOT EXISTS FOR (n:Knowledge) REQUIRE n.uid IS UNIQUE",
-    "CREATE CONSTRAINT chore_uid IF NOT EXISTS FOR (c:Chore) REQUIRE c.uid IS UNIQUE",
+    "CREATE CONSTRAINT pollen_uid IF NOT EXISTS FOR (c:Pollen) REQUIRE c.uid IS UNIQUE",
     "CREATE CONSTRAINT secret_uid IF NOT EXISTS FOR (s:Secret) REQUIRE s.uid IS UNIQUE",
     "CREATE CONSTRAINT invite_hash IF NOT EXISTS FOR (i:Invite) REQUIRE i.code_hash IS UNIQUE",
+]
+
+# Idempotent data migrations run on every startup (no-ops once applied).
+MIGRATIONS = [
+    # Rebrand: the governance task node is now :Pollen (was :Chore). Relabel any legacy nodes.
+    "MATCH (c:Chore) SET c:Pollen REMOVE c:Chore",
 ]
 
 
@@ -61,6 +67,8 @@ def init_db(retries: int = 90, delay: float = 2.0) -> None:
 
     with graph_session() as session:
         for stmt in CONSTRAINTS:
+            session.run(stmt)
+        for stmt in MIGRATIONS:
             session.run(stmt)
         if settings.embeddings_enabled:
             session.run(

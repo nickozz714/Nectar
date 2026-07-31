@@ -19,8 +19,8 @@ def suggest(
     rationale: str,
     model_name: str,
 ) -> dict:
-    if chore_type not in governance_repo.CHORE_TYPES:
-        raise ValueError(f"kind must be one of: {', '.join(sorted(governance_repo.CHORE_TYPES))}")
+    if chore_type not in governance_repo.POLLEN_TYPES:
+        raise ValueError(f"kind must be one of: {', '.join(sorted(governance_repo.POLLEN_TYPES))}")
     result = governance_repo.suggest(
         session, account, chore_type, node_uid, payload, rationale, model_name,
         threshold=get_settings().CONSENSUS_THRESHOLD,

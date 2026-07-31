@@ -31,7 +31,7 @@ def wipe(session: Session, org_uid: str) -> None:
     """Remove all of an org's knowledge, its attachments and chores (for a replace-restore).
     Leaves the org/accounts/tokens/secrets intact."""
     session.run("MATCH (:Knowledge {org_uid: $o})-[:HAS_ATTACHMENT]->(a:Attachment) DETACH DELETE a", o=org_uid)
-    session.run("MATCH (c:Chore)-[:ABOUT]->(:Knowledge {org_uid: $o}) DETACH DELETE c", o=org_uid)
+    session.run("MATCH (c:Pollen)-[:ABOUT]->(:Knowledge {org_uid: $o}) DETACH DELETE c", o=org_uid)
     session.run("MATCH (n:Knowledge {org_uid: $o}) DETACH DELETE n", o=org_uid)
 
 
