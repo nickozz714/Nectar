@@ -25,6 +25,17 @@ CONSTRAINTS = [
 MIGRATIONS = [
     # Rebrand: the governance task node is now :Pollen (was :Chore). Relabel any legacy nodes.
     "MATCH (c:Chore) SET c:Pollen REMOVE c:Chore",
+    # Bloom backfill: give legacy nodes (created before the lifecycle field) an HONEST state so
+    # the badge/recall aren't misleading. Only touches nodes with no lifecycle yet, so newly
+    # 'captured' writes are never overwritten. Established/durable knowledge → mature, archived
+    # or superseded → deprecated, the rest → validated.
+    """
+    MATCH (n:Knowledge) WHERE n.type <> 'topic' AND n.lifecycle IS NULL
+    SET n.lifecycle = CASE
+        WHEN coalesce(n.archived, false) = true OR n.superseded_by IS NOT NULL THEN 'deprecated'
+        WHEN n.type IN ['convention', 'decision', 'learning'] OR coalesce(n.use_count, 0) >= 3 THEN 'mature'
+        ELSE 'validated' END
+    """,
 ]
 
 
