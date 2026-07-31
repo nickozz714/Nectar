@@ -81,7 +81,10 @@ def search(
             # tags count in search: a nudge when one of the node's tags appears in the query
             + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0)
             # superseded facts stay findable but drop far below the current truth
-            - (settings.SUPERSEDE_PENALTY if node.get("superseded_by") else 0.0),
+            - (settings.SUPERSEDE_PENALTY if node.get("superseded_by") else 0.0)
+            # Bloom: mature/validated knowledge rises above unconfirmed 'captured' notes.
+            # Unset lifecycle (legacy nodes) is neutral (0.0).
+            + settings.BLOOM_BOOST.get(node.get("lifecycle"), 0.0),
         )
         for node, sim in candidates
     ]

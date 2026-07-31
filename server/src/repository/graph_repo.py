@@ -246,7 +246,7 @@ def create_knowledge(
             account_uid: CASE WHEN $scope = 'account' THEN $acc_uid ELSE NULL END,
             archived: false, created: timestamp(), last_used: timestamp(),
             use_count: 0, created_by: $acc_uid, created_by_model: $created_by_model,
-            sensitivity: $sensitivity
+            sensitivity: $sensitivity, lifecycle: 'captured'
         }})
         SET n.embedding = $embedding
         RETURN n.uid AS uid
@@ -700,7 +700,7 @@ def supersede(session: Session, account: AuthedAccount, old_uid: str, new_uid: s
         MATCH (old:Knowledge {{uid: $old, org_uid: $org_uid}}), (new:Knowledge {{uid: $new, org_uid: $org_uid}})
         WHERE {VISIBLE.replace('n.', 'old.')} AND {VISIBLE.replace('n.', 'new.')}
         MERGE (new)-[:SUPERSEDES]->(old)
-        SET old.superseded_by = $new, old.superseded_at = timestamp()
+        SET old.superseded_by = $new, old.superseded_at = timestamp(), old.lifecycle = 'deprecated'
         RETURN old.uid AS old_uid, old.title AS old_title, new.uid AS new_uid, new.title AS new_title
         """,
         old=old_uid, new=new_uid, **_acc_params(account),
@@ -708,3 +708,17 @@ def supersede(session: Session, account: AuthedAccount, old_uid: str, new_uid: s
     if record is None:
         return {}
     return dict(record)
+
+
+_LIFECYCLE = ("captured", "validated", "mature", "deprecated")
+
+
+def set_lifecycle(session: Session, org_uid: str, uid: str, state: str) -> bool:
+    """Set a memory's Bloom lifecycle state (captured→validated→mature, or deprecated)."""
+    if state not in _LIFECYCLE:
+        raise ValueError(f"lifecycle must be one of: {', '.join(_LIFECYCLE)}")
+    rec = session.run(
+        "MATCH (n:Knowledge {uid: $uid, org_uid: $o}) SET n.lifecycle = $s RETURN n.uid AS uid",
+        uid=uid, o=org_uid, s=state,
+    ).single()
+    return rec is not None

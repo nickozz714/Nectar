@@ -98,9 +98,11 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
         content = payload.get("content")
         embedding = embed(f"{payload.get('title', '')}\n{content}") if content else None
         graph_repo.update_node(session, node_uid, payload, embedding)
+        graph_repo.set_lifecycle(session, account.org_uid, node_uid, "validated")  # reviewed edit
         return "node updated"
     if kind == "invalidate":
         graph_repo.archive_node(session, node_uid)
+        graph_repo.set_lifecycle(session, account.org_uid, node_uid, "deprecated")
         return "node archived (never hard-deleted)"
     if kind == "promotion":
         target = payload.get("target_topic")
@@ -108,12 +110,14 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
             raise ValueError("promotion payload needs target_topic")
         topic = graph_repo.find_or_create_topic(session, account.org_uid, target, account.uid)
         graph_repo.link(session, account, topic["uid"], node_uid, "contains")
+        graph_repo.set_lifecycle(session, account.org_uid, node_uid, "validated")  # swarm reviewed it
         return f"re-linked under '{topic['title']}' (origin links and scope kept)"
     if kind == "dedup_merge":
         duplicate = payload.get("duplicate_uid")
         if not duplicate:
             raise ValueError("dedup_merge payload needs duplicate_uid")
         graph_repo.archive_node(session, duplicate)
+        graph_repo.set_lifecycle(session, account.org_uid, duplicate, "deprecated")
         return "duplicate archived"
     raise ValueError(f"Unknown chore type {kind}")
 

@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # down hard in ranking, so the current truth wins deterministically — never by asking the
     # model to guess which is newest.
     SUPERSEDE_PENALTY: float = 0.6
+    # Bloom lifecycle weighting in recall: mature knowledge (repeatedly used / swarm-validated)
+    # surfaces above fresh, unconfirmed "captured" notes. Deprecated is pushed down hard.
+    BLOOM_BOOST: dict = {"mature": 0.2, "validated": 0.1, "captured": -0.05, "deprecated": -0.6}
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

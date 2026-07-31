@@ -110,6 +110,29 @@ def remember(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+class LifecycleBody(BaseModel):
+    uid: str
+    state: str   # captured | validated | mature | deprecated
+
+
+@router.post("/lifecycle")
+def set_lifecycle(
+    body: LifecycleBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Set a memory's Bloom lifecycle (captured→validated→mature, or deprecated). Maintainer."""
+    from src.authentication.deps import assert_role
+    try:
+        assert_role(account, "maintainer", "Setting lifecycle")
+        ok = graph_repo.set_lifecycle(session, account.org_uid, body.uid, body.state)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not ok:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return {"uid": body.uid, "lifecycle": body.state}
+
+
 class SupersedeBody(BaseModel):
     old_uid: str
     new_uid: str
