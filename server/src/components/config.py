@@ -69,6 +69,14 @@ class Settings(BaseSettings):
     # Bloom lifecycle weighting in recall: mature knowledge (repeatedly used / swarm-validated)
     # surfaces above fresh, unconfirmed "captured" notes. Deprecated is pushed down hard.
     BLOOM_BOOST: dict = {"mature": 0.2, "validated": 0.1, "captured": -0.05, "deprecated": -0.6}
+    # Importance pin (0..1, 0.5 = neutral). A maintainer can raise a critical memory or lower a
+    # trivial one; it shifts recall ranking by IMPORTANCE_WEIGHT·(importance−0.5).
+    IMPORTANCE_WEIGHT: float = 0.3
+    # Outcome-based decay ("Memory Worth"): once a memory has ≥ OUTCOME_MIN_SAMPLES helped/
+    # hurt votes, recall shifts by OUTCOME_WEIGHT·(worth−0.5), worth = pos/(pos+neg). Makes decay
+    # causal (did it help) instead of mere popularity.
+    OUTCOME_WEIGHT: float = 0.3
+    OUTCOME_MIN_SAMPLES: int = 3
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

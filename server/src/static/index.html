@@ -708,11 +708,20 @@ async function selectNode(uid) {
     ${n.content ? `<pre>${esc(n.content)}</pre>` : ""}
     ${n.type !== "topic" ? `<div class="section"><h3>Status (Bloom)</h3>
       <div>${bloomBadge(n.lifecycle)}
+        ${(n.pos || n.neg) ? `<span class="t" style="color:var(--dim);margin-left:6px">👍 ${n.pos||0} · 👎 ${n.neg||0} (waarde)</span>` : ""}
         ${n.superseded_by ? `<a href="#" class="chip" style="border-color:var(--red);color:var(--red)" onclick='jumpTo("${n.superseded_by}");return false'>⤳ vervangen — toon nieuwste</a>` : ""}</div>
-      ${ME.can_maintain ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      ${ME.can_maintain ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
         <select id="lifecycleSel" style="width:auto;margin:0">
           ${["captured","validated","mature","deprecated"].map(s => `<option value="${s}"${(n.lifecycle||"captured")===s?" selected":""}>${s}</option>`).join("")}</select>
         <button class="ghost" onclick="setLifecycle('${uid}')">Status opslaan</button></div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">
+          <span class="t" style="color:var(--dim)">Belang</span>
+          <select id="impSel" style="width:auto;margin:0">
+            ${[["0.2","laag"],["0.5","normaal"],["0.9","hoog"]].map(([v,l]) => `<option value="${v}"${(((n.importance??0.5)>=0.75?"0.9":(n.importance??0.5)<=0.35?"0.2":"0.5"))===v?" selected":""}>${l}</option>`).join("")}</select>
+          <button class="ghost" onclick="setImportance('${uid}')">Opslaan</button>
+          <span class="t" style="color:var(--dim);margin-left:6px">Decay</span>
+          <input id="decayInput" type="number" min="1" placeholder="dagen (default)" value="${n.half_life_days||''}" style="width:120px;margin:0">
+          <button class="ghost" onclick="setDecay('${uid}')">Opslaan</button></div>
         <div style="margin-top:6px">
           <input id="supersedeInput" placeholder="zoek de nieuwere node op naam…" autocomplete="off"
                  oninput="searchPicker(this.value,'supersedePick','supersedeInput')" style="margin:0">
@@ -790,6 +799,17 @@ function bloomBadge(state) {
 async function setLifecycle(uid) {
   const state = document.getElementById("lifecycleSel").value;
   try { await api("/graph/lifecycle", { method: "POST", body: JSON.stringify({ uid, state }) }); await selectNode(uid); }
+  catch (e) { alert(e.message); }
+}
+async function setImportance(uid) {
+  const value = parseFloat(document.getElementById("impSel").value);
+  try { await api("/graph/importance", { method: "POST", body: JSON.stringify({ uid, value }) }); await selectNode(uid); }
+  catch (e) { alert(e.message); }
+}
+async function setDecay(uid) {
+  const v = document.getElementById("decayInput").value.trim();
+  const half_life_days = v ? parseFloat(v) : null;
+  try { await api("/graph/decay", { method: "POST", body: JSON.stringify({ uid, half_life_days }) }); await selectNode(uid); }
   catch (e) { alert(e.message); }
 }
 async function supersedeNode(oldUid) {

@@ -33,8 +33,20 @@ def _freshness(node: dict, now_ms: float) -> float:
     settings = get_settings()
     stable = node.get("type") in graph_repo.STABLE_TYPES
     half_life = settings.STABLE_HALF_LIFE_DAYS if stable else settings.FRESHNESS_HALF_LIFE_DAYS
+    override = node.get("half_life_days")   # per-node decay override (fast for volatile topics)
+    if override:
+        half_life = float(override)
     age_days = max(0.0, (now_ms - node.get("last_used", now_ms)) / 86_400_000)
     return 0.5 ** (age_days / half_life)
+
+
+def _worth(node: dict) -> float:
+    """Outcome-based ranking shift: pos/(pos+neg) once enough samples, else neutral (0.5)."""
+    settings = get_settings()
+    pos, neg = node.get("pos") or 0, node.get("neg") or 0
+    if pos + neg < settings.OUTCOME_MIN_SAMPLES:
+        return 0.5
+    return pos / (pos + neg)
 
 
 def search(
@@ -84,7 +96,10 @@ def search(
             - (settings.SUPERSEDE_PENALTY if node.get("superseded_by") else 0.0)
             # Bloom: mature/validated knowledge rises above unconfirmed 'captured' notes.
             # Unset lifecycle (legacy nodes) is neutral (0.0).
-            + settings.BLOOM_BOOST.get(node.get("lifecycle"), 0.0),
+            + settings.BLOOM_BOOST.get(node.get("lifecycle"), 0.0)
+            # Importance pin (0.5 neutral) + causal outcome-worth (did it actually help).
+            + settings.IMPORTANCE_WEIGHT * ((node.get("importance") if node.get("importance") is not None else 0.5) - 0.5)
+            + settings.OUTCOME_WEIGHT * (_worth(node) - 0.5),
         )
         for node, sim in candidates
     ]

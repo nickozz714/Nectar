@@ -246,7 +246,8 @@ def create_knowledge(
             account_uid: CASE WHEN $scope = 'account' THEN $acc_uid ELSE NULL END,
             archived: false, created: timestamp(), last_used: timestamp(),
             use_count: 0, created_by: $acc_uid, created_by_model: $created_by_model,
-            sensitivity: $sensitivity, lifecycle: 'captured'
+            sensitivity: $sensitivity, lifecycle: 'captured',
+            importance: 0.5, pos: 0, neg: 0
         }})
         SET n.embedding = $embedding
         RETURN n.uid AS uid
@@ -722,3 +723,27 @@ def set_lifecycle(session: Session, org_uid: str, uid: str, state: str) -> bool:
         uid=uid, o=org_uid, s=state,
     ).single()
     return rec is not None
+
+
+def set_importance(session: Session, org_uid: str, uid: str, value: float) -> bool:
+    v = max(0.0, min(1.0, float(value)))
+    r = session.run("MATCH (n:Knowledge {uid:$u, org_uid:$o}) SET n.importance=$v RETURN n.uid AS uid",
+                    u=uid, o=org_uid, v=v).single()
+    return r is not None
+
+
+def set_half_life(session: Session, org_uid: str, uid: str, days: float | None) -> bool:
+    r = session.run("MATCH (n:Knowledge {uid:$u, org_uid:$o}) SET n.half_life_days=$d RETURN n.uid AS uid",
+                    u=uid, o=org_uid, d=(float(days) if days else None)).single()
+    return r is not None
+
+
+def record_feedback(session: Session, org_uid: str, uid: str, helped: bool) -> dict | None:
+    """Outcome feedback from an agent that used a recalled memory: did it help? Feeds the
+    causal 'Memory Worth' signal (pos/neg counters)."""
+    field = "pos" if helped else "neg"
+    r = session.run(
+        f"MATCH (n:Knowledge {{uid:$u, org_uid:$o}}) SET n.{field}=coalesce(n.{field},0)+1 "
+        "RETURN n.uid AS uid, coalesce(n.pos,0) AS pos, coalesce(n.neg,0) AS neg",
+        u=uid, o=org_uid).single()
+    return dict(r) if r else None

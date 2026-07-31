@@ -87,6 +87,19 @@ def hive_get(node_uid: str) -> dict:
 
 
 @mcp.tool
+def hive_feedback(node_uid: str, helped: bool) -> dict:
+    """Report whether a memory you recalled actually helped with your task (helped=true) or
+    was wrong/irrelevant (helped=false). This is the causal 'Memory Worth' signal: memories
+    that consistently help rise in recall, ones that consistently mislead sink. Call it after
+    you applied (or rejected) a recalled memory — a small pollen every visit."""
+    with _authed() as (session, account):
+        res = graph_repo.record_feedback(session, account.org_uid, node_uid, helped)
+        if res is None:
+            raise ValueError("Node not found or not visible to this account")
+        return res
+
+
+@mcp.tool
 def hive_attachments(node_uid: str) -> list[dict]:
     """List the artifacts (files) attached to a node — filename, size, type, uid. Attachments
     live centrally in the hive, so a machine that did not create them can still get them.

@@ -110,6 +110,69 @@ def remember(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+class ImportanceBody(BaseModel):
+    uid: str
+    value: float   # 0..1, 0.5 = neutral
+
+
+@router.post("/importance")
+def set_importance(
+    body: ImportanceBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Pin a memory's importance (0..1) so recall ranks it higher/lower. Maintainer."""
+    from src.authentication.deps import assert_role
+    try:
+        assert_role(account, "maintainer", "Setting importance")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    if not graph_repo.set_importance(session, account.org_uid, body.uid, body.value):
+        raise HTTPException(status_code=404, detail="Node not found")
+    return {"uid": body.uid, "importance": max(0.0, min(1.0, body.value))}
+
+
+class DecayBody(BaseModel):
+    uid: str
+    half_life_days: float | None = None   # None = use the global default
+
+
+@router.post("/decay")
+def set_decay(
+    body: DecayBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Override a memory's decay half-life in days (fast for volatile knowledge). Maintainer."""
+    from src.authentication.deps import assert_role
+    try:
+        assert_role(account, "maintainer", "Setting decay")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    if not graph_repo.set_half_life(session, account.org_uid, body.uid, body.half_life_days):
+        raise HTTPException(status_code=404, detail="Node not found")
+    return {"uid": body.uid, "half_life_days": body.half_life_days}
+
+
+class FeedbackBody(BaseModel):
+    node_uid: str
+    helped: bool
+
+
+@router.post("/feedback")
+def feedback(
+    body: FeedbackBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """An agent reports whether a recalled memory actually helped — the causal 'Memory Worth'
+    signal that makes decay outcome-based. Any member."""
+    res = graph_repo.record_feedback(session, account.org_uid, body.node_uid, body.helped)
+    if res is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return res
+
+
 class LifecycleBody(BaseModel):
     uid: str
     state: str   # captured | validated | mature | deprecated
