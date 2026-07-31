@@ -88,6 +88,27 @@
   .hevent:last-child { border-bottom: none; }
   .hevent .when { color: var(--dim); font-size: 11px; margin-bottom: 2px; }
   .hevent .act { font-weight: 600; color: #ded6c4; }
+  /* ---- mobile / small screens ---- */
+  @media (max-width: 820px) {
+    header { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+    header h1 { font-size: 16px; }
+    header .tabs { order: 3; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    header .tabs button { padding: 6px 11px; white-space: nowrap; }
+    header .spacer { display: none; }
+    header > button.ghost { padding: 6px 10px; font-size: 12px; }
+    /* side panels become full-height slide-in overlays instead of eating width */
+    #left, #right { position: absolute; top: 0; bottom: 0; z-index: 14; box-shadow: 0 0 40px rgba(0,0,0,.55); }
+    #left { left: 0; width: 86%; max-width: 330px; }
+    #right { right: 0; width: 92%; max-width: 400px; }
+    .gtoolbar { top: 8px; left: 8px; gap: 5px; }
+    .gtoolbar button { width: 40px; height: 40px; font-size: 17px; }   /* bigger tap targets */
+    .gtoolbar button.wide { width: auto; padding: 0 12px; }
+    .edgetab { width: 22px; height: 62px; font-size: 14px; z-index: 16; }  /* stay tappable over the panels to close them */
+    .legend { font-size: 11px; max-width: 60%; }
+    .page { padding: 14px; max-width: none; }
+    input, select, textarea, button { font-size: 16px; }   /* ≥16px stops iOS zoom-on-focus */
+    #histDrawer { width: 92%; }
+  }
   .hevent .tgt { color: var(--dim); word-break: break-word; }
   .hevent a.tgt { color: var(--honey2); cursor: pointer; text-decoration: none; }
   .hevent a.tgt:hover { text-decoration: underline; }
@@ -1432,6 +1453,12 @@ function boot() {
   if (ME.can_review) document.getElementById("reviewTab").style.display = "";
   document.getElementById("histBtn").style.display = ME.role === "org_admin" ? "" : "none";
   applySciFi();
+  // On phones the side panels are slide-in overlays; start with the left one closed so the
+  // graph is visible. The edge tabs (‹ ›) open/close them.
+  if (window.innerWidth <= 820) {
+    document.getElementById("left").classList.add("collapsed");
+    const t = document.getElementById("leftTab"); if (t) t.textContent = "›";
+  }
   document.getElementById("legend").innerHTML = Object.entries(COLORS).map(([t, c]) =>
     `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("")
     + `<span style="opacity:.6">· dubbelklik knoop: uit-/inklappen</span>`;
