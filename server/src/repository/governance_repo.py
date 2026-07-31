@@ -159,3 +159,21 @@ def chores_by_status(session: Session, org_uid: str | None, status: str) -> list
         status=status,
     )
     return [dict(r) for r in result]
+
+
+def candidate_pollen(session: Session, account: AuthedAccount, limit: int = 25) -> list[dict]:
+    """Open/ready chores ('Pollen') about visible nodes, with the node's embedding so the caller
+    can pick the one most relevant to what the agent is currently doing."""
+    result = session.run(
+        f"""
+        MATCH (c:Chore {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
+        WHERE c.status IN ['open', 'ready'] AND {VISIBLE}
+        RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
+               n.uid AS node_uid, n.title AS node_title, n.embedding AS embedding
+        ORDER BY c.created DESC
+        LIMIT $limit
+        """,
+        limit=limit,
+        **_acc_params(account),
+    )
+    return [dict(r) for r in result]

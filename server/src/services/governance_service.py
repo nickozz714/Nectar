@@ -158,3 +158,57 @@ def approve_scope_widening(
     audit_repo.log(session, org_uid, None, "approve_scope_widening", chore["node_uid"],
                    {"chore": chore_uid, "target_scope": target_scope, "reviewed_by": reviewed_by})
     return {"status": "resolved", "node_uid": chore["node_uid"], "scope": target_scope}
+
+
+def _cos(a, b) -> float:
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    return dot / (na * nb) if na and nb else 0.0
+
+
+_POLLEN_VERB = {
+    "promotion": "een node onder een beter topic hangen",
+    "dedup_merge": "een duplicaat samenvoegen",
+    "edit": "een voorgestelde tekstwijziging beoordelen",
+    "invalidate": "verouderde kennis archiveren",
+    "scope_widening": "een scope-verbreding beoordelen (mens)",
+}
+
+
+def pick_contextual_pollen(session: Session, account: AuthedAccount, query: str) -> dict | None:
+    """Choose the single most relevant open/ready Pollen (chore) for what the agent is doing:
+    rank candidates by embedding similarity between the agent's prompt and the chore's node,
+    with a small boost for 'ready'. Returns the chore dict (or None if the hive has no Pollen)."""
+    from src.components.embeddings import embed
+
+    cands = governance_repo.candidate_pollen(session, account, limit=25)
+    if not cands:
+        return None
+    qv = embed(query) if query else None
+
+    def score(c):
+        sim = _cos(qv, c.get("embedding")) if qv else 0.0
+        return sim + (0.15 if c["status"] == "ready" else 0.0)
+
+    return max(cands, key=score)
+
+
+def render_pollen(pollen: dict) -> str:
+    """One-line instruction that hands the agent a bit of Pollen to carry."""
+    import json as _json
+    what = _POLLEN_VERB.get(pollen["type"], pollen["type"])
+    payload = {}
+    try:
+        payload = _json.loads(pollen.get("payload") or "{}")
+    except (ValueError, TypeError):
+        pass
+    target = payload.get("target_topic")
+    detail = f" → voorstel: onder '{target}'" if target else ""
+    node = pollen.get("node_title") or ""
+    node = node[:70] + "…" if len(node) > 70 else node
+    return (f"🌼 **Pollen** — draag bij aan de Hive terwijl je hier toch bent: {what} "
+            f"voor *{node}*{detail}. Past het bij je taak? Beoordeel 'm op inhoud en los 'm op "
+            f"met `hive_chores()` → `hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
