@@ -218,3 +218,36 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
     audit_repo.log(session, account.org_uid, account.uid, "tidy_scan", account.org_uid,
                    {"scanned": len(candidates), "opened": len(opened)})
     return {"scanned": len(candidates), "homeless": len(opened), "chores": opened}
+
+
+def staleness_scan(session: Session, account: AuthedAccount) -> dict:
+    """Surface knowledge that is relied upon (used ≥ STALE_MIN_USE) but hasn't been touched for
+    STALE_REVIEW_DAYS days as a 'stale_review' Pollen — a gentle 'is this still correct?'. Never
+    deletes; resolving with apply just refreshes+confirms it. Idempotent. Maintainer."""
+    assert_role(account, "maintainer", "Running the staleness scan")
+    from src.repository import governance_repo, tenancy_repo
+    from src.components.config import get_settings
+    s = get_settings()
+    rows = session.run(
+        f"""
+        MATCH (n:Knowledge {{org_uid: $o}})
+        WHERE n.type <> 'topic' AND coalesce(n.archived, false) = false
+          AND n.superseded_by IS NULL AND coalesce(n.lifecycle,'') <> 'deprecated'
+          AND coalesce(n.use_count, 0) >= $minuse
+          AND (timestamp() - coalesce(n.last_used, timestamp())) > $ms
+        RETURN n.uid AS uid, n.title AS title, n.type AS type
+        """,
+        o=account.org_uid, minuse=s.STALE_MIN_USE, ms=s.STALE_REVIEW_DAYS * 86_400_000,
+    ).data()
+    threshold = tenancy_repo.get_consensus_threshold(session, account.org_uid, s.CONSENSUS_THRESHOLD)
+    opened = []
+    for n in rows:
+        res = governance_repo.suggest(
+            session, account, "stale_review", n["uid"], {},
+            rationale=f"Staleness-scan: '{n['title'][:60]}' is veelgebruikt maar al lang niet "
+                      f"herzien — nog correct?", model_name="staleness-scan", threshold=threshold)
+        if res:
+            opened.append({"node": n["title"], "type": n["type"], "chore": res["uid"], "status": res["status"]})
+    audit_repo.log(session, account.org_uid, account.uid, "staleness_scan", account.org_uid,
+                   {"scanned": len(rows), "opened": len(opened)})
+    return {"stale": len(rows), "opened": len(opened), "chores": opened}

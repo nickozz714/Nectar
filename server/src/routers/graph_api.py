@@ -345,6 +345,18 @@ def reindex(
     return reindex_service.reembed(session, account.org_uid)
 
 
+@router.post("/staleness-scan")
+def staleness_scan(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Surface stale-but-relied-upon knowledge as review Pollen ('still correct?'). Maintainer."""
+    try:
+        return curation_service.staleness_scan(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/tidy-scan")
 def tidy_scan(
     account: AuthedAccount = Depends(require_account),

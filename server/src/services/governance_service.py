@@ -119,6 +119,11 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
         graph_repo.archive_node(session, duplicate)
         graph_repo.set_lifecycle(session, account.org_uid, duplicate, "deprecated")
         return "duplicate archived"
+    if kind == "stale_review":
+        # "yes, still correct" — refresh it (resets the decay clock) and confirm it as validated.
+        graph_repo.touch_nodes(session, [node_uid])
+        graph_repo.set_lifecycle(session, account.org_uid, node_uid, "validated")
+        return "reviewed — confirmed current"
     raise ValueError(f"Unknown chore type {kind}")
 
 
@@ -180,6 +185,7 @@ _POLLEN_VERB = {
     "edit": "een voorgestelde tekstwijziging beoordelen",
     "invalidate": "verouderde kennis archiveren",
     "scope_widening": "een scope-verbreding beoordelen (mens)",
+    "stale_review": "een oude-maar-veelgebruikte memory herbevestigen of bijwerken",
 }
 
 

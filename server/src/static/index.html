@@ -1149,7 +1149,7 @@ function renderBeheer() {
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
       <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
-      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span></div>
+      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Swarm — consensus</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Minimale Swarm-grootte: hoeveel <strong>stemmen</strong> een Pollen nodig heeft voordat 'ie oppakbaar wordt (<em>ready</em>). Zet op <strong>1</strong> voor een kleine/solo swarm zodat één stem al genoeg is. Elk lid mag daarna ready Pollen oppakken.</p>
       <div style="display:flex;gap:8px;align-items:center">
@@ -1244,6 +1244,14 @@ async function tidyScan() {
   try {
     const r = await api("/graph/tidy-scan", { method: "POST" });
     out.textContent = ` ✓ ${r.scanned} bekeken, ${r.homeless} chore(s) aangemaakt — zie de Pollen-tab`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function stalenessScan() {
+  const out = document.getElementById("staleOut");
+  out.textContent = " bezig…";
+  try {
+    const r = await api("/graph/staleness-scan", { method: "POST" });
+    out.textContent = ` ✓ ${r.stale} stale, ${r.opened} review-Pollen — zie de Pollen-tab`;
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function exportBackup() {

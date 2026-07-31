@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     # causal (did it help) instead of mere popularity.
     OUTCOME_WEIGHT: float = 0.3
     OUTCOME_MIN_SAMPLES: int = 3
+    # Staleness scan: a memory used at least STALE_MIN_USE times but not touched for
+    # STALE_REVIEW_DAYS days is surfaced as a review Pollen ("is this still correct?").
+    STALE_REVIEW_DAYS: int = 120
+    STALE_MIN_USE: int = 3
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15
