@@ -10,6 +10,23 @@ from src.repository import graph_repo
 from src.components.embeddings import embed
 
 
+def _rrf_fuse(lists: list[list[tuple[dict, float]]], k: int = 60) -> list[tuple[dict, float]]:
+    """Reciprocal Rank Fusion of several ranked candidate lists → [(node, normalized_score)].
+    A node's score = Σ 1/(k + rank); normalized to 0..1 so it slots in as the 'semantic' term
+    alongside freshness/boosts. Rank-based, so dense cosine and BM25 scales never fight."""
+    scores: dict[str, float] = {}
+    nodes: dict[str, dict] = {}
+    for lst in lists:
+        for rank, (node, _s) in enumerate(lst):
+            uid = node["uid"]
+            nodes.setdefault(uid, node)
+            scores[uid] = scores.get(uid, 0.0) + 1.0 / (k + rank + 1)
+    if not scores:
+        return []
+    top = max(scores.values())
+    return [(nodes[uid], scores[uid] / top) for uid in scores]
+
+
 def _freshness(node: dict, now_ms: float) -> float:
     """0.5 ^ (age / half_life). Convention/Decision nodes decay much slower — their value
     is their stability. Decay affects ranking only, never findability."""
@@ -38,12 +55,16 @@ def search(
     if anchors:
         anchor_uids = graph_repo.anchor_descendant_uids(session, account, anchors)
 
+    # Hybrid retrieval: dense (vector) + sparse (BM25 full-text), fused with Reciprocal Rank
+    # Fusion. Dense catches meaning; sparse catches exact tokens (symbols, error codes, paths)
+    # that embeddings blur. RRF is rank-based, so the two incompatible score scales combine
+    # cleanly. Falls back to word-matching only when both halves are empty.
     qvec = embed(query)
-    if qvec is not None:
-        candidates = graph_repo.vector_candidates(
-            session, account, qvec, k=max(50, limit * 5), allowed=None
-        )
-    else:
+    pool = max(50, limit * 5)
+    dense = graph_repo.vector_candidates(session, account, qvec, k=pool, allowed=None) if qvec else []
+    sparse = graph_repo.fulltext_candidates(session, account, query, k=pool, allowed=None)
+    candidates = _rrf_fuse([dense, sparse])
+    if not candidates:
         candidates = graph_repo.text_candidates(session, account, query, allowed=None)
 
     now_ms = time.time() * 1000

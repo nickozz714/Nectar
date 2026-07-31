@@ -662,3 +662,30 @@ def topic_member_embeddings(session: Session, org_uid: str) -> list[dict]:
         o=org_uid,
     )
     return [dict(r) for r in rows]
+
+
+import re as _re
+
+
+def fulltext_candidates(
+    session: Session, account: AuthedAccount, query: str, k: int, allowed: list[str] | None
+) -> list[tuple[dict, float]]:
+    """BM25 hits from the Lucene full-text index — the sparse half of hybrid retrieval. Terms
+    are OR-ed and Lucene-escaped so exact identifiers match without breaking the parser."""
+    terms = _re.findall(r"\w+", query.lower())
+    if not terms:
+        return []
+    lucene = " OR ".join(terms)
+    try:
+        result = session.run(
+            f"""
+            CALL db.index.fulltext.queryNodes('knowledge_fulltext', $q) YIELD node AS n, score
+            WHERE n.org_uid = $org_uid AND coalesce(n.archived, false) = false AND {VISIBLE}
+              AND ($allowed IS NULL OR n.uid IN $allowed)
+            RETURN n, score ORDER BY score DESC LIMIT $k
+            """,
+            q=lucene, k=k, allowed=allowed, **_acc_params(account),
+        )
+        return [(node_to_dict(r["n"]), float(r["score"])) for r in result]
+    except Exception:  # index still building / unavailable → sparse half simply contributes nothing
+        return []

@@ -70,6 +70,12 @@ def init_db(retries: int = 90, delay: float = 2.0) -> None:
             session.run(stmt)
         for stmt in MIGRATIONS:
             session.run(stmt)
+        # Full-text (Lucene/BM25) index for hybrid retrieval — catches exact tokens
+        # (symbol names, error codes, paths) that embeddings blur. Always created.
+        session.run(
+            "CREATE FULLTEXT INDEX knowledge_fulltext IF NOT EXISTS "
+            "FOR (n:Knowledge) ON EACH [n.title, n.content]"
+        )
         if settings.embeddings_enabled:
             session.run(
                 "CREATE VECTOR INDEX knowledge_embedding IF NOT EXISTS "
