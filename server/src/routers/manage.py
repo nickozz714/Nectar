@@ -3,9 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from neo4j import Session
 
-from src.authentication.deps import ROLES, AuthedAccount, require_role
+from pydantic import BaseModel
+
+from src.authentication.deps import ROLES, AuthedAccount, require_account, require_role
 from src.components.db import get_graph
 from src.repository import registration_repo, tenancy_repo
+from src.services import org_service
 from src.models.core import (
     AccountOut,
     InviteCreate,
@@ -18,6 +21,32 @@ from src.models.core import (
 # Everything here is done with an org_admin ACCOUNT TOKEN — no operator admin token.
 # All actions are scoped to the caller's own org.
 router = APIRouter(prefix="/manage", tags=["manage"])
+
+
+class ConsensusBody(BaseModel):
+    threshold: int
+
+
+@router.get("/swarm")
+def swarm_settings(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """The Swarm's consensus threshold (min votes before a Pollen is actionable). Any member."""
+    return org_service.get_swarm_settings(session, account)
+
+
+@router.post("/swarm/consensus")
+def set_consensus(
+    body: ConsensusBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Set the minimum Swarm size for consensus (org_admin, enforced in the service)."""
+    try:
+        return org_service.set_consensus_threshold(session, account, body.threshold)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/invites")

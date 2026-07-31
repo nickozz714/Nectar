@@ -32,11 +32,8 @@ def test_promotion_consensus_and_role_gate(graph, account):
     v2 = governance_service.suggest(graph, maint, "promotion", node["uid"], payload, "eens", "m-b")
     assert v2["status"] == "ready" and v2["votes"] == 2
 
-    # member may not resolve
-    with pytest.raises(ValueError, match="maintainer"):
-        governance_service.resolve(graph, author, v2["uid"], "apply", "x")
-
-    out = governance_service.resolve(graph, maint, v2["uid"], "apply", "ok")
+    # any Swarm member may now pick up a ready Pollen (consensus already gates it)
+    out = governance_service.resolve(graph, author, v2["uid"], "apply", "opgepakt door lid")
     assert out["status"] == "resolved"
 
     from src.repository import graph_repo

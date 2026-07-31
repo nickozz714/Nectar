@@ -6,7 +6,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
 from src.components.config import get_settings
-from src.repository import audit_repo, governance_repo, graph_repo
+from src.repository import audit_repo, governance_repo, graph_repo, tenancy_repo
 from src.components.embeddings import embed
 
 # Deterministic write-gate: the server holds no judgement, only hard checks.
@@ -165,7 +165,8 @@ def remember(
             {"duplicate_uid": node["uid"]},
             rationale=f"Write-gate: new node '{title}' is {grey_zone_of['sim']:.2f} similar "
             f"to '{grey_zone_of['title']}' — swarm should judge whether it is a duplicate.",
-            model_name="write-gate", threshold=settings.CONSENSUS_THRESHOLD,
+            model_name="write-gate", threshold=tenancy_repo.get_consensus_threshold(
+                session, account.org_uid, settings.CONSENSUS_THRESHOLD),
         )
         notes.append(
             f"similar to existing '{grey_zone_of['title']}' "

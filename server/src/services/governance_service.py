@@ -6,7 +6,7 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, assert_role
 from src.components.config import get_settings
-from src.repository import audit_repo, governance_repo, graph_repo
+from src.repository import audit_repo, governance_repo, graph_repo, tenancy_repo
 from src.components.embeddings import embed
 
 
@@ -23,7 +23,8 @@ def suggest(
         raise ValueError(f"kind must be one of: {', '.join(sorted(governance_repo.POLLEN_TYPES))}")
     result = governance_repo.suggest(
         session, account, chore_type, node_uid, payload, rationale, model_name,
-        threshold=get_settings().CONSENSUS_THRESHOLD,
+        threshold=tenancy_repo.get_consensus_threshold(
+            session, account.org_uid, get_settings().CONSENSUS_THRESHOLD),
     )
     if result is None:
         raise ValueError("Node not found or not visible to this account")
@@ -38,7 +39,7 @@ def resolve(
     """A bee resolves a 'ready' chore — maintainer role required, so upkeep is
     delegated deliberately instead of open to everyone. scope_widening never passes
     through here — that is the one mutation reserved for a human reviewer."""
-    assert_role(account, "maintainer", "Resolving chores")
+    assert_role(account, "member", "Resolving Pollen")   # any Swarm member may pick up ready Pollen
     chore = governance_repo.get_chore(session, account.org_uid, chore_uid)
     if chore is None:
         raise ValueError("Chore not found")

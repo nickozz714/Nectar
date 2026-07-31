@@ -161,7 +161,7 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
     the recurring 'tidy & re-organise the hive' loop. Maintainer role."""
     assert_role(account, "maintainer", "Running the tidy scan")
     from collections import defaultdict
-    from src.repository import governance_repo
+    from src.repository import governance_repo, tenancy_repo
     from src.components.config import get_settings
 
     MIN_SCORE = 0.14   # below this the best topic is a weak guess → leave the node alone
@@ -209,7 +209,8 @@ def tidy_scan(session: Session, account: AuthedAccount) -> dict:
             session, account, "promotion", n["uid"], {"target_topic": best["title"]},
             rationale=f"Opruim-scan: '{n['title'][:60]}' hangt niet onder een topic — "
                       f"voorgesteld huis: '{best['title']}' (score {best_s:.2f}).",
-            model_name="tidy-scan", threshold=get_settings().CONSENSUS_THRESHOLD,
+            model_name="tidy-scan", threshold=tenancy_repo.get_consensus_threshold(
+                session, account.org_uid, get_settings().CONSENSUS_THRESHOLD),
         )
         if res:
             opened.append({"node": n["title"], "type": n["type"], "target": best["title"],

@@ -258,3 +258,16 @@ def list_orgs(session: Session) -> list[dict]:
         """
     )
     return [dict(r) for r in result]
+
+
+def get_consensus_threshold(session: Session, org_uid: str, default: int) -> int:
+    """The org's consensus threshold = the minimum Swarm size before a Pollen becomes
+    actionable ('ready'). Falls back to the deployment default when unset."""
+    r = session.run("MATCH (o:Org {uid: $u}) RETURN o.consensus_threshold AS t", u=org_uid).single()
+    t = r["t"] if r else None
+    return int(t) if t is not None else int(default)
+
+
+def set_consensus_threshold(session: Session, org_uid: str, n: int) -> int:
+    session.run("MATCH (o:Org {uid: $u}) SET o.consensus_threshold = $n", u=org_uid, n=int(n))
+    return int(n)

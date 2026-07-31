@@ -29,6 +29,7 @@ def me(
         "team_uid": account.team_uid,
         "can_maintain": has_role(account, "maintainer"),
         "can_review": has_role(account, "org_admin"),
+        "can_resolve": has_role(account, "member"),   # any Swarm member may pick up ready Pollen
         "ready_chores": governance_repo.ready_count(session, account),
     }
 

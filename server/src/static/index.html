@@ -993,11 +993,9 @@ async function loadChores() {
   const page = document.getElementById("choresPage");
   const fmt = ms => ms ? new Date(ms).toLocaleString("nl-NL") : "";
   const btns = c => {
-    if (c.status === "ready" && ME.can_maintain)
+    if (c.status === "ready")   // consensus reached — any Swarm member may pick it up
       return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',false)">Toepassen</button>
         <button class="ghost" onclick="resolveChore('${c.uid}','reject',false)">Afwijzen</button></div>`;
-    if (c.status === "ready")
-      return `<div class="t" style="color:var(--dim);margin-top:8px">maintainer-rol nodig om af te handelen</div>`;
     if (ME.role === "org_admin")   // open, geen consensus — org_admin mag direct
       return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',true)">Direct toepassen</button>
         <button class="ghost danger" onclick="resolveChore('${c.uid}','reject',true)">Afwijzen</button></div>
@@ -1067,6 +1065,11 @@ function renderBeheer() {
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
       <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
       <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span></div>
+    <div class="card"><h3 style="margin-bottom:8px">Swarm — consensus</h3>
+      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Minimale Swarm-grootte: hoeveel <strong>stemmen</strong> een Pollen nodig heeft voordat 'ie oppakbaar wordt (<em>ready</em>). Zet op <strong>1</strong> voor een kleine/solo swarm zodat één stem al genoeg is. Elk lid mag daarna ready Pollen oppakken.</p>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="consensusInput" type="number" min="1" style="width:90px;margin:0" value="">
+        <button class="action" onclick="saveConsensus()">Opslaan</button> <span id="consensusOut" class="ok"></span></div></div>
     <div class="card"><h3 style="margin-bottom:8px">Back-up &amp; restore</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Volledige export van de hele hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <em>samenvoegen</em> (upsert) of <em>vervangen</em> (hive eerst leegmaken = echte restore).</p>
       <button class="action" onclick="exportBackup()">Exporteren (download)</button> <span id="expOut" class="ok"></span>
@@ -1094,6 +1097,7 @@ function renderBeheer() {
       <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
       <div id="accList"></div></div>`
     : `<p style="color:var(--dim)">Accountbeheer is voorbehouden aan org_admins. Vraag een org_admin om een account of token.</p>`}`;
+  if (isAdmin) loadConsensus();
 }
 async function loadSkills() {
   try {
@@ -1119,6 +1123,20 @@ async function reclassifySensitivity() {
   try {
     const r = await api("/graph/reclassify-sensitivity", { method: "POST" });
     out.textContent = ` ✓ ${r.scanned} beoordeeld, ${r.changed} aangepast (${r.now_internal} → intern, ${r.now_sensitive} → gevoelig)`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function loadConsensus() {
+  const el = document.getElementById("consensusInput"); if (!el) return;
+  try { const s = await api("/manage/swarm"); el.value = s.consensus_threshold; } catch (e) {}
+}
+async function saveConsensus() {
+  const n = parseInt(document.getElementById("consensusInput").value, 10);
+  const out = document.getElementById("consensusOut");
+  if (!(n >= 1)) { alert("Geef een getal ≥ 1"); return; }
+  out.textContent = " bezig…";
+  try {
+    const r = await api("/manage/swarm/consensus", { method: "POST", body: JSON.stringify({ threshold: n }) });
+    out.textContent = ` ✓ consensus = ${r.consensus_threshold}`;
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function tidyScan() {
