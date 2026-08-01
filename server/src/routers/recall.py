@@ -26,6 +26,10 @@ def recall(
     results = search_service.search(
         session, account, body.query, anchors=body.anchors or None, limit=body.limit
     )
+    if not results:
+        # A recall that found nothing is a knowledge gap — aggregate it so repeated
+        # unanswered questions surface as capture prompts (self-improving loop).
+        graph_repo.record_gap(session, account.org_uid, body.query)
 
     # System memories: standing instructions always injected, on top, regardless of query.
     system = graph_repo.list_system(session, account)

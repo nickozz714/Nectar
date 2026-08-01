@@ -345,6 +345,28 @@ def reindex(
     return reindex_service.reembed(session, account.org_uid)
 
 
+@router.get("/analytics")
+def analytics(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Insight into the mind: totals by lifecycle, most-used memories, never-used (archive
+    candidates), and knowledge gaps (repeated empty recalls). Any member."""
+    return graph_repo.analytics(session, account.org_uid)
+
+
+@router.post("/topic-summaries")
+def topic_summaries(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """(Re)build the deterministic per-topic summaries. Maintainer."""
+    try:
+        return curation_service.build_topic_summaries(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/staleness-scan")
 def staleness_scan(
     account: AuthedAccount = Depends(require_account),

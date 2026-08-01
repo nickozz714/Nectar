@@ -251,3 +251,32 @@ def staleness_scan(session: Session, account: AuthedAccount) -> dict:
     audit_repo.log(session, account.org_uid, account.uid, "staleness_scan", account.org_uid,
                    {"scanned": len(rows), "opened": len(opened)})
     return {"stale": len(rows), "opened": len(opened), "chores": opened}
+
+
+def build_topic_summaries(session: Session, account: AuthedAccount) -> dict:
+    """Deterministic topic summaries: for each topic, a digest of what it holds (counts by type +
+    key titles) stored on the topic so it answers 'what's in here?' and is itself retrievable.
+    (The richer LLM-written summary is parked for the Swarm-driven approach.) Maintainer."""
+    assert_role(account, "maintainer", "Building topic summaries")
+    rows = session.run(
+        """
+        MATCH (t:Topic {org_uid: $o})
+        OPTIONAL MATCH (t)-[:CONTAINS]->(m:Knowledge) WHERE m.type <> 'topic'
+        WITH t, collect({title: m.title, type: m.type}) AS members
+        RETURN t.uid AS uid, t.title AS title, members
+        """, o=account.org_uid).data()
+    from collections import Counter
+    updated = 0
+    for r in rows:
+        members = [m for m in r["members"] if m.get("title")]
+        by_type = Counter(m["type"] for m in members)
+        types = ", ".join(f"{n}× {t}" for t, n in by_type.most_common())
+        titles = "; ".join(m["title"] for m in members[:6])
+        summary = (f"{r['title']} — {len(members)} items"
+                   + (f" ({types})" if types else "")
+                   + (f". Kernonderwerpen: {titles}." if titles else "."))
+        session.run("MATCH (t:Topic {uid:$u}) SET t.summary = $s", u=r["uid"], s=summary)
+        updated += 1
+    audit_repo.log(session, account.org_uid, account.uid, "topic_summaries", account.org_uid,
+                   {"topics": updated})
+    return {"topics": updated}

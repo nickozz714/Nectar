@@ -727,6 +727,7 @@ async function selectNode(uid) {
     <div class="section"><h3>${esc(n.type)} · scope ${esc(n.scope)}</h3>
       <strong style="font-size:16px">${esc(n.title)}</strong></div>
     ${n.content ? `<pre>${esc(n.content)}</pre>` : ""}
+    ${n.type === "topic" && n.summary ? `<div class="section"><h3>Samenvatting</h3><div class="t" style="color:var(--dim)">${esc(n.summary)}</div></div>` : ""}
     ${n.type !== "topic" ? `<div class="section"><h3>Status (Bloom)</h3>
       <div>${bloomBadge(n.lifecycle)}
         ${(n.pos || n.neg) ? `<span class="t" style="color:var(--dim);margin-left:6px">👍 ${n.pos||0} · 👎 ${n.neg||0} (waarde)</span>` : ""}
@@ -1158,6 +1159,9 @@ function renderBeheer() {
   const isAdmin = ME.role === "org_admin";
   page.innerHTML = `
     <h2 style="margin-bottom:6px">Beheer</h2>
+    <div class="card"><h3 style="margin-bottom:8px">Inzicht</h3>
+      <button class="ghost" onclick="loadAnalytics()">Laden</button>
+      <div id="analytics" style="margin-top:8px"></div></div>
     <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert Nectar zelf in een project.</p>
       <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
@@ -1170,7 +1174,7 @@ function renderBeheer() {
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
       <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
-      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span></div>
+      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Topic-samenvattingen (deterministisch) bijwerken zodat elk topic toont wat het bevat.</p><button class="ghost" onclick="rebuildSummaries()">Samenvattingen bijwerken</button> <span id="sumOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Swarm — consensus</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Minimale Swarm-grootte: hoeveel <strong>stemmen</strong> een Pollen nodig heeft voordat 'ie oppakbaar wordt (<em>ready</em>). Zet op <strong>1</strong> voor een kleine/solo swarm zodat één stem al genoeg is. Elk lid mag daarna ready Pollen oppakken.</p>
       <div style="display:flex;gap:8px;align-items:center">
@@ -1274,6 +1278,28 @@ async function stalenessScan() {
     const r = await api("/graph/staleness-scan", { method: "POST" });
     out.textContent = ` ✓ ${r.stale} stale, ${r.opened} review-Pollen — zie de Pollen-tab`;
   } catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function rebuildSummaries() {
+  const out = document.getElementById("sumOut"); out.textContent = " bezig…";
+  try { const r = await api("/graph/topic-summaries", { method: "POST" }); out.textContent = ` ✓ ${r.topics} topics`; }
+  catch (e) { out.textContent = ""; alert(e.message); }
+}
+async function loadAnalytics() {
+  const el = document.getElementById("analytics");
+  el.innerHTML = `<div class="t" style="color:var(--dim)">laden…</div>`;
+  try {
+    const a = await api("/graph/analytics");
+    const gaps = (a.gaps || []).length
+      ? `<div class="section"><h3>Kennis-gaten (herhaalde lege recalls)</h3>` +
+        a.gaps.map(g => `<div class="t">• ${esc(g.query)} <span style="color:var(--dim)">(${g.count}×)</span></div>`).join("") + `</div>`
+      : `<div class="t" style="color:var(--dim)">geen kennis-gaten geregistreerd</div>`;
+    const most = (a.most_used || []).map(m => `<div class="t">• ${esc(m.title)} <span style="color:var(--dim)">(${m.use_count}×)</span></div>`).join("");
+    el.innerHTML = `
+      <div class="t">Totaal: <strong>${a.total||0}</strong> · mature ${a.mature||0} · validated ${a.validated||0} · captured ${a.captured||0} · deprecated ${a.deprecated||0}</div>
+      <div class="t" style="margin-top:4px">Nooit opgehaald (archiveer-kandidaten): <strong>${a.never_used||0}</strong></div>
+      <div class="section" style="margin-top:8px"><h3>Meest gebruikt</h3>${most || '<div class="t" style="color:var(--dim)">nog niets</div>'}</div>
+      ${gaps}`;
+  } catch (e) { el.innerHTML = `<div class="t" style="color:var(--red)">${esc(e.message)}</div>`; }
 }
 async function exportBackup() {
   const out = document.getElementById("expOut");

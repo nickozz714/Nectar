@@ -765,3 +765,44 @@ def neighbors_for(session: Session, account: AuthedAccount, uids: list[str], lim
         uids=uids, limit=limit, **_acc_params(account),
     )
     return [node_to_dict(r["n"]) for r in result]
+
+
+def record_gap(session: Session, org_uid: str, query: str) -> None:
+    """A recall that returned nothing = a knowledge gap. Aggregate by normalized query so
+    repeated empty searches surface as 'what the org keeps asking but has no answer for'."""
+    q = " ".join(query.lower().split())[:200]
+    if len(q) < 3:
+        return
+    session.run(
+        """
+        MERGE (g:Gap {org_uid: $o, q: $q})
+        ON CREATE SET g.count = 1, g.first = timestamp(), g.last = timestamp()
+        ON MATCH SET g.count = coalesce(g.count,0) + 1, g.last = timestamp()
+        """,
+        o=org_uid, q=q,
+    )
+
+
+def top_gaps(session: Session, org_uid: str, limit: int = 20) -> list[dict]:
+    rows = session.run(
+        "MATCH (g:Gap {org_uid:$o}) RETURN g.q AS query, g.count AS count, g.last AS last "
+        "ORDER BY g.count DESC, g.last DESC LIMIT $l", o=org_uid, l=limit)
+    return [dict(r) for r in rows]
+
+
+def analytics(session: Session, org_uid: str) -> dict:
+    row = session.run(
+        """
+        MATCH (n:Knowledge {org_uid:$o}) WHERE n.type <> 'topic'
+        RETURN count(n) AS total,
+               sum(CASE WHEN coalesce(n.use_count,0)=0 THEN 1 ELSE 0 END) AS never_used,
+               sum(CASE WHEN n.lifecycle='mature' THEN 1 ELSE 0 END) AS mature,
+               sum(CASE WHEN n.lifecycle='validated' THEN 1 ELSE 0 END) AS validated,
+               sum(CASE WHEN n.lifecycle='captured' THEN 1 ELSE 0 END) AS captured,
+               sum(CASE WHEN n.lifecycle='deprecated' THEN 1 ELSE 0 END) AS deprecated
+        """, o=org_uid).single()
+    most = session.run(
+        "MATCH (n:Knowledge {org_uid:$o}) WHERE n.type<>'topic' AND coalesce(n.use_count,0)>0 "
+        "RETURN n.title AS title, n.use_count AS use_count ORDER BY n.use_count DESC LIMIT 8",
+        o=org_uid).data()
+    return {**dict(row), "most_used": most, "gaps": top_gaps(session, org_uid, 12)}
