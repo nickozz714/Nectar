@@ -62,14 +62,26 @@ kluwen. De GUI klapt deze ketens uit bij aanklikken, dus goede hiërarchie = een
   `hive_attachments(node_uid)` (of `hive-attach list <node_uid>`) → `hive-attach get <att_uid>`.
   Bijlagen worden **niet** automatisch in recall gespoten — alleen op aanvraag.
 
-## Mutaties zijn consensus-gated
-Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een
-`hive_suggest` in (`edit`, `invalidate`, `dedup_merge`, `promotion`, `scope_widening`).
-Bij de drempel wordt de chore actief. Scope-verbreding gaat altijd naar een mens.
+## Draag stuifmeel — versterk het brein bij elk bezoek
+Recall geeft je bij elke prompt één **Pollen** (taak) mee. Past het bij je werk, pak 'm dan even op:
+- **Claim eerst** met `hive_claim(pollen_uid)` zodat een andere agent niet hetzelfde doet; besluit je 'm
+  niet te doen, geef 'm vrij met `hive_release`.
+- **Los op** met `hive_chores()` → beoordeel → `hive_resolve_chore(uid, "apply"|"reject")`.
+- **op_route Pollen** (twee bijna-gelijke memories): lees beide met `hive_get` en beslis met
+  `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP", ...)`. **Belangrijk:** UPDATE/DELETE mag je NIET
+  doen op een memory die je zélf schreef — dat oordeel is voor een ánder Swarm-lid.
 
-## Wees een bij 🐝
-Noemt recall openstaande chores en je taak laat het toe: onderhoud even mee —
-`hive_chores()` → beoordeel → `hive_resolve_chore(...)` (vereist de maintainer-rol).
+**Geef feedback op wat je gebruikte.** Paste een uit recall opgehaalde memory je taak echt (of juist
+niet)? Meld het met `hive_feedback(node_uid, helped=true|false)`. Dit is het causale "Memory Worth"-signaal:
+wat consequent helpt stijgt in recall, wat misleidt zakt. Eén klein stuifmeel per bezoek.
+
+**Verouderd besluit?** Schrijf het nieuwe besluit en koppel ze met `hive_supersede(old, new)` — het oude
+blijft vindbaar maar zakt weg; het nieuwste wint. Laat het model nooit zelf "raden" wat nieuwer is.
+
+## Mutaties zijn consensus-gated (aanvullend)
+Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een `hive_suggest` in.
+Bij genoeg **onafhankelijke** stemmen (per account, niet per model) wordt de Pollen actief. Scope-verbreding
+gaat altijd naar een mens.
 
 ## Secrets
 Haal secrets alleen via `hive-secret` in een env-var (`export X=$(hive-secret X)`) — nooit
