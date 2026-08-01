@@ -117,6 +117,32 @@ Any project opts in with the bundled plugin — a recall hook (injects knowledge
 a skill, and secret/update helpers. Download the install kit from the GUI (Beheer →
 install-zip) or see **[INSTALL.md](INSTALL.md)** for the exact steps.
 
+### Connect any other MCP client (client-agnostic)
+
+Nectar is a **standard MCP server** — the whole brain (search, remember, chores, feedback,
+focus, skills, secrets) is available to **any MCP-capable client** (Cursor, Cline, Windsurf,
+your own agent, …), not just Claude Code. Point the client at the MCP endpoint with an account
+token:
+
+```jsonc
+// generic MCP client config
+{
+  "mcpServers": {
+    "nectar": {
+      "url": "https://<host>:8643/mcp",       // HTTPS via the Caddy sidecar
+      "headers": { "Authorization": "Bearer <your account token>" }
+    }
+  }
+}
+```
+
+The one Claude-Code-specific nicety is *automatic* recall on every prompt (via its hook). Every
+other client gets the same experience **on demand**: have the model call **`hive_recall("<your
+task>")`** at the start of a task — it returns the exact same context block (active focus +
+standing instructions + top-ranked memories + one Pollen). Then `hive_remember` to write and
+`hive_feedback` on what helped. The MCP server's own instructions tell connecting models to do
+this, so it works out of the box.
+
 ### Deploy an update
 
 ```bash

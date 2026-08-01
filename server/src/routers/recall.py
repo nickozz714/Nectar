@@ -5,9 +5,8 @@ from neo4j import Session
 
 from src.authentication.deps import AuthedAccount, require_account
 from src.components.db import get_graph
-from src.repository import focus_repo, governance_repo, graph_repo
 from src.models.core import RecallRequest, RecallResponse
-from src.services import governance_service, search_service
+from src.services import recall_service
 
 router = APIRouter(tags=["hive"])
 
@@ -18,40 +17,13 @@ def recall(
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
-    """Deterministic read side: called by the plugin's UserPromptSubmit hook on every
-    prompt. Anchors (the project's topics, via HIVE_ANCHORS) boost the project's slice
-    of the Hive in the ranking without hiding the rest of the org's knowledge. One
-    contextually-matched Pollen (task) piggybacks so every model in the Swarm carries a
-    bit of pollen each visit — strengthening Nectar as it goes."""
-    results = search_service.search(
-        session, account, body.query, anchors=body.anchors or None, limit=body.limit
+    """Deterministic read side: called by the Claude Code plugin's UserPromptSubmit hook on every
+    prompt. Composes the recall context (focus + standing instructions + ranked memories + one
+    contextual Pollen). Other MCP clients get the same via the hive_recall tool. Anchors boost the
+    project's slice of the Hive without hiding the rest of the org's knowledge."""
+    r = recall_service.recall(
+        session, account, body.query, anchors=body.anchors or None,
+        project=body.project or "", limit=body.limit,
     )
-    if not results:
-        # A recall that found nothing is a knowledge gap — aggregate it so repeated
-        # unanswered questions surface as capture prompts (self-improving loop).
-        graph_repo.record_gap(session, account.org_uid, body.query)
-
-    # System memories: standing instructions always injected, on top, regardless of query.
-    system = graph_repo.list_system(session, account)
-    seen = {n["uid"] for n in system}
-    results = [n for n in results if n["uid"] not in seen]
-    # Anti context-rot: inject only a few, highly-relevant memories, strongest at the ends.
-    results = search_service.cap_and_order(results)
-
-    ready = governance_repo.ready_count(session, account)
-    parts = []
-    # Active focus first: the current task/plan/guardrails, re-injected every prompt to
-    # keep a long session on course (anti-drift, survives compaction).
-    focus = focus_repo.get_focus(session, account, project=body.project or "")
-    if focus and focus.get("goal"):
-        parts.append("## ▶ Actieve taak — blijf hierbij\n" + search_service.render_focus(focus))
-    if system:
-        parts.append("## Nectar — vaste instructies (altijd van toepassing)\n"
-                     + search_service.render_system(system))
-    if results:
-        parts.append("## Nectar recall\n" + search_service.render_results(results))
-    # One Pollen per visit: the single open/ready task most relevant to this prompt.
-    pollen = governance_service.pick_contextual_pollen(session, account, body.query)
-    if pollen:
-        parts.append(governance_service.render_pollen(pollen))
-    return RecallResponse(context="\n\n".join(parts), result_count=len(results), ready_chores=ready)
+    return RecallResponse(context=r["context"], result_count=r["result_count"],
+                          ready_chores=r["ready_chores"])

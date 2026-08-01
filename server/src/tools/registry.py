@@ -23,8 +23,11 @@ from src.services import (
 mcp = FastMCP(
     "Nectar",
     instructions=(
-        "The shared mind of your organization. Consult it before starting work, write "
-        "back reusable knowledge, and — when a chore is ready — help maintain the hive."
+        "Nectar — the shared mind of your organization, usable from ANY MCP client. At the "
+        "start of a task call hive_recall(<your task>) to load the relevant org knowledge "
+        "(focus + standing instructions + top memories + one maintenance task). Write reusable "
+        "knowledge back with hive_remember. Afterwards, hive_feedback(node_uid, helped) on what "
+        "actually helped. When a Pollen (task) is ready, help maintain the hive."
     ),
 )
 
@@ -47,6 +50,21 @@ def _project() -> str:
         return (get_http_request().headers.get("x-hive-project", "") or "").strip()
     except Exception:
         return ""
+
+
+@mcp.tool
+def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8) -> str:
+    """Load the organization's relevant knowledge for your CURRENT task — the same context the
+    Claude Code hook injects automatically, so ANY MCP client (Cursor, Cline, Windsurf, your own
+    agent, …) can tap the shared brain the same way. Returns the active focus, the standing
+    instructions, the top-ranked memories, and one contextual Pollen (maintenance task).
+
+    Call this at the START of a task and whenever the topic shifts. Afterwards, tell the brain
+    what actually helped with hive_feedback(node_uid, helped) so recall keeps improving. Pass
+    `anchors` (your project's topic titles) to bias ranking toward that project."""
+    with _authed() as (session, account):
+        from src.services import recall_service
+        return recall_service.recall(session, account, query, anchors=anchors, limit=limit)["context"]
 
 
 @mcp.tool
