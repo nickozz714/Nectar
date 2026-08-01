@@ -404,6 +404,18 @@ def train_ranker(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/linkpred-scan")
+def linkpred_scan(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Propose RELATES links between probably-related memories as suggestion-Pollen. Maintainer."""
+    try:
+        return curation_service.link_prediction_scan(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/pagerank-scan")
 def pagerank_scan(
     account: AuthedAccount = Depends(require_account),

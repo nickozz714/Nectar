@@ -119,6 +119,12 @@ def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict)
         graph_repo.archive_node(session, duplicate)
         graph_repo.set_lifecycle(session, account.org_uid, duplicate, "deprecated")
         return "duplicate archived"
+    if kind == "relate_suggest":
+        other = payload.get("other_uid")
+        if not other:
+            raise ValueError("relate_suggest payload needs other_uid")
+        graph_repo.link(session, account, node_uid, other, "relates")
+        return "linked as related"
     if kind == "stale_review":
         # "yes, still correct" — refresh it (resets the decay clock) and confirm it as validated.
         graph_repo.touch_nodes(session, [node_uid])
@@ -187,6 +193,7 @@ _POLLEN_VERB = {
     "scope_widening": "een scope-verbreding beoordelen (mens)",
     "stale_review": "een oude-maar-veelgebruikte memory herbevestigen of bijwerken",
     "op_route": "beslissen hoe een bijna-duplicaat te verwerken (samenvoegen/behouden/schrappen)",
+    "relate_suggest": "twee waarschijnlijk-gerelateerde memories aan elkaar koppelen (RELATES)",
 }
 
 

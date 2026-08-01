@@ -8,7 +8,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository.graph_repo import VISIBLE, _acc_params
 
-POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route"}
+POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest"}
 
 
 def suggestion_key(chore_type: str, node_uid: str, payload: dict) -> str:

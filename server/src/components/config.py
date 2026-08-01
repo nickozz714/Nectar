@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     # Cold-start: falls back to the hand-tuned blend until then. No torch/sklearn.
     LTR_ENABLED: bool = True
     LTR_MIN_EXAMPLES: int = 40
+    # Link prediction: propose RELATES edges between memories that share neighbours
+    # (Adamic-Adar) AND are semantically similar, as suggestion-Pollen (never auto-linked).
+    LINKPRED_MIN_SIM: float = 0.55
+    LINKPRED_MIN_COMMON: int = 2
+    LINKPRED_TOP: int = 15
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

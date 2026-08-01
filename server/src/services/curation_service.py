@@ -314,3 +314,61 @@ def pagerank_scan(session: Session, account: AuthedAccount) -> dict:
     audit_repo.log(session, account.org_uid, account.uid, "pagerank_scan", account.org_uid, {"nodes": n})
     return {"nodes": n, "edges": len(edges),
             "top": [{"uid": u, "score": s} for u, s in top]}
+
+
+def link_prediction_scan(session: Session, account: AuthedAccount) -> dict:
+    """Propose RELATES links: memory pairs that share neighbours (Adamic-Adar) AND are semantically
+    similar, but aren't linked yet. High-scoring pairs become suggestion-Pollen for review — never
+    auto-linked. In-app (no GDS plugin). Maintainer."""
+    import math
+    from collections import defaultdict
+    from src.repository import governance_repo, tenancy_repo
+    from src.components.config import get_settings
+    assert_role(account, "maintainer", "Running link prediction")
+    s = get_settings()
+    data = graph_repo.linkpred_data(session, account.org_uid)
+    emb = {n["uid"]: n["embedding"] for n in data["nodes"]}
+    title = {n["uid"]: n["title"] for n in data["nodes"]}
+    istopic = {n["uid"]: (n["type"] == "topic") for n in data["nodes"]}
+    adj: dict[str, set] = defaultdict(set)
+    existing = set()
+    for a, b in data["edges"]:
+        adj[a].add(b); adj[b].add(a)
+        existing.add(frozenset((a, b)))
+    deg = {u: len(v) for u, v in adj.items()}
+
+    scored, seen = [], set()
+    for a in list(adj):
+        if istopic.get(a):
+            continue
+        two_hop = {b for x in adj[a] for b in adj[x] if b != a and not istopic.get(b, False)}
+        for b in two_hop:
+            key = frozenset((a, b))
+            if key in seen or key in existing:
+                continue
+            seen.add(key)
+            common = adj[a] & adj[b]
+            if len(common) < s.LINKPRED_MIN_COMMON:
+                continue
+            sim = _cosine(emb.get(a), emb.get(b))
+            if sim < s.LINKPRED_MIN_SIM:
+                continue
+            aa = sum(1.0 / math.log(deg[c]) for c in common if deg.get(c, 0) > 1)
+            scored.append((a, b, aa, sim, aa * sim, len(common)))
+    scored.sort(key=lambda t: t[4], reverse=True)
+
+    threshold = tenancy_repo.get_consensus_threshold(session, account.org_uid, s.CONSENSUS_THRESHOLD)
+    opened = []
+    for a, b, aa, sim, _score, cn in scored[: s.LINKPRED_TOP]:
+        res = governance_repo.suggest(
+            session, account, "relate_suggest", a,
+            {"other_uid": b, "other_title": title.get(b, ""), "similarity": round(sim, 3), "common": cn},
+            rationale=f"Link-predictie: '{title.get(a,'')[:45]}' ↔ '{title.get(b,'')[:45]}' delen {cn} "
+                      f"buren en lijken semantisch (sim {sim:.2f}). Koppelen als RELATES?",
+            model_name="link-prediction", threshold=threshold)
+        if res:
+            opened.append({"a": title.get(a, ""), "b": title.get(b, ""),
+                           "similarity": round(sim, 3), "chore": res["uid"], "status": res["status"]})
+    audit_repo.log(session, account.org_uid, account.uid, "link_prediction_scan", account.org_uid,
+                   {"candidates": len(scored), "opened": len(opened)})
+    return {"candidates": len(scored), "opened": len(opened), "suggestions": opened}

@@ -889,3 +889,15 @@ def ranker_examples(session: Session, org_uid: str) -> list[dict]:
         except (ValueError, TypeError):
             pass
     return out
+
+
+def linkpred_data(session: Session, org_uid: str) -> dict:
+    """Non-archived knowledge nodes (uid/type/title/embedding) + the undirected CONTAINS/RELATES
+    edge pairs — the substrate for in-app link prediction (Adamic-Adar × semantic similarity)."""
+    nodes = [dict(r) for r in session.run(
+        "MATCH (n:Knowledge {org_uid:$o}) WHERE coalesce(n.archived,false)=false "
+        "RETURN n.uid AS uid, n.type AS type, n.title AS title, n.embedding AS embedding", o=org_uid)]
+    edges = [(r["a"], r["b"]) for r in session.run(
+        "MATCH (a:Knowledge {org_uid:$o})-[:CONTAINS|RELATES]-(b:Knowledge {org_uid:$o}) "
+        "WHERE id(a) < id(b) RETURN a.uid AS a, b.uid AS b", o=org_uid)]
+    return {"nodes": nodes, "edges": edges}
