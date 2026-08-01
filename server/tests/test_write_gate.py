@@ -59,9 +59,10 @@ def test_grey_zone_creates_and_files_chore(graph, account):
     res = _remember(graph, acc, title,
                     "woordaaa woordbbb woordccc woordddd woordeee woordhhh wooooiii", ["Onderwerp"])
     assert res["created"] is True
-    assert any("dedup" in n for n in res["notes"])
+    assert any("think-Pollen" in n or "similar" in n for n in res["notes"])
+    # the grey band now files an op_route think-Pollen (ready) for the swarm to reconcile
     chores = governance_repo.open_chores(graph, acc, limit=10)
-    assert any(c["type"] == "dedup_merge" for c in chores)
+    assert any(c["type"] == "op_route" and c["status"] == "ready" for c in chores)
 
 
 def test_sensitivity_classification(graph, account):

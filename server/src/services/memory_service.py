@@ -162,17 +162,25 @@ def remember(
     )
 
     if grey_zone_of is not None:
-        governance_repo.suggest(
-            session, account, "dedup_merge", grey_zone_of["uid"],
-            {"duplicate_uid": node["uid"]},
-            rationale=f"Write-gate: new node '{title}' is {grey_zone_of['sim']:.2f} similar "
-            f"to '{grey_zone_of['title']}' — swarm should judge whether it is a duplicate.",
-            model_name="write-gate", threshold=tenancy_repo.get_consensus_threshold(
-                session, account.org_uid, settings.CONSENSUS_THRESHOLD),
+        # op_route think-Pollen: instead of a silent dedup vote, pose a REASONING task to the
+        # swarm — a visiting agent decides ADD / UPDATE / DELETE / NOOP given both memories.
+        governance_repo.create_think_pollen(
+            session, account, node["uid"], "op_route",
+            {
+                "instruction": ("Twee bijna-gelijke memories. Beslis: ADD (het zijn echt aparte "
+                                "weetjes, behoud beide), UPDATE (voeg samen tot één betere — lever "
+                                "merged_title + merged_content), DELETE (dit nieuwe is een dubbel, "
+                                "schrap het), of NOOP (laat zo). Een ánder Swarm-lid moet dit oordelen."),
+                "duplicate_uid": grey_zone_of["uid"],
+                "duplicate_title": grey_zone_of["title"],
+                "similarity": round(grey_zone_of["sim"], 3),
+                "decisions": ["ADD", "UPDATE", "DELETE", "NOOP"],
+            },
+            idem_key=f"op_route:{node['uid']}",
         )
         notes.append(
-            f"similar to existing '{grey_zone_of['title']}' "
-            f"(similarity {grey_zone_of['sim']:.2f}); a dedup chore was filed for the swarm"
+            f"similar to existing '{grey_zone_of['title']}' (similarity {grey_zone_of['sim']:.2f}); "
+            "an op-route think-Pollen was filed for the swarm to reconcile"
         )
 
     if force:

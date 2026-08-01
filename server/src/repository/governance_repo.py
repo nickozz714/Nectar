@@ -8,7 +8,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository.graph_repo import VISIBLE, _acc_params
 
-POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review"}
+POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route"}
 
 
 def suggestion_key(chore_type: str, node_uid: str, payload: dict) -> str:
@@ -207,3 +207,26 @@ def release_pollen(session: Session, org_uid: str, pollen_uid: str, account_uid:
         u=pollen_uid, o=org_uid, me=account_uid,
     ).single()
     return r is not None
+
+
+def create_think_pollen(
+    session: Session, account: AuthedAccount, node_uid: str, kind: str, payload: dict, idem_key: str
+) -> dict | None:
+    """A 'think-Pollen' poses a REASONING task to the swarm (not a vote-to-consensus). It is
+    created 'ready' immediately — a single visiting agent does the thinking and writes the
+    answer back. Idempotent on idem_key (a re-triggered identical task merges, never duplicates)."""
+    import json as _json
+    rec = session.run(
+        f"""
+        MATCH (n:Knowledge {{uid: $node_uid, org_uid: $org_uid}})
+        WHERE {VISIBLE}
+        MERGE (c:Pollen {{org_uid: $org_uid, suggestion_key: $key}})
+        ON CREATE SET c.uid = randomUUID(), c.type = $kind, c.mode = 'think', c.status = 'ready',
+                      c.payload = $payload, c.created = timestamp()
+        MERGE (c)-[:ABOUT]->(n)
+        RETURN c.uid AS uid, c.type AS type, c.status AS status
+        """,
+        node_uid=node_uid, org_uid=account.org_uid, key=idem_key, kind=kind,
+        payload=_json.dumps(payload), acc_team=account.team_uid, acc_uid=account.uid,
+    ).single()
+    return dict(rec) if rec else None

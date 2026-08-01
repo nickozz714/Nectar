@@ -186,6 +186,7 @@ _POLLEN_VERB = {
     "invalidate": "verouderde kennis archiveren",
     "scope_widening": "een scope-verbreding beoordelen (mens)",
     "stale_review": "een oude-maar-veelgebruikte memory herbevestigen of bijwerken",
+    "op_route": "beslissen hoe een bijna-duplicaat te verwerken (samenvoegen/behouden/schrappen)",
 }
 
 
@@ -224,3 +225,54 @@ def render_pollen(pollen: dict) -> str:
     return (f"🌼 **Pollen** — draag bij aan de Hive terwijl je hier toch bent: {what} "
             f"voor *{node}*{detail}. Past het bij je taak? Beoordeel 'm op inhoud en los 'm op "
             f"met `hive_chores()` → `hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
+
+
+def resolve_think(
+    session: Session, account: AuthedAccount, pollen_uid: str, decision: str,
+    merged_title: str = "", merged_content: str = "", note: str = "",
+) -> dict:
+    """Resolve an op_route think-Pollen: a swarm agent decides how to reconcile a near-duplicate.
+    SAFEGUARD (producer≠reviewer): the DESTRUCTIVE decisions (UPDATE/DELETE) may not be made by the
+    account that WROTE the new memory — a different Swarm member must judge the merge. The result
+    of an UPDATE enters lifecycle 'validated' (a peer confirmed it); the new node is archived."""
+    assert_role(account, "member", "Resolving a think-Pollen")
+    decision = (decision or "").strip().upper()
+    if decision not in ("ADD", "UPDATE", "DELETE", "NOOP"):
+        raise ValueError("decision must be ADD, UPDATE, DELETE or NOOP")
+    chore = governance_repo.get_chore(session, account.org_uid, pollen_uid)
+    if chore is None or chore["type"] != "op_route":
+        raise ValueError("op_route think-Pollen not found")
+    if chore["status"] not in ("open", "ready"):
+        raise ValueError(f"already handled ('{chore['status']}')")
+    payload = json.loads(chore["payload"] or "{}")
+    new_uid = chore["node_uid"]                 # the just-written (possibly duplicate) memory
+    keep_uid = payload.get("duplicate_uid")     # the existing memory it resembles
+    new_node = graph_repo.get_node(session, account, new_uid)
+    if new_node is None:
+        raise ValueError("the new memory no longer exists")
+
+    if decision in ("UPDATE", "DELETE") and new_node.get("created_by") == account.uid:
+        raise ValueError("producer≠reviewer: a DIFFERENT Swarm member must judge this merge — "
+                         "you wrote the new memory. Ask another agent, or choose ADD/NOOP.")
+
+    if decision in ("ADD", "NOOP"):
+        result = "kept both — judged as distinct" if decision == "ADD" else "left as-is"
+    elif decision == "DELETE":
+        graph_repo.archive_node(session, new_uid)
+        graph_repo.set_lifecycle(session, account.org_uid, new_uid, "deprecated")
+        result = "new memory archived as a duplicate"
+    else:  # UPDATE — merge into the kept node
+        if not keep_uid or not merged_content.strip():
+            raise ValueError("UPDATE needs the existing memory + merged_content")
+        title = merged_title.strip() or graph_repo.get_node(session, account, keep_uid)["title"]
+        embedding = embed(f"{title}\n{merged_content}")
+        graph_repo.update_node(session, keep_uid, {"title": title, "content": merged_content}, embedding)
+        graph_repo.set_lifecycle(session, account.org_uid, keep_uid, "validated")  # peer-confirmed merge
+        graph_repo.archive_node(session, new_uid)
+        graph_repo.set_lifecycle(session, account.org_uid, new_uid, "deprecated")
+        result = "merged into the existing memory; new one archived"
+
+    governance_repo.close_chore(session, pollen_uid, "resolved", account.uid, note or f"{decision}: {result}")
+    audit_repo.log(session, account.org_uid, account.uid, "resolve_think", pollen_uid,
+                   {"kind": "op_route", "decision": decision, "new": new_uid, "keep": keep_uid})
+    return {"status": "resolved", "decision": decision, "result": result}

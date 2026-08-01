@@ -117,6 +117,24 @@ def graph_repo_governance_claim(session, account, pollen_uid: str) -> dict:
 
 
 @mcp.tool
+def hive_resolve_think(pollen_uid: str, decision: str, merged_title: str = "",
+                       merged_content: str = "", note: str = "") -> dict:
+    """Do the reasoning an op_route think-Pollen asks for: two near-duplicate memories, decide
+    how to reconcile them. decision is one of:
+      • ADD — they are genuinely distinct, keep both
+      • UPDATE — merge into one better memory (supply merged_title + merged_content); the new
+        one is archived and the merged memory is confirmed 'validated'
+      • DELETE — the new memory is a duplicate, archive it
+      • NOOP — leave as-is
+    SAFEGUARD: UPDATE/DELETE may NOT be done by the agent that wrote the new memory — a different
+    Swarm member must judge the merge. Read both memories with hive_get first."""
+    with _authed() as (session, account):
+        from src.services import governance_service
+        return governance_service.resolve_think(
+            session, account, pollen_uid, decision, merged_title, merged_content, note)
+
+
+@mcp.tool
 def hive_feedback(node_uid: str, helped: bool) -> dict:
     """Report whether a memory you recalled actually helped with your task (helped=true) or
     was wrong/irrelevant (helped=false). This is the causal 'Memory Worth' signal: memories
