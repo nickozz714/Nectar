@@ -162,19 +162,48 @@ def chores_by_status(session: Session, org_uid: str | None, status: str) -> list
     return [dict(r) for r in result]
 
 
-def candidate_pollen(session: Session, account: AuthedAccount, limit: int = 25) -> list[dict]:
+def candidate_pollen(session: Session, account: AuthedAccount, limit: int = 25, ttl_min: int = 20) -> list[dict]:
     """Open/ready chores ('Pollen') about visible nodes, with the node's embedding so the caller
-    can pick the one most relevant to what the agent is currently doing."""
+    can pick the one most relevant to what the agent is doing. Stigmergy: Pollen actively claimed
+    by ANOTHER agent (within ttl_min) is hidden, so the swarm does not duplicate the same task."""
     result = session.run(
         f"""
         MATCH (c:Pollen {{org_uid: $org_uid}})-[:ABOUT]->(n:Knowledge)
         WHERE c.status IN ['open', 'ready'] AND {VISIBLE}
+          AND NOT (c.claimed_by IS NOT NULL AND c.claimed_by <> $acc_uid
+                   AND c.claimed_at > timestamp() - $ttl_ms)
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
                n.uid AS node_uid, n.title AS node_title, n.embedding AS embedding
         ORDER BY c.created DESC
         LIMIT $limit
         """,
-        limit=limit,
+        limit=limit, ttl_ms=ttl_min * 60_000,
         **_acc_params(account),
     )
     return [dict(r) for r in result]
+
+
+def claim_pollen(session: Session, org_uid: str, pollen_uid: str, account_uid: str, ttl_min: int) -> dict | None:
+    """Soft-lock a Pollen so other agents skip it. Succeeds if unclaimed, already yours, or the
+    previous claim expired. Returns None if another agent holds an active claim."""
+    r = session.run(
+        """
+        MATCH (c:Pollen {uid: $u, org_uid: $o})
+        WITH c, (c.claimed_by IS NULL OR c.claimed_by = $me
+                 OR c.claimed_at <= timestamp() - $ttl_ms) AS free
+        WHERE free
+        SET c.claimed_by = $me, c.claimed_at = timestamp()
+        RETURN c.uid AS uid, c.claimed_by AS claimed_by
+        """,
+        u=pollen_uid, o=org_uid, me=account_uid, ttl_ms=ttl_min * 60_000,
+    ).single()
+    return dict(r) if r else None
+
+
+def release_pollen(session: Session, org_uid: str, pollen_uid: str, account_uid: str) -> bool:
+    r = session.run(
+        "MATCH (c:Pollen {uid:$u, org_uid:$o}) WHERE c.claimed_by = $me "
+        "SET c.claimed_by = null, c.claimed_at = null RETURN c.uid AS uid",
+        u=pollen_uid, o=org_uid, me=account_uid,
+    ).single()
+    return r is not None

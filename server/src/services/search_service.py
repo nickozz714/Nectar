@@ -78,6 +78,16 @@ def search(
     candidates = _rrf_fuse([dense, sparse])
     if not candidates:
         candidates = graph_repo.text_candidates(session, account, query, allowed=None)
+    # Multi-hop expansion: pull the 1-hop neighbours of the strongest anchors — the answer
+    # often lives one edge away (a decision links to its rationale / superseding decision).
+    # Neighbours enter at a demoted base score, so they only surface if freshness/importance lifts them.
+    if candidates:
+        top = sorted(candidates, key=lambda c: c[1], reverse=True)[:settings.MULTIHOP_ANCHORS]
+        present = {n["uid"] for n, _ in candidates}
+        for nb in graph_repo.neighbors_for(session, account, [n["uid"] for n, _ in top]):
+            if nb["uid"] not in present:
+                candidates.append((nb, settings.MULTIHOP_BASE))
+                present.add(nb["uid"])
 
     now_ms = time.time() * 1000
     qlow = query.lower()

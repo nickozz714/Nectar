@@ -195,7 +195,8 @@ def pick_contextual_pollen(session: Session, account: AuthedAccount, query: str)
     with a small boost for 'ready'. Returns the chore dict (or None if the hive has no Pollen)."""
     from src.components.embeddings import embed
 
-    cands = governance_repo.candidate_pollen(session, account, limit=25)
+    cands = governance_repo.candidate_pollen(
+        session, account, limit=25, ttl_min=get_settings().CLAIM_TTL_MIN)
     if not cands:
         return None
     qv = embed(query) if query else None

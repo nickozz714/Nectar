@@ -87,6 +87,36 @@ def hive_get(node_uid: str) -> dict:
 
 
 @mcp.tool
+def hive_claim(pollen_uid: str) -> dict:
+    """Claim a Pollen (task) before you start working it, so other agents in the Swarm skip it
+    and don't duplicate your work (stigmergy). The claim auto-expires after a while. Call
+    hive_release if you decide not to do it. Returns {claimed:true} or notes another agent holds it."""
+    from src.components.config import get_settings
+    with _authed() as (session, account):
+        res = graph_repo_governance_claim(session, account, pollen_uid)
+        return res
+
+
+@mcp.tool
+def hive_release(pollen_uid: str) -> dict:
+    """Release a Pollen you claimed but won't finish, so another agent can pick it up."""
+    with _authed() as (session, account):
+        from src.repository import governance_repo
+        ok = governance_repo.release_pollen(session, account.org_uid, pollen_uid, account.uid)
+        return {"released": ok}
+
+
+def graph_repo_governance_claim(session, account, pollen_uid: str) -> dict:
+    from src.components.config import get_settings
+    from src.repository import governance_repo
+    res = governance_repo.claim_pollen(session, account.org_uid, pollen_uid, account.uid,
+                                        get_settings().CLAIM_TTL_MIN)
+    if res is None:
+        return {"claimed": False, "note": "Another agent holds an active claim on this Pollen — pick a different one."}
+    return {"claimed": True, "pollen_uid": pollen_uid}
+
+
+@mcp.tool
 def hive_feedback(node_uid: str, helped: bool) -> dict:
     """Report whether a memory you recalled actually helped with your task (helped=true) or
     was wrong/irrelevant (helped=false). This is the causal 'Memory Worth' signal: memories

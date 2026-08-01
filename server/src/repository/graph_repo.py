@@ -747,3 +747,21 @@ def record_feedback(session: Session, org_uid: str, uid: str, helped: bool) -> d
         "RETURN n.uid AS uid, coalesce(n.pos,0) AS pos, coalesce(n.neg,0) AS neg",
         u=uid, o=org_uid).single()
     return dict(r) if r else None
+
+
+def neighbors_for(session: Session, account: AuthedAccount, uids: list[str], limit: int = 24) -> list[dict]:
+    """1-hop CONTAINS/RELATES neighbours (non-topic, visible, not archived) of the given anchor
+    nodes — for multi-hop retrieval expansion (the answer often sits one edge away)."""
+    if not uids:
+        return []
+    result = session.run(
+        f"""
+        MATCH (a:Knowledge) WHERE a.uid IN $uids
+        MATCH (a)-[:CONTAINS|RELATES]-(n:Knowledge)
+        WHERE n.type <> 'topic' AND coalesce(n.archived,false)=false AND {VISIBLE}
+          AND NOT n.uid IN $uids
+        RETURN DISTINCT n LIMIT $limit
+        """,
+        uids=uids, limit=limit, **_acc_params(account),
+    )
+    return [node_to_dict(r["n"]) for r in result]

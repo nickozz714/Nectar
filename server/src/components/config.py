@@ -81,6 +81,13 @@ class Settings(BaseSettings):
     # STALE_REVIEW_DAYS days is surfaced as a review Pollen ("is this still correct?").
     STALE_REVIEW_DAYS: int = 120
     STALE_MIN_USE: int = 3
+    # Multi-hop retrieval: expand the top MULTIHOP_ANCHORS hits with their 1-hop neighbours,
+    # which enter ranking at MULTIHOP_BASE (demoted vs direct hits).
+    MULTIHOP_ANCHORS: int = 5
+    MULTIHOP_BASE: float = 0.4
+    # Stigmergy: a Pollen claimed by an agent is hidden from OTHER agents for CLAIM_TTL_MIN
+    # minutes, so the swarm does not duplicate the same task. The claimer/expiry can retake it.
+    CLAIM_TTL_MIN: int = 20
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15
