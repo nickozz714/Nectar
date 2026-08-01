@@ -98,6 +98,11 @@ class Settings(BaseSettings):
     # a 0..1 pagerank per node; recall adds PAGERANK_WEIGHT·pagerank so well-connected,
     # central knowledge surfaces a little higher. No GDS plugin — the graph is small.
     PAGERANK_WEIGHT: float = 0.1
+    # Learning-to-rank: once >= LTR_MIN_EXAMPLES labeled recall examples (from hive_feedback)
+    # accrue, a small local logistic-regression ranker replaces the hand-tuned weights.
+    # Cold-start: falls back to the hand-tuned blend until then. No torch/sklearn.
+    LTR_ENABLED: bool = True
+    LTR_MIN_EXAMPLES: int = 40
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

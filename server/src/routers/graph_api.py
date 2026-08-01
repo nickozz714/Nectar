@@ -391,6 +391,19 @@ def topic_summaries(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/train-ranker")
+def train_ranker(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Train the learning-to-rank model from accumulated recall feedback. Maintainer."""
+    from src.services import ltr_service
+    try:
+        return ltr_service.train(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/pagerank-scan")
 def pagerank_scan(
     account: AuthedAccount = Depends(require_account),

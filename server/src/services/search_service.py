@@ -71,6 +71,50 @@ def _worth(node: dict) -> float:
     return pos / (pos + neg)
 
 
+# ---- Ranking = dot(features, weights). The weights are the hand-tuned defaults until a
+# ---- learning-to-rank model is trained from feedback (then those weights take over). ----
+FEATURE_KEYS = ("sim", "freshness", "anchor", "decision", "learning", "tag",
+                "superseded", "bloom", "importance", "worth", "pagerank")
+
+
+def _features(node: dict, sim: float, now_ms: float, anchor_uids: set, qlow: str) -> dict:
+    s = get_settings()
+    return {
+        "sim": sim,
+        "freshness": _freshness(node, now_ms),
+        "anchor": 1.0 if node["uid"] in anchor_uids else 0.0,
+        "decision": 1.0 if node.get("type") == "decision" else 0.0,
+        "learning": 1.0 if node.get("type") == "learning" else 0.0,
+        "tag": 1.0 if any(t in qlow for t in (node.get("tags") or [])) else 0.0,
+        "superseded": 1.0 if node.get("superseded_by") else 0.0,
+        "bloom": s.BLOOM_BOOST.get(node.get("lifecycle"), 0.0),
+        "importance": (node.get("importance") if node.get("importance") is not None else 0.5) - 0.5,
+        "worth": _worth(node) - 0.5,
+        "pagerank": node.get("pagerank") or 0.0,
+    }
+
+
+def _default_weights() -> tuple[dict, float]:
+    s = get_settings()
+    return ({"sim": s.SEMANTIC_WEIGHT, "freshness": s.FRESHNESS_WEIGHT, "anchor": s.ANCHOR_BOOST,
+             "decision": s.DECISION_BOOST, "learning": s.LEARNING_BOOST, "tag": s.TAG_BOOST,
+             "superseded": -s.SUPERSEDE_PENALTY, "bloom": 1.0, "importance": s.IMPORTANCE_WEIGHT,
+             "worth": s.OUTCOME_WEIGHT, "pagerank": s.PAGERANK_WEIGHT}, 0.0)
+
+
+def _apply(feat: dict, weights: dict, bias: float) -> float:
+    return sum(weights.get(k, 0.0) * feat[k] for k in FEATURE_KEYS) + bias
+
+
+def _ranker(session, org_uid: str) -> tuple[dict, float]:
+    """Learned weights if a ranker has been trained (learning-to-rank), else the hand-tuned defaults."""
+    if get_settings().LTR_ENABLED:
+        learned = graph_repo.get_ranker_weights(session, org_uid)
+        if learned and learned.get("weights"):
+            return learned["weights"], learned.get("bias", 0.0)
+    return _default_weights()
+
+
 def search(
     session: Session,
     account: AuthedAccount,
@@ -117,29 +161,14 @@ def search(
     now_ms = time.time() * 1000
     qlow = query.lower()
     want_tags = {t.strip().lower() for t in (tags or []) if t.strip()}
-    scored = [
-        (
-            node,
-            sim * settings.SEMANTIC_WEIGHT
-            + _freshness(node, now_ms) * settings.FRESHNESS_WEIGHT
-            + (settings.ANCHOR_BOOST if node["uid"] in anchor_uids else 0.0)
-            + (settings.DECISION_BOOST if node.get("type") == "decision" else 0.0)
-            + (settings.LEARNING_BOOST if node.get("type") == "learning" else 0.0)
-            # tags count in search: a nudge when one of the node's tags appears in the query
-            + (settings.TAG_BOOST if any(t in qlow for t in (node.get("tags") or [])) else 0.0)
-            # superseded facts stay findable but drop far below the current truth
-            - (settings.SUPERSEDE_PENALTY if node.get("superseded_by") else 0.0)
-            # Bloom: mature/validated knowledge rises above unconfirmed 'captured' notes.
-            # Unset lifecycle (legacy nodes) is neutral (0.0).
-            + settings.BLOOM_BOOST.get(node.get("lifecycle"), 0.0)
-            # Importance pin (0.5 neutral) + causal outcome-worth (did it actually help).
-            + settings.IMPORTANCE_WEIGHT * ((node.get("importance") if node.get("importance") is not None else 0.5) - 0.5)
-            + settings.OUTCOME_WEIGHT * (_worth(node) - 0.5)
-            # Structural importance: central, well-connected knowledge surfaces a little higher.
-            + settings.PAGERANK_WEIGHT * (node.get("pagerank") or 0.0),
-        )
-        for node, sim in candidates
-    ]
+    # Ranking is a dot product of a fixed feature vector with weights. The weights are the
+    # hand-tuned defaults UNLESS a learning-to-rank model has been trained from feedback.
+    weights, bias = _ranker(session, account.org_uid)
+    scored = []
+    for node, sim in candidates:
+        feat = _features(node, sim, now_ms, anchor_uids, qlow)
+        node["_feat"] = feat        # carried so the recall hook can log it as a training impression
+        scored.append((node, _apply(feat, weights, bias)))
     # explicit tag filter: keep only nodes carrying ALL requested tags
     if want_tags:
         scored = [(n, s) for n, s in scored if want_tags.issubset(set(n.get("tags") or []))]

@@ -31,6 +31,10 @@ def recall(
     results = [n for n in results if n["uid"] not in seen]
     # Anti context-rot: inject only a few, highly-relevant memories, strongest at the ends.
     results = search_service.cap_and_order(results)
+    # Log what was actually shown (with its ranking features) as an impression — becomes a
+    # labeled training example for learning-to-rank once the agent gives feedback on it.
+    graph_repo.record_impressions(session, account.org_uid,
+                                  [{"uid": n["uid"], "features": n["_feat"]} for n in results if n.get("_feat")])
 
     ready = governance_repo.ready_count(session, account)
     parts: list[str] = []

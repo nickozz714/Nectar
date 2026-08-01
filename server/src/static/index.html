@@ -645,7 +645,7 @@ function placeRadially(parentUid, childUids) {
   let dx = p.x - anchor.x, dy = p.y - anchor.y, len = Math.hypot(dx, dy);
   if (len < 1) { dx = p.x; dy = p.y; len = Math.hypot(dx, dy); }   // p near centre → radiate outward
   const base = len < 1 ? 0 : Math.atan2(dy, dx);
-  const span = Math.min(Math.PI * 1.15, 0.6 + n * 0.3);            // fan widens with count, never wraps back
+  const span = Math.min(Math.PI, 0.6 + n * 0.3);                   // at most a HALF circle, always fanning outward
   const step = n > 1 ? span / (n - 1) : 0;
   childUids.forEach((k, i) => {
     const node = nodes.get(k); if (!node) return;
@@ -1174,7 +1174,7 @@ function renderBeheer() {
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
       <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
       <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
-      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Topic-samenvattingen (deterministisch) bijwerken zodat elk topic toont wat het bevat.</p><button class="ghost" onclick="rebuildSummaries()">Samenvattingen bijwerken</button> <span id="sumOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">PageRank (structureel belang) herberekenen: centrale, goed-verbonden kennis komt iets hoger in recall.</p><button class="ghost" onclick="pagerankScan()">PageRank bijwerken</button> <span id="prOut" class="ok"></span></div>
+      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Topic-samenvattingen (deterministisch) bijwerken zodat elk topic toont wat het bevat.</p><button class="ghost" onclick="rebuildSummaries()">Samenvattingen bijwerken</button> <span id="sumOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">PageRank (structureel belang) herberekenen: centrale, goed-verbonden kennis komt iets hoger in recall.</p><button class="ghost" onclick="pagerankScan()">PageRank bijwerken</button> <span id="prOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Ranker trainen: leert van de "heeft het geholpen?"-feedback en vervangt de handmatige weegfactoren (valt terug op de defaults tot er genoeg feedback is).</p><button class="ghost" onclick="trainRanker()">Ranker trainen</button> <span id="ltrOut" class="ok"></span></div>
     <div class="card"><h3 style="margin-bottom:8px">Swarm — consensus</h3>
       <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Minimale Swarm-grootte: hoeveel <strong>stemmen</strong> een Pollen nodig heeft voordat 'ie oppakbaar wordt (<em>ready</em>). Zet op <strong>1</strong> voor een kleine/solo swarm zodat één stem al genoeg is. Elk lid mag daarna ready Pollen oppakken.</p>
       <div style="display:flex;gap:8px;align-items:center">
@@ -1289,6 +1289,13 @@ async function pagerankScan() {
   try { const r = await api("/graph/pagerank-scan", { method: "POST" }); out.textContent = ` ✓ ${r.nodes} nodes, ${r.edges} relaties`; }
   catch (e) { out.textContent = ""; alert(e.message); }
 }
+async function trainRanker() {
+  const out = document.getElementById("ltrOut"); out.textContent = " bezig…";
+  try {
+    const r = await api("/graph/train-ranker", { method: "POST" });
+    out.textContent = r.trained ? ` ✓ getraind op ${r.examples} voorbeelden` : ` ${r.examples}/${r.need} voorbeelden — nog niet genoeg (defaults blijven actief)`;
+  } catch (e) { out.textContent = ""; alert(e.message); }
+}
 async function loadAnalytics() {
   const el = document.getElementById("analytics");
   el.innerHTML = `<div class="t" style="color:var(--dim)">laden…</div>`;
@@ -1302,6 +1309,7 @@ async function loadAnalytics() {
     el.innerHTML = `
       <div class="t">Totaal: <strong>${a.total||0}</strong> · mature ${a.mature||0} · validated ${a.validated||0} · captured ${a.captured||0} · deprecated ${a.deprecated||0}</div>
       <div class="t" style="margin-top:4px">Nooit opgehaald (archiveer-kandidaten): <strong>${a.never_used||0}</strong></div>
+      <div class="t" style="margin-top:4px">Ranker: <strong>${a.ranker && a.ranker.trained ? "getraind" : "handmatige gewichten"}</strong> · ${a.ranker ? a.ranker.examples : 0} feedback-voorbeelden</div>
       <div class="section" style="margin-top:8px"><h3>Meest gebruikt</h3>${most || '<div class="t" style="color:var(--dim)">nog niets</div>'}</div>
       ${gaps}`;
   } catch (e) { el.innerHTML = `<div class="t" style="color:var(--red)">${esc(e.message)}</div>`; }

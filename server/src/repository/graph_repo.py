@@ -746,6 +746,8 @@ def record_feedback(session: Session, org_uid: str, uid: str, helped: bool) -> d
         f"MATCH (n:Knowledge {{uid:$u, org_uid:$o}}) SET n.{field}=coalesce(n.{field},0)+1 "
         "RETURN n.uid AS uid, coalesce(n.pos,0) AS pos, coalesce(n.neg,0) AS neg",
         u=uid, o=org_uid).single()
+    if r:
+        capture_example(session, org_uid, uid, 1 if helped else 0)   # feed learning-to-rank
     return dict(r) if r else None
 
 
@@ -805,7 +807,10 @@ def analytics(session: Session, org_uid: str) -> dict:
         "MATCH (n:Knowledge {org_uid:$o}) WHERE n.type<>'topic' AND coalesce(n.use_count,0)>0 "
         "RETURN n.title AS title, n.use_count AS use_count ORDER BY n.use_count DESC LIMIT 8",
         o=org_uid).data()
-    return {**dict(row), "most_used": most, "gaps": top_gaps(session, org_uid, 12)}
+    ex = session.run("MATCH (e:RankExample {org_uid:$o}) RETURN count(e) AS n", o=org_uid).single()["n"]
+    rk = get_ranker_weights(session, org_uid)
+    ranker = {"examples": ex, "trained": bool(rk), "trained_at": (rk or {}).get("trained_at")}
+    return {**dict(row), "most_used": most, "gaps": top_gaps(session, org_uid, 12), "ranker": ranker}
 
 
 def graph_for_pagerank(session: Session, org_uid: str) -> dict:
@@ -823,3 +828,64 @@ def write_pagerank(session: Session, org_uid: str, scores: dict) -> None:
     session.run(
         "UNWIND $rows AS r MATCH (n:Knowledge {uid:r.uid, org_uid:$o}) SET n.pagerank = r.pr",
         rows=[{"uid": u, "pr": p} for u, p in scores.items()], o=org_uid)
+
+
+# ---- Learning-to-rank storage: impressions (what was recalled) → labeled examples (via
+# ---- feedback) → learned weights on the org. All local; no external ML runtime.
+import json as _json
+
+
+def get_ranker_weights(session: Session, org_uid: str) -> dict | None:
+    r = session.run("MATCH (o:Org {uid:$o}) RETURN o.ranker_weights AS w", o=org_uid).single()
+    if r and r["w"]:
+        try:
+            return _json.loads(r["w"])
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def set_ranker_weights(session: Session, org_uid: str, payload: dict) -> None:
+    session.run("MATCH (o:Org {uid:$o}) SET o.ranker_weights = $w", o=org_uid, w=_json.dumps(payload))
+
+
+def record_impressions(session: Session, org_uid: str, items: list[dict]) -> None:
+    """One (latest) impression per recalled node: its feature vector at recall time. Overwritten
+    each recall; becomes a labeled training example when the agent gives feedback on that node."""
+    if not items:
+        return
+    session.run(
+        """
+        UNWIND $items AS it
+        MERGE (im:Impression {org_uid: $o, node_uid: it.uid})
+        SET im.features = it.features, im.at = timestamp()
+        """,
+        o=org_uid, items=[{"uid": i["uid"], "features": _json.dumps(i["features"])} for i in items])
+
+
+def capture_example(session: Session, org_uid: str, node_uid: str, label: int, cap: int = 5000) -> None:
+    """When feedback lands, turn the node's latest impression into a labeled RankExample, then
+    keep the example store bounded (drop the oldest beyond `cap`)."""
+    session.run(
+        """
+        MATCH (im:Impression {org_uid: $o, node_uid: $u})
+        CREATE (:RankExample {org_uid: $o, features: im.features, label: $lab, at: timestamp()})
+        """,
+        o=org_uid, u=node_uid, lab=int(label))
+    session.run(
+        """
+        MATCH (e:RankExample {org_uid: $o}) WITH e ORDER BY e.at DESC SKIP $cap
+        DETACH DELETE e
+        """,
+        o=org_uid, cap=cap)
+
+
+def ranker_examples(session: Session, org_uid: str) -> list[dict]:
+    rows = session.run("MATCH (e:RankExample {org_uid:$o}) RETURN e.features AS f, e.label AS label", o=org_uid)
+    out = []
+    for r in rows:
+        try:
+            out.append({"features": _json.loads(r["f"]), "label": int(r["label"])})
+        except (ValueError, TypeError):
+            pass
+    return out
