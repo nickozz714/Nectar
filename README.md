@@ -25,6 +25,8 @@ maintain the brain — without you doing anything.
 - **Reranking** — a small local model re-weighs the best hits precisely for sharper results.
 - **Structural importance** — knowledge that is well-connected to other knowledge (PageRank)
   counts a little heavier.
+- **Learns from feedback** — as agents report what helped, the ranker learns the best weighting
+  itself, so search order improves over time (learning-to-rank).
 - **Short & focused** — only the strongest few pieces are injected, no noise that distracts
   the model.
 - **Truth over time** — a newer decision supersedes the old one; the old stays findable but
@@ -44,6 +46,8 @@ maintain the brain — without you doing anything.
 - **No duplicate work** — an agent "claims" a task; others then don't see it (stigmergy).
 - **Self-tidying** — loose knowledge gets a logical home proposed; empty searches become
   tracked knowledge gaps.
+- **Suggests connections** — spots memories that probably belong together and proposes linking
+  them (link prediction) — as a suggestion, never automatically.
 - **Thinking together** — for two near-duplicate memories a *different* agent decides how they
   merge — never rubber-stamping your own work.
 
