@@ -25,6 +25,7 @@ os.environ["EMBEDDINGS_DIM"] = "64"
 os.environ["CONSENSUS_THRESHOLD"] = "2"
 os.environ["DEDUP_SIMILARITY_THRESHOLD"] = "0.92"
 os.environ["DEDUP_REVIEW_THRESHOLD"] = "0.85"
+os.environ["RERANK_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 

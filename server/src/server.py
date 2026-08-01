@@ -18,6 +18,7 @@ from src.routers import (
     recall, review, secrets, signup, skills,
 )
 from src.components.embeddings import warmup
+from src.components import reranker
 
 _STATIC = Path(__file__).parent / "static"
 _INSTALL_ZIP = Path(__file__).parent.parent / "hivemind-install.zip"
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI):
     with graph_session() as session:
         seed_service.seed_all(session)
     warmup()
+    reranker.warmup()   # best-effort; degrades to no-rerank if the model can't load
     async with mcp_app.lifespan(app):
         yield
     close_driver()

@@ -8,6 +8,28 @@ from src.authentication.deps import AuthedAccount
 from src.components.config import get_settings
 from src.repository import graph_repo
 from src.components.embeddings import embed
+from src.components import reranker
+
+
+def _rerank(query: str, candidates: list[tuple[dict, float]]) -> list[tuple[dict, float]]:
+    """Rewrite the base relevance of the top-K candidates with cross-encoder scores (normalized
+    0..1); non-reranked candidates keep a demoted base so they stay below. The downstream blend
+    still layers freshness/importance/Bloom/worth on top, so governance signals are preserved.
+    No-op when reranking is disabled/unavailable."""
+    settings = get_settings()
+    if not settings.RERANK_ENABLED or len(candidates) < 2:
+        return candidates
+    ranked = sorted(candidates, key=lambda c: c[1], reverse=True)
+    head, tail = ranked[:settings.RERANK_TOP_K], ranked[settings.RERANK_TOP_K:]
+    docs = [f"{n.get('title', '')}\n{(n.get('content') or '')[:600]}" for n, _ in head]
+    scores = reranker.rerank(query, docs)
+    if scores is None or len(scores) != len(head):
+        return candidates
+    lo, hi = min(scores), max(scores)
+    span = (hi - lo) or 1.0
+    new_head = [(head[i][0], (scores[i] - lo) / span) for i in range(len(head))]
+    new_tail = [(n, min(s, 0.4) * 0.5) for n, s in tail]
+    return new_head + new_tail
 
 
 def _rrf_fuse(lists: list[list[tuple[dict, float]]], k: int = 60) -> list[tuple[dict, float]]:
@@ -88,6 +110,9 @@ def search(
             if nb["uid"] not in present:
                 candidates.append((nb, settings.MULTIHOP_BASE))
                 present.add(nb["uid"])
+    # Second-stage precision: rerank the strongest candidates with a local cross-encoder, which
+    # judges query+document together far more accurately than the first-stage vectors.
+    candidates = _rerank(query, candidates)
 
     now_ms = time.time() * 1000
     qlow = query.lower()

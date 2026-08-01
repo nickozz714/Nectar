@@ -88,6 +88,12 @@ class Settings(BaseSettings):
     # Stigmergy: a Pollen claimed by an agent is hidden from OTHER agents for CLAIM_TTL_MIN
     # minutes, so the swarm does not duplicate the same task. The claimer/expiry can retake it.
     CLAIM_TTL_MIN: int = 20
+    # Cross-encoder reranking (local fastembed ONNX/CPU). Reranks the top RERANK_TOP_K hybrid
+    # candidates for a big precision-at-k gain. Best-effort: if the model can't load, search
+    # silently keeps the first-stage order. Set RERANK_ENABLED=false to turn off.
+    RERANK_ENABLED: bool = True
+    RERANK_MODEL: str = "Xenova/ms-marco-MiniLM-L-6-v2"
+    RERANK_TOP_K: int = 40
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15
