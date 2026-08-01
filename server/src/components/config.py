@@ -94,6 +94,10 @@ class Settings(BaseSettings):
     RERANK_ENABLED: bool = True
     RERANK_MODEL: str = "Xenova/ms-marco-MiniLM-L-6-v2"
     RERANK_TOP_K: int = 40
+    # Structural importance: a periodic in-app PageRank over the CONTAINS/RELATES graph writes
+    # a 0..1 pagerank per node; recall adds PAGERANK_WEIGHT·pagerank so well-connected,
+    # central knowledge surfaces a little higher. No GDS plugin — the graph is small.
+    PAGERANK_WEIGHT: float = 0.1
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

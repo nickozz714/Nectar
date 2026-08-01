@@ -134,7 +134,9 @@ def search(
             + settings.BLOOM_BOOST.get(node.get("lifecycle"), 0.0)
             # Importance pin (0.5 neutral) + causal outcome-worth (did it actually help).
             + settings.IMPORTANCE_WEIGHT * ((node.get("importance") if node.get("importance") is not None else 0.5) - 0.5)
-            + settings.OUTCOME_WEIGHT * (_worth(node) - 0.5),
+            + settings.OUTCOME_WEIGHT * (_worth(node) - 0.5)
+            # Structural importance: central, well-connected knowledge surfaces a little higher.
+            + settings.PAGERANK_WEIGHT * (node.get("pagerank") or 0.0),
         )
         for node, sim in candidates
     ]

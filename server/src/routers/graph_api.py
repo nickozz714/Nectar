@@ -391,6 +391,18 @@ def topic_summaries(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/pagerank-scan")
+def pagerank_scan(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Recompute structural importance (PageRank) over the knowledge graph. Maintainer."""
+    try:
+        return curation_service.pagerank_scan(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/staleness-scan")
 def staleness_scan(
     account: AuthedAccount = Depends(require_account),

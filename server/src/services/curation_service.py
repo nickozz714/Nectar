@@ -280,3 +280,37 @@ def build_topic_summaries(session: Session, account: AuthedAccount) -> dict:
     audit_repo.log(session, account.org_uid, account.uid, "topic_summaries", account.org_uid,
                    {"topics": updated})
     return {"topics": updated}
+
+
+def pagerank_scan(session: Session, account: AuthedAccount) -> dict:
+    """Compute PageRank (structural importance) over the org's knowledge graph in-app and store a
+    normalized 0..1 score per node, so recall can lift central, well-connected knowledge. Cheap
+    for a small graph; no GDS plugin. Maintainer."""
+    assert_role(account, "maintainer", "Running the PageRank scan")
+    data = graph_repo.graph_for_pagerank(session, account.org_uid)
+    nodes, edges = data["nodes"], data["edges"]
+    n = len(nodes)
+    if n == 0:
+        return {"nodes": 0}
+    idx = {u: i for i, u in enumerate(nodes)}
+    adj: list[list[int]] = [[] for _ in range(n)]
+    for a, b in edges:                       # undirected: importance flows both ways
+        if a in idx and b in idx:
+            adj[idx[a]].append(idx[b])
+            adj[idx[b]].append(idx[a])
+    d, pr = 0.85, [1.0 / n] * n
+    for _ in range(30):
+        new = [(1.0 - d) / n] * n
+        for i in range(n):
+            if adj[i]:
+                share = d * pr[i] / len(adj[i])
+                for j in adj[i]:
+                    new[j] += share
+        pr = new
+    mx = max(pr) or 1.0
+    scores = {nodes[i]: round(pr[i] / mx, 4) for i in range(n)}
+    graph_repo.write_pagerank(session, account.org_uid, scores)
+    top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:5]
+    audit_repo.log(session, account.org_uid, account.uid, "pagerank_scan", account.org_uid, {"nodes": n})
+    return {"nodes": n, "edges": len(edges),
+            "top": [{"uid": u, "score": s} for u, s in top]}

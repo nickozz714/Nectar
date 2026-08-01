@@ -806,3 +806,20 @@ def analytics(session: Session, org_uid: str) -> dict:
         "RETURN n.title AS title, n.use_count AS use_count ORDER BY n.use_count DESC LIMIT 8",
         o=org_uid).data()
     return {**dict(row), "most_used": most, "gaps": top_gaps(session, org_uid, 12)}
+
+
+def graph_for_pagerank(session: Session, org_uid: str) -> dict:
+    """All knowledge-node uids + their CONTAINS/RELATES edges — the substrate for computing
+    structural importance (PageRank) in-app. Small graph, so no GDS plugin needed."""
+    nodes = [r["uid"] for r in session.run(
+        "MATCH (n:Knowledge {org_uid:$o}) WHERE coalesce(n.archived,false)=false RETURN n.uid AS uid", o=org_uid)]
+    edges = [(r["a"], r["b"]) for r in session.run(
+        "MATCH (a:Knowledge {org_uid:$o})-[:CONTAINS|RELATES]->(b:Knowledge {org_uid:$o}) "
+        "RETURN a.uid AS a, b.uid AS b", o=org_uid)]
+    return {"nodes": nodes, "edges": edges}
+
+
+def write_pagerank(session: Session, org_uid: str, scores: dict) -> None:
+    session.run(
+        "UNWIND $rows AS r MATCH (n:Knowledge {uid:r.uid, org_uid:$o}) SET n.pagerank = r.pr",
+        rows=[{"uid": u, "pr": p} for u, p in scores.items()], o=org_uid)
