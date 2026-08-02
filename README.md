@@ -48,6 +48,9 @@ maintain the brain — without you doing anything.
   tracked knowledge gaps.
 - **Suggests connections** — spots memories that probably belong together and proposes linking
   them (link prediction) — as a suggestion, never automatically.
+- **Catches contradictions** — spots two memories that look alike but may state opposite things
+  (e.g. a different decision for the same topic); a *different* agent judges whether they really
+  conflict, and if so the outdated one is superseded — the current truth wins.
 - **Thinking together** — for two near-duplicate memories a *different* agent decides how they
   merge — never rubber-stamping your own work.
 

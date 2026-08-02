@@ -108,6 +108,14 @@ class Settings(BaseSettings):
     LINKPRED_MIN_SIM: float = 0.55
     LINKPRED_MIN_COMMON: int = 2
     LINKPRED_TOP: int = 15
+    # Contradiction detection: highly-similar memory pairs (>= CONTRA_MIN_SIM, but below the
+    # dedup band) become a contradiction-check think-Pollen for the swarm to judge and, if
+    # they conflict, propose supersession. Local candidate detection; swarm does the judgement.
+    # The floor is deliberately high: a genuine truth-conflict is about the *same* subject, so it
+    # sits just under the dedup band. A lower floor floods the swarm with loosely-related pairs
+    # (a first live run at 0.70 opened 12 pairs, nearly all unrelated). Neo4j cosine score.
+    CONTRA_MIN_SIM: float = 0.82
+    CONTRA_TOP: int = 12
     # Max size of a single attachment (artifact) stored on a memory. Kept modest because the
     # bytes live in Neo4j (single store); link, don't attach, for anything larger.
     ATTACHMENT_MAX_MB: int = 15

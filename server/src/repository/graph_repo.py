@@ -575,9 +575,11 @@ def governance_rows(session: Session, account: AuthedAccount) -> list[dict]:
         f"""
         MATCH (n:Knowledge {{org_uid: $org_uid}})
         WHERE coalesce(n.archived, false) = false AND {VISIBLE}
+        OPTIONAL MATCH (acc:Account {{uid: n.created_by, org_uid: $org_uid}})
         RETURN n.uid AS uid, n.title AS title, n.type AS type, n.scope AS scope,
                coalesce(n.sensitivity, 'intern') AS sensitivity,
-               coalesce(n.created_by_model, '') AS model
+               coalesce(n.created_by_model, '') AS model,
+               acc.name AS account, coalesce(acc.person, acc.name) AS person
         """,
         **_acc_params(account),
     )
@@ -901,3 +903,12 @@ def linkpred_data(session: Session, org_uid: str) -> dict:
         "MATCH (a:Knowledge {org_uid:$o})-[:CONTAINS|RELATES]-(b:Knowledge {org_uid:$o}) "
         "WHERE id(a) < id(b) RETURN a.uid AS a, b.uid AS b", o=org_uid)]
     return {"nodes": nodes, "edges": edges}
+
+
+def nodes_with_embeddings(session: Session, org_uid: str) -> list[dict]:
+    """Non-topic, non-archived nodes with their embedding + lifecycle/supersede state — for
+    semantic pair scans (contradiction detection)."""
+    return [dict(r) for r in session.run(
+        "MATCH (n:Knowledge {org_uid:$o}) WHERE n.type <> 'topic' AND coalesce(n.archived,false)=false "
+        "RETURN n.uid AS uid, n.title AS title, n.content AS content, n.embedding AS embedding, "
+        "n.lifecycle AS lifecycle, n.superseded_by AS superseded_by", o=org_uid)]

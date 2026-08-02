@@ -404,6 +404,40 @@ def train_ranker(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.post("/contradiction-scan")
+def contradiction_scan(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Find highly-similar memory pairs and file contradiction-check think-Pollen. Maintainer."""
+    try:
+        return curation_service.contradiction_scan(session, account)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class ContradictionBody(BaseModel):
+    pollen_uid: str
+    verdict: str            # contradiction | compatible
+    current: str = ""
+    outdated: str = ""
+    note: str = ""
+
+
+@router.post("/contradiction/resolve")
+def resolve_contradiction(
+    body: ContradictionBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Resolve a contradiction-check think-Pollen (compatible, or contradiction → supersede)."""
+    try:
+        return governance_service.resolve_contradiction(
+            session, account, body.pollen_uid, body.verdict, body.current, body.outdated, body.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/linkpred-scan")
 def linkpred_scan(
     account: AuthedAccount = Depends(require_account),
@@ -498,10 +532,14 @@ def chores(
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
+    open_ch = governance_repo.open_chores(session, account, limit=25)
+    done_ch = governance_repo.resolved_chores(session, account, limit=25)
+    for c in open_ch + done_ch:
+        c["view"] = governance_service.build_pollen_view(session, account, c)
     return {
         "ready": governance_repo.ready_count(session, account),
-        "chores": governance_repo.open_chores(session, account, limit=25),
-        "resolved": governance_repo.resolved_chores(session, account, limit=25),
+        "chores": open_ch,
+        "resolved": done_ch,
     }
 
 
@@ -553,12 +591,23 @@ def governance(
     wrote it, and where governance work stands. Visible to every member — the hive must
     be open about itself."""
     rows = graph_repo.governance_rows(session, account)
+    # Provenance chain: which model wrote it, via which account (= token holder), coupled to
+    # which person. Grouped and human-readable — no uids.
+    origin = Counter(
+        (r["model"] or "onbekend", r["account"] or "systeem/seed", r["person"] or "—")
+        for r in rows
+    )
+    by_origin = [
+        {"model": m, "account": a, "person": p, "count": c}
+        for (m, a, p), c in sorted(origin.items(), key=lambda kv: -kv[1])
+    ]
     return {
         "nodes_total": len(rows),
         "by_scope": dict(Counter(r["scope"] for r in rows)),
         "by_type": dict(Counter(r["type"] for r in rows)),
         "by_sensitivity": dict(Counter(r["sensitivity"] for r in rows)),
         "by_model": dict(Counter(r["model"] or "onbekend" for r in rows)),
+        "by_origin": by_origin,
         "sensitive_nodes": [
             {"uid": r["uid"], "title": r["title"], "type": r["type"]}
             for r in rows if r["sensitivity"] == "gevoelig"

@@ -372,3 +372,50 @@ def link_prediction_scan(session: Session, account: AuthedAccount) -> dict:
     audit_repo.log(session, account.org_uid, account.uid, "link_prediction_scan", account.org_uid,
                    {"candidates": len(scored), "opened": len(opened)})
     return {"candidates": len(scored), "opened": len(opened), "suggestions": opened}
+
+
+def contradiction_scan(session: Session, account: AuthedAccount) -> dict:
+    """Find highly-similar memory pairs (candidates for a truth-conflict) and file a
+    contradiction-check think-Pollen for the swarm to judge — and, if they conflict, propose
+    which supersedes which. Local candidate detection (vector index); the judgement is the swarm's.
+    Maintainer."""
+    from src.repository import governance_repo
+    from src.components.config import get_settings
+    assert_role(account, "maintainer", "Running contradiction detection")
+    s = get_settings()
+    nodes = graph_repo.nodes_with_embeddings(session, account.org_uid)
+    seen, opened = set(), []
+    for n in nodes:
+        if n.get("lifecycle") == "deprecated" or n.get("superseded_by") or not n.get("embedding"):
+            continue
+        for other, score in graph_repo.vector_candidates(session, account, n["embedding"], k=5, allowed=None):
+            if other["uid"] == n["uid"] or other.get("type") == "topic":
+                continue
+            if score < s.CONTRA_MIN_SIM or score >= s.DEDUP_SIMILARITY_THRESHOLD:
+                continue  # below = unrelated; at/above = handled by the dedup band on write
+            if other.get("lifecycle") == "deprecated" or other.get("superseded_by"):
+                continue
+            key = frozenset((n["uid"], other["uid"]))
+            if key in seen:
+                continue
+            seen.add(key)
+            res = governance_repo.create_think_pollen(
+                session, account, n["uid"], "contradiction_check",
+                {"instruction": ("Twee sterk gelijkende memories. Spreken ze elkaar TEGEN (bv. ander "
+                                 "besluit/waarde voor hetzelfde onderwerp)? Zo ja: welke is de HUIDIGE "
+                                 "waarheid? Los op met hive_resolve_contradiction(verdict, current, outdated). "
+                                 "Zijn ze verenigbaar: verdict='compatible'."),
+                 "a_uid": n["uid"], "a_title": n["title"], "a_content": (n.get("content") or "")[:800],
+                 "b_uid": other["uid"], "b_title": other["title"], "b_content": (other.get("content") or "")[:800],
+                 "similarity": round(score, 3)},
+                idem_key=f"contradiction:{min(n['uid'], other['uid'])}:{max(n['uid'], other['uid'])}")
+            if res:
+                opened.append({"a": n["title"], "b": other["title"], "similarity": round(score, 3),
+                               "chore": res["uid"]})
+            if len(opened) >= s.CONTRA_TOP:
+                break
+        if len(opened) >= s.CONTRA_TOP:
+            break
+    audit_repo.log(session, account.org_uid, account.uid, "contradiction_scan", account.org_uid,
+                   {"opened": len(opened)})
+    return {"opened": len(opened), "pairs": opened}

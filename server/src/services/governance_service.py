@@ -194,6 +194,7 @@ _POLLEN_VERB = {
     "stale_review": "een oude-maar-veelgebruikte memory herbevestigen of bijwerken",
     "op_route": "beslissen hoe een bijna-duplicaat te verwerken (samenvoegen/behouden/schrappen)",
     "relate_suggest": "twee waarschijnlijk-gerelateerde memories aan elkaar koppelen (RELATES)",
+    "contradiction_check": "beoordelen of twee memories elkaar tegenspreken (en supersession voorstellen)",
 }
 
 
@@ -216,6 +217,111 @@ def pick_contextual_pollen(session: Session, account: AuthedAccount, query: str)
     return max(cands, key=score)
 
 
+def _excerpt(text: str | None, limit: int = 1200) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= limit else text[:limit].rstrip() + "…"
+
+
+def build_pollen_view(session: Session, account: AuthedAccount, chore: dict) -> dict:
+    """Turn a raw Pollen (a type + a uid-laden payload) into a human-readable decision card: the
+    actual memory text involved, a plain-language 'what approving does', a before/after for edits,
+    and which resolve-route the UI should offer. Uids are carried only for the action buttons —
+    never for display — so a human sees titles and text, not identifiers."""
+    kind = chore["type"]
+    try:
+        payload = json.loads(chore.get("payload") or "{}")
+    except (ValueError, TypeError):
+        payload = {}
+    node_uid = chore.get("node_uid")
+    node_title = chore.get("node_title") or ""
+
+    refs = [node_uid, payload.get("duplicate_uid"), payload.get("other_uid")]
+    texts = governance_repo.nodes_text(session, account, [r for r in refs if r])
+
+    def node_of(uid, label=None):
+        t = texts.get(uid) or {}
+        card = {"title": t.get("title", ""), "content": _excerpt(t.get("content"))}
+        if label:
+            card["label"] = label
+        return card
+
+    primary = node_of(node_uid) if node_uid else None
+    view = {
+        "route": "standard",            # standard | contradiction | op_route | human
+        "headline": kind,
+        "explain": "",
+        "primary": primary,
+        "compare": None,
+        "proposed": None,
+        "target_topic": None,
+        "similarity": payload.get("similarity"),
+        "refs": {"pollen": chore["uid"], "node": node_uid},
+    }
+
+    if kind == "edit":
+        view["headline"] = "Wijziging aan een memory"
+        view["explain"] = ("Keur je goed, dan wordt de inhoud van deze memory vervangen door de "
+                           "voorgestelde tekst.")
+        view["proposed"] = {"title": payload.get("title") or (primary["title"] if primary else ""),
+                            "content": _excerpt(payload.get("content"))}
+    elif kind == "invalidate":
+        view["headline"] = "Memory archiveren"
+        view["explain"] = ("Keur je goed, dan wordt deze memory gearchiveerd — weg uit recall, maar "
+                           "blijft in de historie. Nooit hard verwijderd.")
+        if payload.get("reason"):
+            view["explain"] += f" Reden: {payload['reason']}"
+    elif kind == "promotion":
+        view["headline"] = "Memory onder een topic hangen"
+        view["target_topic"] = payload.get("target_topic")
+        view["explain"] = (f"Keur je goed, dan komt deze memory (ook) onder het topic "
+                           f"'{payload.get('target_topic','')}'. Bestaande koppelingen en scope blijven.")
+    elif kind == "dedup_merge":
+        if primary:
+            primary["label"] = "Blijft"
+        view["compare"] = node_of(payload.get("duplicate_uid"), "Wordt gearchiveerd (dubbel)")
+        view["headline"] = "Dubbele memory opruimen"
+        view["explain"] = ("Twee memories zijn (bijna) identiek. Keur je goed, dan blijft de eerste "
+                           "en wordt de tweede gearchiveerd.")
+    elif kind == "relate_suggest":
+        if primary:
+            primary["label"] = "Deze memory"
+        view["compare"] = node_of(payload.get("other_uid"), "Voorgestelde koppeling")
+        view["headline"] = "Verband voorstellen"
+        view["explain"] = ("Deze twee memories horen waarschijnlijk bij elkaar. Keur je goed, dan "
+                           "worden ze als 'gerelateerd' gekoppeld — nooit samengevoegd.")
+    elif kind == "stale_review":
+        view["headline"] = "Klopt dit nog?"
+        view["explain"] = ("Deze memory is oud maar wordt veel gebruikt. Toepassen = 'nog steeds "
+                           "correct' (ververst 'm); afwijzen als 'ie niet meer klopt.")
+    elif kind == "scope_widening":
+        view["route"] = "human"
+        view["headline"] = "Zichtbaarheid verbreden"
+        view["explain"] = (f"Voorstel om deze memory breder zichtbaar te maken (→ "
+                           f"{payload.get('target_scope','org')}). Dit besluit is voor een mens.")
+    elif kind == "op_route":
+        view["route"] = "op_route"
+        if primary:
+            primary["label"] = "Nieuwe memory"
+        view["compare"] = node_of(payload.get("duplicate_uid"), "Bestaande memory die erop lijkt")
+        view["headline"] = "Bijna-duplicaat: hoe verwerken?"
+        view["explain"] = ("Een nieuwe memory lijkt sterk op een bestaande. Kies: apart houden "
+                           "(ADD), samenvoegen (UPDATE), het nieuwe schrappen (DELETE), of laten "
+                           "staan (NOOP). Een ánder lid dan de schrijver oordeelt over samenvoegen/schrappen.")
+    elif kind == "contradiction_check":
+        view["route"] = "contradiction"
+        view["primary"] = {"title": payload.get("a_title", ""),
+                           "content": _excerpt(payload.get("a_content")), "label": "Memory A"}
+        view["compare"] = {"title": payload.get("b_title", ""),
+                           "content": _excerpt(payload.get("b_content")), "label": "Memory B"}
+        view["headline"] = "Mogelijke tegenspraak"
+        view["explain"] = ("Twee memories lijken sterk op elkaar. Spreken ze elkaar tegen? Zo ja, "
+                           "kies welke de huidige waarheid is — de andere wordt gesuperseded "
+                           "(blijft vindbaar, zakt weg). Zo nee: 'verenigbaar'.")
+        view["refs"]["a"] = payload.get("a_uid")
+        view["refs"]["b"] = payload.get("b_uid")
+    return view
+
+
 def render_pollen(pollen: dict) -> str:
     """One-line instruction that hands the agent a bit of Pollen to carry."""
     import json as _json
@@ -229,9 +335,18 @@ def render_pollen(pollen: dict) -> str:
     detail = f" → voorstel: onder '{target}'" if target else ""
     node = pollen.get("node_title") or ""
     node = node[:70] + "…" if len(node) > 70 else node
+    if pollen["type"] == "contradiction_check":
+        how = (f"Lees beide met `hive_get`, oordeel, en los op met "
+               f"`hive_resolve_contradiction(\"{pollen['uid']}\", \"contradiction\"|\"compatible\", "
+               f"current=…, outdated=…)`.")
+    elif pollen["type"] == "op_route":
+        how = (f"Beoordeel en los op met "
+               f"`hive_resolve_think(\"{pollen['uid']}\", …)`.")
+    else:
+        how = (f"Beoordeel 'm op inhoud en los 'm op met `hive_chores()` → "
+               f"`hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
     return (f"🌼 **Pollen** — draag bij aan de Hive terwijl je hier toch bent: {what} "
-            f"voor *{node}*{detail}. Past het bij je taak? Beoordeel 'm op inhoud en los 'm op "
-            f"met `hive_chores()` → `hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
+            f"voor *{node}*{detail}. Past het bij je taak? {how}")
 
 
 def resolve_think(
@@ -283,3 +398,36 @@ def resolve_think(
     audit_repo.log(session, account.org_uid, account.uid, "resolve_think", pollen_uid,
                    {"kind": "op_route", "decision": decision, "new": new_uid, "keep": keep_uid})
     return {"status": "resolved", "decision": decision, "result": result}
+
+
+def resolve_contradiction(
+    session: Session, account: AuthedAccount, pollen_uid: str, verdict: str,
+    current_uid: str = "", outdated_uid: str = "", note: str = "",
+) -> dict:
+    """Resolve a contradiction-check think-Pollen: the swarm judged whether two similar memories
+    conflict. 'compatible' → close. 'contradiction' → supersede the outdated one by the current one
+    (the old fact stays findable but sinks; the current wins deterministically)."""
+    assert_role(account, "member", "Resolving a contradiction-check")
+    verdict = (verdict or "").strip().lower()
+    chore = governance_repo.get_chore(session, account.org_uid, pollen_uid)
+    if chore is None or chore["type"] != "contradiction_check":
+        raise ValueError("contradiction-check think-Pollen not found")
+    if chore["status"] not in ("open", "ready"):
+        raise ValueError(f"already handled ('{chore['status']}')")
+    payload = json.loads(chore["payload"] or "{}")
+    pair = {payload.get("a_uid"), payload.get("b_uid")}
+    if verdict == "compatible":
+        result = "judged compatible — no conflict"
+    elif verdict in ("contradiction", "contradict", "conflict"):
+        if {current_uid, outdated_uid} != pair or current_uid == outdated_uid:
+            raise ValueError("current and outdated must be the two memories in this pair")
+        got = graph_repo.supersede(session, account, outdated_uid, current_uid)
+        if not got:
+            raise ValueError("could not supersede — one node not visible")
+        result = "contradiction resolved — outdated superseded by current"
+    else:
+        raise ValueError("verdict must be 'contradiction' or 'compatible'")
+    governance_repo.close_chore(session, pollen_uid, "resolved", account.uid, note or result)
+    audit_repo.log(session, account.org_uid, account.uid, "resolve_contradiction", pollen_uid,
+                   {"verdict": verdict, "current": current_uid, "outdated": outdated_uid})
+    return {"status": "resolved", "verdict": verdict, "result": result}

@@ -70,6 +70,10 @@ Recall geeft je bij elke prompt één **Pollen** (taak) mee. Past het bij je wer
 - **op_route Pollen** (twee bijna-gelijke memories): lees beide met `hive_get` en beslis met
   `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP", ...)`. **Belangrijk:** UPDATE/DELETE mag je NIET
   doen op een memory die je zélf schreef — dat oordeel is voor een ánder Swarm-lid.
+- **contradiction_check Pollen** (twee sterk gelijkende memories): lees beide met `hive_get` en oordeel of
+  ze elkaar tegenspreken. Zo ja: welke is de huidige waarheid? Los op met
+  `hive_resolve_contradiction(uid, "contradiction", current=<uid nieuwste>, outdated=<uid oude>)` — de oude
+  wordt gesuperseded (blijft vindbaar, zakt weg). Zijn ze verenigbaar: `"compatible"`.
 
 **Geef feedback op wat je gebruikte.** Paste een uit recall opgehaalde memory je taak echt (of juist
 niet)? Meld het met `hive_feedback(node_uid, helped=true|false)`. Dit is het causale "Memory Worth"-signaal:

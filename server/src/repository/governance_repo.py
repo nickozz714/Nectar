@@ -8,7 +8,25 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository.graph_repo import VISIBLE, _acc_params
 
-POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest"}
+POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest", "contradiction_check"}
+
+
+def nodes_text(session: Session, account: AuthedAccount, uids: list[str]) -> dict:
+    """Batch-resolve a set of node uids to their {title, content, scope} — scope-checked, so a
+    caller only ever sees memories visible to them. Used to give the Pollen queue real context
+    (titles + text) instead of raw uids."""
+    uids = [u for u in dict.fromkeys(uids) if u]
+    if not uids:
+        return {}
+    rows = session.run(
+        f"""
+        MATCH (n:Knowledge {{org_uid: $org_uid}})
+        WHERE n.uid IN $uids AND {VISIBLE}
+        RETURN n.uid AS uid, n.title AS title, n.content AS content, n.scope AS scope
+        """,
+        uids=uids, **_acc_params(account),
+    )
+    return {r["uid"]: {"title": r["title"], "content": r["content"], "scope": r["scope"]} for r in rows}
 
 
 def suggestion_key(chore_type: str, node_uid: str, payload: dict) -> str:

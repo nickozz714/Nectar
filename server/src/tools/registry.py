@@ -153,6 +153,21 @@ def hive_resolve_think(pollen_uid: str, decision: str, merged_title: str = "",
 
 
 @mcp.tool
+def hive_resolve_contradiction(pollen_uid: str, verdict: str, current: str = "",
+                               outdated: str = "", note: str = "") -> dict:
+    """Judge a contradiction-check think-Pollen: two highly-similar memories — do they CONTRADICT
+    (a different decision/value for the same thing)? Read both with hive_get first.
+      • verdict="compatible" — they don't conflict; close it.
+      • verdict="contradiction" — they conflict; pass current=<uid of the memory that is the
+        current truth> and outdated=<uid of the old one>. The outdated one is superseded (stays
+        findable but sinks in recall; the current wins)."""
+    with _authed() as (session, account):
+        from src.services import governance_service
+        return governance_service.resolve_contradiction(
+            session, account, pollen_uid, verdict, current, outdated, note)
+
+
+@mcp.tool
 def hive_feedback(node_uid: str, helped: bool) -> dict:
     """Report whether a memory you recalled actually helped with your task (helped=true) or
     was wrong/irrelevant (helped=false). This is the causal 'Memory Worth' signal: memories

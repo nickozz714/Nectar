@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nectar</title>
 <style>
   :root {
@@ -12,7 +12,7 @@
     --orange: #f08a4b; --red: #e4572e; --gray: #8d99ae;
   }
   * { box-sizing: border-box; margin: 0; }
-  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Segoe UI", sans-serif; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--line); }
   header h1 { font-size: 17px; color: var(--honey2); }
   header .tabs { display: flex; gap: 4px; }
@@ -21,7 +21,7 @@
   header .spacer { flex: 1; }
   .badge { background: var(--honey); color: #201a08; border-radius: 10px; padding: 1px 8px; font-size: 12px; font-weight: 600; }
   .rolebadge { background: var(--panel2); border: 1px solid var(--line); color: var(--dim); border-radius: 10px; padding: 1px 8px; font-size: 12px; }
-  main { flex: 1; display: flex; min-height: 0; }
+  main { flex: 1; display: flex; min-height: 0; min-width: 0; }
   .col { overflow-y: auto; }
   #left { width: 290px; background: var(--panel); border-right: 1px solid var(--line); padding: 12px; }
   #center { flex: 1; position: relative; }
@@ -47,11 +47,150 @@
   .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
   .card .meta { font-size: 12px; color: var(--dim); margin-bottom: 6px; }
   pre { background: #131109; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; margin: 6px 0; }
+  /* Pollen decision cards — human-readable, no uids */
+  .pcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .pcard.ready { border-color: var(--honey); }
+  .phead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+  .phead .ptitle { font-size: 15px; font-weight: 600; color: var(--text); }
+  .pchip { font-size: 11px; color: var(--dim); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1px 7px; }
+  .pchip.psim { color: var(--honey2); }
+  .pexplain { font-size: 13px; color: var(--dim); margin: 6px 0 10px; }
+  .pmems { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+  .pmems.one { grid-template-columns: 1fr; }
+  @media (max-width: 680px) { .pmems { grid-template-columns: 1fr; } }
+  .mempanel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; min-width: 0; }
+  .mempanel.new { border-color: var(--honey); }
+  .mempanel.gone { opacity: .6; }
+  .mlabel { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin-bottom: 4px; }
+  .mtitle { font-weight: 600; font-size: 13px; margin-bottom: 4px; word-break: break-word; }
+  .mbody { font-size: 12.5px; color: var(--text); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto; }
+  .ptopic { display: inline-block; font-size: 12px; color: var(--honey2); margin-top: 4px; }
+  /* ============ modern tab design-system (Focus/Pollen/Review/Governance/Beheer) ============ */
+  .page { --gap: 16px; }
+  .phdr { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 18px;
+          padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .phdr .htxt { flex: 1; min-width: 200px; }
+  .phdr h2 { font-size: 22px; letter-spacing: -.01em; color: var(--text); display: flex; align-items: center; gap: 9px; }
+  .phdr h2 .ic { font-size: 20px; filter: saturate(1.1); }
+  .phdr .sub { color: var(--dim); font-size: 13.5px; margin-top: 3px; }
+  .phdr .hact { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat { display: inline-flex; flex-direction: column; align-items: flex-start;
+          background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 13px; }
+  .stat b { font-size: 19px; color: var(--honey2); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat span { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+  /* stat-tile grid */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: var(--gap); }
+  .tile { background: linear-gradient(160deg, var(--panel2), var(--panel)); border: 1px solid var(--line);
+          border-radius: 14px; padding: 15px 16px; position: relative; overflow: hidden; }
+  .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent, var(--honey)); opacity: .9; }
+  .tile .tnum { font-size: 27px; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+  .tile .tlbl { font-size: 12.5px; color: var(--dim); margin-top: 6px; }
+  .tile .tsub { font-size: 11.5px; color: var(--dim); opacity: .8; margin-top: 2px; }
+  /* content block (airier card) */
+  .block { background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: var(--gap); }
+  .block > .bh { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
+  .block > .bh .ic { font-size: 17px; }
+  .block > .bh h3 { font-size: 15px; color: var(--text); font-weight: 600; }
+  .block > .bh .badge2 { margin-left: auto; }
+  .block .bhint { color: var(--dim); font-size: 12.5px; margin-bottom: 14px; line-height: 1.5; }
+  .badge2 { background: var(--panel); border: 1px solid var(--line); color: var(--dim);
+            border-radius: 20px; padding: 2px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  /* distribution bars */
+  .dist { display: flex; flex-direction: column; gap: 9px; }
+  .dist .row { display: grid; grid-template-columns: 120px 1fr 42px; align-items: center; gap: 10px; font-size: 13px; }
+  .dist .row .k { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dist .row .bar { height: 8px; border-radius: 5px; background: var(--panel); overflow: hidden; }
+  .dist .row .bar > i { display: block; height: 100%; border-radius: 5px; background: var(--accent, var(--honey)); }
+  .dist .row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+  /* action tiles (maintenance scans) */
+  .acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .act { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+         display: flex; flex-direction: column; gap: 8px; transition: border-color .12s, transform .12s; }
+  .act:hover { border-color: #6b6047; }
+  .act .ah { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; color: var(--text); }
+  .act .ah .ic { font-size: 16px; }
+  .act .ad { font-size: 12px; color: var(--dim); line-height: 1.45; flex: 1; }
+  .act .arow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .act .aout { font-size: 12px; color: var(--green); }
+  /* segmented sub-nav */
+  .subnav { display: flex; gap: 4px; background: var(--panel2); border: 1px solid var(--line);
+            border-radius: 11px; padding: 4px; margin-bottom: 18px; flex-wrap: wrap; }
+  .subnav button { flex: 1; min-width: 90px; background: none; border: none; color: var(--dim);
+            padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .subnav button.on { background: var(--panel); color: var(--honey2); box-shadow: inset 0 0 0 1px var(--line); }
+  .subnav button:hover:not(.on) { color: var(--text); }
+  /* progress bar */
+  .prog { height: 7px; border-radius: 5px; background: var(--panel); overflow: hidden; }
+  .prog > i { display: block; height: 100%; background: linear-gradient(90deg, var(--honey), var(--honey2)); border-radius: 5px; transition: width .3s; }
+  /* focus step list (clickable) */
+  .steps { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+  .steps .step { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13.5px; }
+  .steps .step:hover { background: var(--panel); }
+  .steps .step .box { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line);
+            display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .steps .step.done .box { background: var(--green); border-color: var(--green); color: #10240a; }
+  .steps .step.current .box { border-color: var(--honey); color: var(--honey2); }
+  .steps .step.done .txt { color: var(--dim); text-decoration: line-through; }
+  .steps .step.current .txt { color: var(--text); font-weight: 550; }
+  .steps .step .txt { color: var(--text); }
+  /* guardrail chips */
+  .guards { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+  .guard { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #e6cfa0;
+           background: rgba(232,167,35,.07); border: 1px solid rgba(232,167,35,.22); border-radius: 8px; padding: 7px 10px; }
+  .guard .ic { flex-shrink: 0; }
+  /* generic list rows */
+  .lrow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line);
+          border-radius: 10px; margin-bottom: 8px; background: var(--panel); }
+  .lrow .grow { flex: 1; min-width: 0; }
+  .lrow .grow .l1 { font-weight: 550; font-size: 13.5px; word-break: break-word; }
+  .lrow .grow .l2 { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .lrow .ra { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .pill { font-size: 11px; padding: 2px 9px; border-radius: 20px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+  .pill.role { color: var(--honey2); border-color: rgba(232,167,35,.4); }
+  .pill.on { color: var(--green); border-color: rgba(108,197,81,.4); }
+  .pill.off { color: var(--gray); }
+  /* audit timeline */
+  .tl { border-left: 2px solid var(--line); margin-left: 6px; padding-left: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .tl .ev { position: relative; }
+  .tl .ev::before { content: ""; position: absolute; left: -22px; top: 4px; width: 9px; height: 9px; border-radius: 50%;
+            background: var(--panel); border: 2px solid var(--honey); }
+  .tl .ev .when { font-size: 11px; color: var(--dim); }
+  .tl .ev .what { font-size: 13px; margin-top: 1px; }
+  .tl .ev .what b { color: var(--honey2); font-weight: 600; }
+  .tl .ev .det { font-size: 11.5px; color: var(--dim); margin-top: 2px; word-break: break-word; }
+  .empty { text-align: center; color: var(--dim); padding: 36px 20px; border: 1px dashed var(--line); border-radius: 14px; font-size: 14px; }
+  .empty .big { font-size: 30px; display: block; margin-bottom: 8px; opacity: .7; }
+  .seg-hide { display: none; }
+  label.fl { display: block; font-size: 12px; color: var(--dim); margin: 8px 0 3px; }
+  /* settings rows with expandable what/how/risk */
+  .setrow { padding: 13px 0; border-top: 1px solid var(--line); }
+  .setrow:first-child { border-top: none; }
+  .setline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .setkey { font-weight: 600; font-size: 13.5px; flex: 1; min-width: 150px; display: flex; align-items: center; gap: 8px; }
+  .setwhat { font-size: 12.5px; color: var(--dim); margin-top: 6px; line-height: 1.5; }
+  .setdet { margin-top: 7px; }
+  .setdet > summary { cursor: pointer; font-size: 12px; color: var(--honey2); width: max-content; list-style: none; user-select: none; }
+  .setdet > summary::-webkit-details-marker { display: none; }
+  .setdet > summary::before { content: "▸ "; }
+  .setdet[open] > summary::before { content: "▾ "; }
+  .sethow { font-size: 12.5px; color: var(--text); margin: 9px 0 0; line-height: 1.55; }
+  .sethow code, .setkey code { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font-size: 11.5px; }
+  .setrisk { font-size: 12.5px; color: #e6cfa0; background: rgba(232,167,35,.07); border: 1px solid rgba(232,167,35,.22);
+             border-radius: 8px; padding: 8px 11px; margin-top: 9px; display: flex; gap: 8px; line-height: 1.5; }
+  .pill.live { color: var(--green); border-color: rgba(108,197,81,.45); }
+  .skillcode { font-family: monospace; font-size: 11.5px; opacity: .82; word-break: break-all; }
+  .skillfiles { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .skillfiles .fp { font-size: 12px; color: var(--honey2); font-family: monospace; margin-bottom: 3px; }
+  @media (max-width: 820px) {
+    .phdr h2 { font-size: 19px; }
+    .dist .row { grid-template-columns: 92px 1fr 38px; }
+    .tile .tnum { font-size: 23px; }
+  }
   #overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 10; }
   #overlay .box { width: 340px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
   #overlay h2 { color: var(--honey2); margin-bottom: 4px; }
   #overlay p { color: var(--dim); font-size: 13px; margin-bottom: 14px; }
-  .page { flex: 1; overflow-y: auto; padding: 20px; max-width: 900px; }
+  .page { flex: 1; overflow-y: auto; padding: 20px; max-width: 900px; min-width: 0; }
   .err { color: var(--red); font-size: 13px; margin-top: 6px; }
   .ok { color: var(--green); font-size: 13px; }
   .legend { position: absolute; bottom: 12px; left: 12px; background: rgba(30,27,21,.9); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--dim); }
@@ -108,6 +247,62 @@
     .page { padding: 14px; max-width: none; }
     input, select, textarea, button { font-size: 16px; }   /* ≥16px stops iOS zoom-on-focus */
     #histDrawer { width: 92%; }
+  }
+  /* elements that only exist in the standalone mobile layout — hidden on desktop */
+  .show-mobile { display: none; }
+  #mobilenav { display: none; }
+  #acctMenu { display: none; }
+  /* ===================== standalone mobile design (bottom-nav app shell) ===================== */
+  @media (max-width: 820px) {
+    header { flex-wrap: nowrap; padding: 9px 14px; gap: 10px; align-items: center; }
+    header h1 { font-size: 17px; flex: 0 0 auto; }
+    header .tabs { display: none; }            /* replaced by the bottom tab bar */
+    .hide-mobile { display: none; }
+    .show-mobile { display: inline-flex; }
+    #who { font-size: 11px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #acctBtn { background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+      width: 38px; height: 38px; border-radius: 10px; font-size: 20px; line-height: 1; padding: 0;
+      align-items: center; justify-content: center; cursor: pointer; }
+    #acctMenu { position: fixed; top: 56px; right: 12px; z-index: 30; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 12px; padding: 6px; flex-direction: column; gap: 2px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.55); min-width: 210px; }
+    #acctMenu.open { display: flex; }
+    #acctMenu button { background: none; border: none; color: var(--text); text-align: left;
+      padding: 12px 12px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    #acctMenu button:active { background: var(--panel2); }
+    /* bottom tab bar — a real flex row so it never overlaps content */
+    #mobilenav { display: flex; flex: 0 0 auto; background: var(--panel); border-top: 1px solid var(--line);
+      padding: 4px 2px calc(4px + env(safe-area-inset-bottom)); z-index: 20; }
+    #mobilenav button { flex: 1; background: none; border: none; color: var(--dim); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0 4px;
+      font-size: 10.5px; position: relative; border-radius: 8px; min-width: 0; }
+    #mobilenav button .mi { font-size: 21px; line-height: 1; filter: grayscale(.45); opacity: .78; transition: opacity .12s; }
+    #mobilenav button.active { color: var(--honey2); }
+    #mobilenav button.active .mi { filter: none; opacity: 1; }
+    #mobilenav .ml { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .mdot { display: none; position: absolute; top: 3px; left: 50%; margin-left: 6px; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--honey); border: 1.5px solid var(--panel); }
+    /* content: single column, comfortable, room above the bottom bar */
+    html, body { max-width: 100%; overflow-x: hidden; }
+    .page { padding: 16px 14px 26px; max-width: none; overflow-x: hidden; }
+    .phdr { align-items: flex-start; }
+    .phdr .hact { width: 100%; }
+    /* CSS grids: minmax(0,1fr) so tracks shrink below their content instead of overflowing */
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .acts { grid-template-columns: minmax(0, 1fr); }
+    .pmems { grid-template-columns: minmax(0, 1fr); }
+    .tile, .lrow, .grow, .mempanel, .block, .stat { min-width: 0; max-width: 100%; }
+    /* any inline auto-fit multi-column grid collapses to one column on phones */
+    main .page div[style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+    .dist .row { grid-template-columns: 84px minmax(0, 1fr) 30px; }
+    .subnav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    .subnav button { flex: 0 0 auto; min-width: auto; padding: 9px 13px; }
+    .lrow { flex-wrap: wrap; }
+    .lrow .ra { width: 100%; }
+    .btnrow button, .act button, .action, button.ghost { min-height: 42px; }
+    /* Mind graph sits in the space above the bar; keep legend/toolbar clear of it */
+    .legend { max-width: 68%; font-size: 10px; bottom: 10px; }
+    #histDrawer { width: 100%; max-width: 100%; }
   }
   .hevent .tgt { color: var(--dim); word-break: break-word; }
   .hevent a.tgt { color: var(--honey2); cursor: pointer; text-decoration: none; }
@@ -181,9 +376,14 @@
   </div>
   <div class="spacer"></div>
   <span id="who" class="rolebadge"></span>
-  <button class="ghost" onclick="setMyPassword()">Wachtwoord</button>
-  <button class="ghost" onclick="logout()">Uitloggen</button>
+  <button class="ghost hide-mobile" onclick="setMyPassword()">Wachtwoord</button>
+  <button class="ghost hide-mobile" onclick="logout()">Uitloggen</button>
+  <button id="acctBtn" class="show-mobile" onclick="toggleAcctMenu(event)" aria-label="Account-menu">⋯</button>
 </header>
+<div id="acctMenu">
+  <button onclick="setMyPassword();closeAcctMenu()">🔑 Wachtwoord wijzigen</button>
+  <button onclick="logout()">🚪 Uitloggen</button>
+</div>
 
 <main id="tab-mind">
   <div id="left" class="col">
@@ -232,6 +432,15 @@
 <main id="tab-review" style="display:none"><div class="page" id="reviewPage"></div></main>
 <main id="tab-beheer" style="display:none"><div class="page" id="beheerPage"></div></main>
 
+<nav id="mobilenav">
+  <button data-tab="mind" class="active" onclick="showTab('mind')"><span class="mi">🕸️</span><span class="ml">Mind</span></button>
+  <button data-tab="focus" onclick="showTab('focus')"><span class="mi">🎯</span><span class="ml">Focus</span></button>
+  <button data-tab="chores" onclick="showTab('chores')"><span class="mi">🌼</span><span class="ml">Pollen</span><span id="choreDotM" class="mdot"></span></button>
+  <button data-tab="review" id="reviewTabM" style="display:none" onclick="showTab('review')"><span class="mi">👁️</span><span class="ml">Review</span></button>
+  <button data-tab="governance" onclick="showTab('governance')"><span class="mi">⚖️</span><span class="ml">Gov</span></button>
+  <button data-tab="beheer" onclick="showTab('beheer')"><span class="mi">⚙️</span><span class="ml">Beheer</span></button>
+</nav>
+
 <script>
 const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:"#3fc1c9",
                  skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae",
@@ -262,6 +471,17 @@ function setAllTypes(on) {
 }
 let TOKEN = localStorage.getItem("hive_token") || "";
 let ME = null;
+
+// iOS Safari's bottom toolbar overlaps a `100vh` layout, hiding the bottom nav. Modern browsers
+// use `100dvh` (CSS above). For older iOS that lacks dvh, pin body height to the real visible
+// height so the bottom bar always sits above Safari's chrome.
+(function () {
+  if (window.CSS && CSS.supports && CSS.supports("height", "100dvh")) return;
+  const fit = () => { document.body.style.height = window.innerHeight + "px"; };
+  window.addEventListener("resize", fit);
+  window.addEventListener("orientationchange", fit);
+  fit();
+})();
 
 const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -318,13 +538,21 @@ async function setMyPassword() {
 function showTab(name) {
   for (const m of document.querySelectorAll("main")) m.style.display = "none";
   document.getElementById("tab-" + name).style.display = "flex";
-  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === name);
+  for (const b of document.querySelectorAll(".tabs button, #mobilenav button")) b.classList.toggle("active", b.dataset.tab === name);
+  closeAcctMenu();
   if (name === "focus") loadFocus();
   if (name === "chores") loadChores();
   if (name === "review") loadReview();
   if (name === "governance") loadGovernance();
   if (name === "beheer") renderBeheer();
 }
+
+function toggleAcctMenu(e) { if (e) e.stopPropagation(); document.getElementById("acctMenu").classList.toggle("open"); }
+function closeAcctMenu() { const m = document.getElementById("acctMenu"); if (m) m.classList.remove("open"); }
+document.addEventListener("click", e => {
+  const m = document.getElementById("acctMenu");
+  if (m && m.classList.contains("open") && !m.contains(e.target) && e.target.id !== "acctBtn") closeAcctMenu();
+});
 
 /* ---------- force graph ---------- */
 const nodes = new Map();   // uid -> {uid,title,type,x,y,vx,vy}
@@ -553,9 +781,18 @@ const HIST_LABELS = { remember:"onthouden", create_topic:"topic aangemaakt", mov
   set_role:"rol gewijzigd", invite_create:"uitnodiging aangemaakt", login:"ingelogd",
   login_entra:"ingelogd (Microsoft)", login_entra_provision:"account aangemaakt (Microsoft)",
   password_set:"wachtwoord ingesteld", password_set_for:"wachtwoord ingesteld voor",
-  secret_set:"secret opgeslagen", secret_get:"secret gelezen", skill_create:"skill aangemaakt",
+  secret_set:"secret opgeslagen", secret_get:"secret gelezen", secret_read:"secret gelezen",
+  skill_create:"skill aangemaakt",
   skill_update:"skill bijgewerkt", workflow_create:"workflow aangemaakt", workflow_update:"workflow bijgewerkt",
-  approve_scope_widening:"scope-verbreding goedgekeurd" };
+  approve_scope_widening:"scope-verbreding goedgekeurd", supersede:"vervangen (superseded)",
+  resolve_contradiction:"tegenspraak afgehandeld", resolve_think:"denk-Pollen afgehandeld",
+  lifecycle:"levensfase gewijzigd", set_importance:"belang aangepast", set_decay:"verval aangepast",
+  reclassify_sensitivity:"gevoeligheid herbeoordeeld", pagerank_scan:"PageRank herberekend",
+  contradiction_scan:"tegenspraak-scan", linkpred_scan:"link-predictie", tidy_scan:"opruim-scan",
+  staleness_scan:"staleness-scan", relate:"gekoppeld", unlink:"koppeling verwijderd",
+  reembed:"opnieuw ge-embed", train_ranker:"ranker getraind", feedback:"feedback gegeven",
+  invite_revoke:"uitnodiging ingetrokken", token_rotate:"token geroteerd", token_revoke:"token ingetrokken",
+  create_account:"account aangemaakt", create_token:"token aangemaakt", set_consensus:"consensus-drempel gewijzigd" };
 function histLabel(a) { return HIST_LABELS[a] || (a || "").replace(/_/g, " "); }
 function timeAgo(ms) {
   if (!ms) return "";
@@ -1027,7 +1264,7 @@ function sgFields() {
     extra.innerHTML = `<input id="sgTitle" placeholder="nieuwe titel (leeg = ongewijzigd)">
       <textarea id="sgContent" rows="4" placeholder="nieuwe inhoud (leeg = ongewijzigd)"></textarea>`;
   else if (kind === "promotion")
-    extra.innerHTML = `<input id="sgTopic" placeholder="generiek doel-topic (bv. Fabric werkwijzen)">`;
+    extra.innerHTML = `<input id="sgTopic" placeholder="generiek doel-topic">`;
   else if (kind === "scope_widening")
     extra.innerHTML = `<select id="sgScope"><option value="org">org-breed</option><option value="team">team</option></select>`;
   else extra.innerHTML = "";
@@ -1069,62 +1306,188 @@ async function showLineage(uid) {
 }
 
 /* ---------- governance ---------- */
+const TYPE_COLORS = COLORS;
+function distBars(obj, colorFn) {
+  const entries = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return `<div class="t" style="color:var(--dim)">geen data</div>`;
+  const max = Math.max(...entries.map(e => e[1])) || 1;
+  return `<div class="dist">` + entries.map(([k, v]) => {
+    const col = colorFn ? colorFn(k) : "var(--honey)";
+    return `<div class="row"><span class="k" title="${esc(k)}">${esc(k)}</span>
+      <span class="bar"><i style="width:${Math.round(v / max * 100)}%;background:${col}"></i></span>
+      <span class="v">${v}</span></div>`;
+  }).join("") + `</div>`;
+}
 async function loadGovernance() {
-  const g = await api("/graph/governance");
-  const table = (obj, label) => `<div class="card"><div class="meta">${label}</div>` +
-    Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
-      `<div style="display:flex;justify-content:space-between"><span>${esc(k)}</span><strong>${v}</strong></div>`).join("") + "</div>";
-  let html = `<h2 style="margin-bottom:12px">Governance <span class="badge">${g.nodes_total} items</span></h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-    ${table(g.by_scope, "Zichtbaarheid (scope)")}${table(g.by_sensitivity, "Gevoeligheid")}
-    ${table(g.by_type, "Kennistype")}${table(g.by_model, "Herkomst (model)")}
-    ${table(g.chores, "Governance-klussen")}</div>`;
-  if ((g.sensitive_nodes || []).length) {
-    html += `<h3 style="margin:16px 0 8px;color:var(--dim)">Als gevoelig geclassificeerd — controleer of dit klopt</h3>` +
-      g.sensitive_nodes.map(n => `<div class="item" onclick="showTab('mind');jumpTo('${n.uid}')">
-        <span class="dot" style="background:var(--red)"></span> ${esc(n.title)} <span class="t">${esc(n.type)}</span></div>`).join("");
-  }
+  const page = document.getElementById("govPage");
+  let g; try { g = await api("/graph/governance"); } catch (e) { page.innerHTML = `<p style="color:var(--red)">${esc(e.message)}</p>`; return; }
+  const ch = g.chores || {};
+  const openP = (ch.open || 0) + (ch.ready || 0);
+  const sens = (g.sensitive_nodes || []).length;
+  const tiles = `<div class="tiles">
+    <div class="tile" style="--accent:var(--honey)"><div class="tnum">${g.nodes_total || 0}</div><div class="tlbl">memories totaal</div></div>
+    <div class="tile" style="--accent:var(--red)"><div class="tnum">${sens}</div><div class="tlbl">gevoelig geclassificeerd</div></div>
+    <div class="tile" style="--accent:var(--blue)"><div class="tnum">${openP}</div><div class="tlbl">open Pollen</div><div class="tsub">${ch.ready || 0} ready</div></div>
+    <div class="tile" style="--accent:var(--purple)"><div class="tnum">${ch.awaiting_human || 0}</div><div class="tlbl">wacht op mens</div></div>
+  </div>`;
+  const sensColor = k => k === "gevoelig" ? "var(--red)" : (k === "intern" ? "var(--orange)" : "var(--green)");
+  const dists = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap)">
+    <div class="block"><div class="bh"><span class="ic">🔭</span><h3>Zichtbaarheid</h3></div>${distBars(g.by_scope)}</div>
+    <div class="block"><div class="bh"><span class="ic">🔐</span><h3>Gevoeligheid</h3></div>${distBars(g.by_sensitivity, sensColor)}</div>
+    <div class="block"><div class="bh"><span class="ic">🧩</span><h3>Kennistype</h3></div>${distBars(g.by_type, k => TYPE_COLORS[k] || "var(--honey)")}</div>
+  </div>`;
+  const origin = (g.by_origin || []).map(o => `<div class="lrow">
+      <span class="dot" style="background:var(--teal)"></span>
+      <div class="grow"><div class="l1">${esc(o.person)} <span class="t" style="font-weight:400;color:var(--dim)">· via account ${esc(o.account)}</span></div>
+        <div class="l2">🤖 model ${esc(o.model)}</div></div>
+      <span class="badge2">${o.count}</span></div>`).join("");
+  const originBlock = `<div class="block"><div class="bh"><span class="ic">🧬</span><h3>Herkomst</h3></div>
+    <div class="bhint">Wie schreef de kennis: het <b>model</b>, via welk <b>account</b> (token-houder), gekoppeld aan welke <b>persoon</b>.</div>
+    ${origin || `<div class="t" style="color:var(--dim)">geen herkomst-gegevens</div>`}</div>`;
+  const pipeOrder = [["open", "open"], ["ready", "ready"], ["awaiting_human", "wacht op mens"], ["resolved", "toegepast"], ["rejected", "afgewezen"]];
+  const pipe = `<div class="block"><div class="bh"><span class="ic">🌼</span><h3>Pollen-pijplijn</h3></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${pipeOrder.map(([k, lbl]) =>
+      `<span class="stat"><b>${ch[k] || 0}</b><span>${lbl}</span></span>`).join("")}</div></div>`;
+  let sensBlock = "";
+  if (sens) sensBlock = `<div class="block"><div class="bh"><span class="ic">⚠️</span><h3>Als gevoelig geclassificeerd</h3><span class="badge2">${sens}</span></div>
+    <div class="bhint">Controleer of dit klopt — klik om naar de memory in de Mind te springen.</div>
+    ${g.sensitive_nodes.map(n => `<div class="lrow" style="cursor:pointer" onclick="showTab('mind');jumpTo('${n.uid}')">
+      <span class="dot" style="background:var(--red)"></span>
+      <div class="grow"><div class="l1">${esc(n.title)}</div></div><span class="pill">${esc(n.type)}</span></div>`).join("")}</div>`;
+  let auditBlock = "";
   if (ME.can_review) {
-    const audit = await api("/graph/audit?limit=60");
-    const fmt = ms => new Date(ms).toLocaleString("nl-NL");
-    html += `<h3 style="margin:16px 0 8px;color:var(--dim)">Audit-trail (laatste ${audit.length})</h3>` +
-      audit.map(e => `<div class="card"><div class="meta">${fmt(e.at)} — ${esc(e.action)} — ${esc(e.account || "systeem")}</div>
-        <span class="t">${esc(e.target)}</span><pre>${esc(e.detail || "")}</pre></div>`).join("");
+    try {
+      const audit = await api("/graph/audit?limit=60");
+      const fmt = ms => new Date(ms).toLocaleString("nl-NL");
+      auditBlock = `<div class="block"><div class="bh"><span class="ic">📜</span><h3>Audit-trail</h3><span class="badge2">laatste ${audit.length}</span></div>
+        <div class="bhint">Append-only: elke schrijf-, mutatie- en secret-toegang. Onweerlegbaar.</div>
+        <div class="tl">${audit.map(auditEvent).join("")}</div></div>`;
+    } catch (e) {}
   }
-  document.getElementById("govPage").innerHTML = html;
+  page.innerHTML = `<div class="phdr">
+      <div class="htxt"><h2><span class="ic">⚖️</span>Governance</h2>
+        <div class="sub">Wie ziet wat, waar komt kennis vandaan, en wat is gevoelig — plus de onweerlegbare audit-trail.</div></div>
+    </div>${tiles}${dists}${originBlock}${pipe}${sensBlock}${auditBlock}`;
+}
+/* Render one audit event human-readably: action + who (person/account name), the subject as a
+   real title (never a uid), and any remaining detail with uid-like values filtered out. */
+function isUidLike(v) {
+  return typeof v === "string" && (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(v) || /^[0-9a-f]{16,}$/i.test(v));
+}
+function auditDetailText(str, usedTitle) {
+  let d; try { d = JSON.parse(str || "{}"); } catch (e) { return isUidLike(str) ? "" : esc(str || ""); }
+  if (!d || typeof d !== "object") return esc(String(d));
+  const parts = Object.entries(d)
+    .filter(([k, v]) => v != null && v !== "" && typeof v !== "object" && !isUidLike(v) && String(v) !== usedTitle)
+    .map(([k, v]) => `${esc(k.replace(/_/g, " "))}: ${esc(String(v))}`);
+  return parts.join(" · ");
+}
+function auditEvent(e) {
+  const fmt = ms => new Date(ms).toLocaleString("nl-NL");
+  let d = {}; try { d = JSON.parse(e.detail || "{}"); } catch (_) {}
+  const subjectTitle = e.target_title || d.title || d.name || d.result || "";
+  const subject = e.target_title
+    ? `${e.target_type ? `<span class="pill" style="margin-right:6px">${esc(e.target_type)}</span>` : ""}${esc(e.target_title)}`
+    : (subjectTitle ? esc(subjectTitle) : "");
+  const det = auditDetailText(e.detail, subjectTitle);
+  return `<div class="ev">
+    <div class="when">${fmt(e.at)}</div>
+    <div class="what"><b>${esc(histLabel(e.action))}</b> · ${esc(e.account || "systeem")}</div>
+    ${subject ? `<div class="det">${subject}</div>` : ""}
+    ${det ? `<div class="det" style="opacity:.8">${det}</div>` : ""}
+  </div>`;
 }
 
-/* ---------- chores ---------- */
+/* ---------- Pollen ---------- */
+function pMem(m, cls) {
+  if (!m || (!m.title && !m.content)) return "";
+  return `<div class="mempanel ${cls || ""}">
+    ${m.label ? `<div class="mlabel">${esc(m.label)}</div>` : ""}
+    <div class="mtitle">${esc(m.title || "(zonder titel)")}</div>
+    ${m.content ? `<div class="mbody">${esc(m.content)}</div>` : ""}</div>`;
+}
+function pBody(v, type) {
+  if (v.route === "contradiction")
+    return `<div class="pmems">${pMem(v.primary)}${pMem(v.compare)}</div>`;
+  if (v.route === "op_route")
+    return `<div class="pmems">${pMem(v.primary, "new")}${pMem(v.compare)}</div>`;
+  if (v.proposed)   // edit: before → after
+    return `<div class="pmems">${pMem({ ...v.primary, label: "Nu" })}${pMem({ ...v.proposed, label: "Voorgesteld" }, "new")}</div>`;
+  if (v.compare)    // dedup / relate
+    return `<div class="pmems">${pMem(v.primary)}${pMem(v.compare, type === "dedup_merge" ? "gone" : "")}</div>`;
+  // single memory (invalidate / stale_review / promotion / scope_widening)
+  return `<div class="pmems one">${pMem(v.primary)}</div>` +
+    (v.target_topic ? `<span class="ptopic">→ topic: ${esc(v.target_topic)}</span>` : "");
+}
+function pWait() { return `<div class="t" style="color:var(--dim);margin-top:8px">wacht op meer stemmen (consensus)</div>`; }
+function pButtons(c) {
+  const v = c.view || {}, p = (v.refs || {}).pollen || c.uid;
+  if (v.route === "contradiction") {
+    if (c.status !== "ready") return pWait();
+    const a = v.refs.a, b = v.refs.b;
+    return `<div class="btnrow">
+      <button class="action" onclick="resolveContra('${p}','${a}','${b}')">A is huidig → B verouderd</button>
+      <button class="action" onclick="resolveContra('${p}','${b}','${a}')">B is huidig → A verouderd</button>
+      <button class="ghost" onclick="resolveContraCompat('${p}')">Verenigbaar (geen tegenspraak)</button></div>`;
+  }
+  if (v.route === "op_route") {
+    if (c.status !== "ready") return pWait();
+    return `<div class="btnrow">
+      <button class="ghost" onclick="resolveThink('${p}','ADD')">Apart houden</button>
+      <button class="action" onclick="resolveThinkUpdate('${p}')">Samenvoegen…</button>
+      <button class="ghost danger" onclick="resolveThink('${p}','DELETE')">Nieuwe schrappen</button>
+      <button class="ghost" onclick="resolveThink('${p}','NOOP')">Laten staan</button></div>`;
+  }
+  if (v.route === "human")
+    return `<div class="t" style="color:var(--dim);margin-top:8px">Wacht op menselijke review (admin-wachtrij).</div>`;
+  // standard
+  if (c.status === "ready")
+    return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',false)">Toepassen</button>
+      <button class="ghost" onclick="resolveChore('${c.uid}','reject',false)">Afwijzen</button></div>`;
+  if (ME.role === "org_admin")
+    return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',true)">Direct toepassen</button>
+      <button class="ghost danger" onclick="resolveChore('${c.uid}','reject',true)">Afwijzen</button></div>
+      <div class="t" style="color:var(--dim);margin-top:4px">org_admin — bypasst consensus (geaudit)</div>`;
+  return pWait();
+}
 async function loadChores() {
   const data = await api("/graph/chores");
   const page = document.getElementById("choresPage");
   const fmt = ms => ms ? new Date(ms).toLocaleString("nl-NL") : "";
-  const btns = c => {
-    if (c.status === "ready")   // consensus reached — any Swarm member may pick it up
-      return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',false)">Toepassen</button>
-        <button class="ghost" onclick="resolveChore('${c.uid}','reject',false)">Afwijzen</button></div>`;
-    if (ME.role === "org_admin")   // open, geen consensus — org_admin mag direct
-      return `<div class="btnrow"><button class="action" onclick="resolveChore('${c.uid}','apply',true)">Direct toepassen</button>
-        <button class="ghost danger" onclick="resolveChore('${c.uid}','reject',true)">Afwijzen</button></div>
-        <div class="t" style="color:var(--dim);margin-top:4px">org_admin — bypasst consensus (geaudit)</div>`;
-    return `<div class="t" style="color:var(--dim);margin-top:8px">wacht op meer stemmen (consensus)</div>`;
-  };
-  const openCards = data.chores.map(c => `<div class="card">
-      <div class="meta">${esc(c.type)} · <span style="color:${c.status === "ready" ? "var(--honey)" : "var(--dim)"}">${esc(c.status)}</span> · ${c.votes} stem(men)</div>
-      <div><strong>${esc(c.node_title || "")}</strong></div>
-      ${c.payload ? `<pre>${esc(c.payload)}</pre>` : ""}${btns(c)}</div>`).join("")
-    || `<p style="color:var(--dim)">Geen open Pollen — Nectar is bij.</p>`;
+  const openCards = data.chores.map(c => {
+    const v = c.view || {};
+    const sc = c.status === "ready" ? "var(--honey2)" : "var(--dim)";
+    return `<div class="pcard ${c.status === "ready" ? "ready" : ""}">
+      <div class="phead"><span class="ptitle">${esc(v.headline || c.type)}</span>
+        <span class="pchip">${esc(c.type)}</span>
+        <span class="pchip" style="color:${sc}">${esc(c.status)}</span>
+        ${v.similarity != null ? `<span class="pchip psim">gelijkenis ${Number(v.similarity).toFixed(2)}</span>` : ""}
+        ${c.status !== "ready" && c.votes != null ? `<span class="pchip">${c.votes} stem(men)</span>` : ""}</div>
+      ${v.explain ? `<div class="pexplain">${esc(v.explain)}</div>` : ""}
+      ${pBody(v, c.type)}
+      ${pButtons(c)}</div>`;
+  }).join("") || `<p style="color:var(--dim)">Geen open Pollen — Nectar is bij.</p>`;
   const resolved = data.resolved || [];
   const doneCards = resolved.map(c => {
-    const ok = c.status === "resolved";
-    return `<div class="card" style="opacity:.85">
-      <div class="meta">${ok ? "✓" : "✗"} ${esc(c.type)} · ${ok ? "toegepast" : "afgewezen"}${c.resolved ? " · " + fmt(c.resolved) : ""}</div>
-      <div><strong>${esc(c.node_title || "")}</strong></div>
-      ${c.resolution ? `<div class="t" style="margin-top:4px">${esc(c.resolution)}</div>` : ""}</div>`;
+    const v = c.view || {}, ok = c.status === "resolved";
+    return `<div class="pcard" style="opacity:.72;padding:11px 14px">
+      <div class="phead"><span class="ptitle" style="font-size:14px">${ok ? "✓" : "✗"} ${esc(v.headline || c.type)}</span>
+        <span class="pchip" style="color:${ok ? "var(--green)" : "var(--gray)"}">${ok ? "toegepast" : "afgewezen"}${c.resolved ? " · " + fmt(c.resolved) : ""}</span></div>
+      ${v.primary && v.primary.title ? `<div class="mtitle" style="font-weight:500;color:var(--dim)">${esc(v.primary.title)}</div>` : ""}
+      ${c.resolution ? `<div class="t" style="margin-top:4px;color:var(--dim)">${esc(c.resolution)}</div>` : ""}</div>`;
   }).join("") || `<p style="color:var(--dim)">Nog niets afgehandeld.</p>`;
-  page.innerHTML = `<h2 style="margin-bottom:12px">Pollen <span class="t" style="font-weight:400;color:var(--dim)">— taken die de Swarm de Hive mee versterkt</span> <span class="badge">${data.ready} ready</span></h2>
-    <h3 style="margin:4px 0 8px;color:var(--dim)">Open / actief</h3>${openCards}
-    <h3 style="margin:22px 0 8px;color:var(--dim)">Afgehandeld <span class="t">(${resolved.length})</span></h3>${doneCards}`;
+  const nOpen = data.chores.length;
+  page.innerHTML = `<div class="phdr">
+      <div class="htxt"><h2><span class="ic">🌼</span>Pollen</h2>
+        <div class="sub">Onderhoudsbeslissingen die de Swarm de Hive mee versterkt. Beoordeel op inhoud en handel af — niets verandert automatisch.</div></div>
+      <div class="hact">
+        <span class="stat"><b>${data.ready}</b><span>ready</span></span>
+        <span class="stat"><b>${nOpen}</b><span>open</span></span></div>
+    </div>
+    <div class="bh" style="margin:0 0 10px"><span class="ic">📥</span><h3 style="font-size:14px">Open / actief</h3></div>
+    ${openCards}
+    <div class="bh" style="margin:26px 0 10px"><span class="ic">🗂️</span><h3 style="font-size:14px">Afgehandeld</h3><span class="badge2">${resolved.length}</span></div>
+    ${doneCards}`;
 }
 async function resolveChore(uid, action, direct) {
   try { await api(`/graph/chores/${uid}/resolve?action=${action}${direct ? "&direct=true" : ""}`,
@@ -1132,20 +1495,62 @@ async function resolveChore(uid, action, direct) {
   catch (e) { alert(e.message); }
   loadChores();
 }
+async function resolveContra(pollen, current, outdated) {
+  try { await api("/graph/contradiction/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, verdict: "contradiction", current, outdated, note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadChores();
+}
+async function resolveContraCompat(pollen) {
+  try { await api("/graph/contradiction/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, verdict: "compatible", note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadChores();
+}
+async function resolveThink(pollen, decision) {
+  try { await api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, decision, note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadChores();
+}
+async function resolveThinkUpdate(pollen) {
+  const merged_content = prompt("Samengevoegde inhoud (de twee memories tot één betere):");
+  if (merged_content == null || !merged_content.trim()) return;
+  const merged_title = prompt("Titel voor de samengevoegde memory (leeg = titel van de bestaande):", "") || "";
+  try { await api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, decision: "UPDATE", merged_title, merged_content, note: "via GUI" }) }); }
+  catch (e) { alert(e.message); }
+  loadChores();
+}
 
-/* ---------- review ---------- */
+/* ---------- review (human queue: scope widening) ---------- */
+const SCOPE_LABEL = { account: "persoonlijk", team: "team", org: "hele org" };
 async function loadReview() {
   const page = document.getElementById("reviewPage");
-  const items = await api("/review/chores");
-  page.innerHTML = `<h2 style="margin-bottom:12px">Menselijke review — zichtbaarheid verbreden</h2>` +
-    (items.map(c => `<div class="card">
-      <div class="meta">${esc(c.type)} · huidige scope: ${esc(c.node_scope)}</div>
-      <div><strong>${esc(c.node_title || "")}</strong></div>
-      <pre>${esc(c.payload || "")}</pre>
-      <div class="meta">${(c.votes || []).map(v => esc((v.account || "?") + " (" + (v.model || "?") + "): " + (v.rationale || ""))).join("<br>")}</div>
-      <button class="action" onclick="reviewAct('${c.uid}','approve')">Goedkeuren</button>
-      <button class="ghost" onclick="reviewAct('${c.uid}','reject')">Afwijzen</button></div>`).join("")
-     || `<p style="color:var(--dim)">Niets te reviewen.</p>`);
+  let items;
+  try { items = await api("/review/chores"); } catch (e) { page.innerHTML = `<p style="color:var(--red)">${esc(e.message)}</p>`; return; }
+  const cards = items.map(c => {
+    let payload = {}; try { payload = JSON.parse(c.payload || "{}"); } catch (e) {}
+    const from = SCOPE_LABEL[c.node_scope] || c.node_scope || "?";
+    const to = SCOPE_LABEL[payload.target_scope] || payload.target_scope || "breder";
+    const votes = (c.votes || []).map(v =>
+      `<div class="guard" style="background:rgba(90,169,230,.07);border-color:rgba(90,169,230,.22);color:#bcd9f2">
+        <span class="ic">🗳️</span><span><strong>${esc(v.account || "?")}</strong>
+        <span style="color:var(--dim)">(${esc(v.model || "?")})</span>${v.rationale ? " — " + esc(v.rationale) : ""}</span></div>`).join("");
+    return `<div class="block">
+      <div class="bh"><span class="ic">👁️</span><h3>${esc(c.node_title || "(zonder titel)")}</h3></div>
+      <div class="bhint" style="margin-bottom:12px">De Swarm stelt voor deze memory breder zichtbaar te maken. Dit besluit ligt bewust bij een mens.</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span class="pill">${esc(from)}</span><span style="color:var(--honey2);font-size:18px">→</span>
+        <span class="pill role">${esc(to)}</span></div>
+      ${votes ? `<div class="guards" style="margin-bottom:12px">${votes}</div>` : ""}
+      <div class="btnrow">
+        <button class="action" onclick="reviewAct('${c.uid}','approve')">Goedkeuren — breder zichtbaar</button>
+        <button class="ghost danger" onclick="reviewAct('${c.uid}','reject')">Afwijzen</button></div>
+    </div>`;
+  }).join("");
+  page.innerHTML = `<div class="phdr">
+      <div class="htxt"><h2><span class="ic">👁️</span>Menselijke review</h2>
+        <div class="sub">Zichtbaarheid verbreden is de één mutatie die nooit door de Swarm alleen mag — hier beslis jij.</div></div>
+      ${items.length ? `<div class="hact"><span class="stat"><b>${items.length}</b><span>te reviewen</span></span></div>` : ""}
+    </div>
+    ${cards || `<div class="empty"><span class="big">✅</span>Niets te reviewen — geen openstaande scope-verbredingen.</div>`}`;
 }
 async function reviewAct(uid, act) {
   try { await api(`/review/chores/${uid}/${act}`, { method: "POST", body: JSON.stringify({ note: "via GUI" }) }); }
@@ -1153,61 +1558,115 @@ async function reviewAct(uid, act) {
   loadReview();
 }
 
-/* ---------- beheer ---------- */
+/* ---------- beheer (sectie-navigatie) ---------- */
+let BEHEER_SEC = "inzicht";
 function renderBeheer() {
   const page = document.getElementById("beheerPage");
-  const isAdmin = ME.role === "org_admin";
-  page.innerHTML = `
-    <h2 style="margin-bottom:6px">Beheer</h2>
-    <div class="card"><h3 style="margin-bottom:8px">Inzicht</h3>
-      <button class="ghost" onclick="loadAnalytics()">Laden</button>
-      <div id="analytics" style="margin-top:8px"></div></div>
-    <div class="card"><h3 style="margin-bottom:8px">Install-pakket voor Claude</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Download de zip, geef 'm plus een token aan iemand; Claude installeert Nectar zelf in een project.</p>
+  const admin = ME.role === "org_admin";
+  const secs = admin
+    ? [["inzicht", "📊 Inzicht"], ["onderhoud", "🧹 Onderhoud"], ["swarm", "🎛️ Instellingen"],
+       ["toegang", "🔑 Toegang"], ["data", "💾 Data"], ["pakket", "📦 Pakket"]]
+    : [["inzicht", "📊 Inzicht"], ["pakket", "📦 Pakket"]];
+  if (!secs.find(s => s[0] === BEHEER_SEC)) BEHEER_SEC = "inzicht";
+  page.innerHTML = `<div class="phdr">
+      <div class="htxt"><h2><span class="ic">⚙️</span>Beheer</h2>
+        <div class="sub">${admin ? "Inzicht, onderhoud, instellingen, toegang en back-ups van de Hive." : "Inzicht en het install-pakket. Accountbeheer is voor org_admins."}</div></div>
+      <div class="hact"><span class="rolebadge">${esc(ME.role)}</span></div>
+    </div>
+    <div class="subnav">${secs.map(([k, l]) => `<button class="${k === BEHEER_SEC ? "on" : ""}" onclick="beheerGo('${k}')">${l}</button>`).join("")}</div>
+    <div id="beheerBody"></div>`;
+  renderBeheerSection();
+}
+function beheerGo(sec) { BEHEER_SEC = sec; renderBeheer(); }
+function renderBeheerSection() {
+  const admin = ME.role === "org_admin";
+  const body = document.getElementById("beheerBody");
+  switch (BEHEER_SEC) {
+    case "inzicht": body.innerHTML = `<div id="analytics"><div class="t" style="color:var(--dim)">laden…</div></div>`; loadAnalytics(); return;
+    case "pakket": body.innerHTML = pakketHTML(); loadSkills(); return;
+  }
+  if (!admin) { body.innerHTML = `<div class="empty">Alleen voor org_admins.</div>`; return; }
+  switch (BEHEER_SEC) {
+    case "onderhoud": body.innerHTML = onderhoudHTML(); return;
+    case "swarm": body.innerHTML = `<div id="settingsBox"><div class="t" style="color:var(--dim)">laden…</div></div>`; loadSettings(); return;
+    case "toegang": body.innerHTML = toegangHTML(); loadBeheerOptions(); loadAccounts(); loadInvites(); return;
+    case "data": body.innerHTML = dataHTML(); return;
+  }
+}
+function actTile(ic, name, desc, fn, outId) {
+  return `<div class="act"><div class="ah"><span class="ic">${ic}</span>${name}</div>
+    <div class="ad">${desc}</div>
+    <div class="arow"><button class="ghost" onclick="${fn}">Draaien</button><span class="aout" id="${outId}"></span></div></div>`;
+}
+function onderhoudHTML() {
+  return `<div class="block"><div class="bh"><span class="ic">🧹</span><h3>Onderhoudsscans</h3></div>
+    <div class="bhint">Deterministische scans die de Hive gezond houden. De meeste openen <b>Pollen</b> (voorstellen) i.p.v. direct te wijzigen — je vindt ze terug op de Pollen-tab. Niets wordt ooit hard verwijderd.</div>
+    <div class="acts">
+      ${actTile("🗂️", "Opruimen", "Losse kennis zonder topic krijgt het dichtstbijzijnde topic voorgesteld (Pollen).", "tidyScan()", "tidyOut")}
+      ${actTile("⏳", "Staleness", "Oude maar veelgebruikte kennis krijgt een 'klopt dit nog?'-review-Pollen.", "stalenessScan()", "staleOut")}
+      ${actTile("📝", "Topic-samenvattingen", "Werk per topic de samenvatting bij zodat elk topic toont wat het bevat.", "rebuildSummaries()", "sumOut")}
+      ${actTile("🕸️", "PageRank", "Herbereken structureel belang: goed-verbonden kennis komt iets hoger in recall.", "pagerankScan()", "prOut")}
+      ${actTile("🔗", "Link-predictie", "Stel RELATES-koppelingen voor tussen waarschijnlijk-gerelateerde memories (Pollen).", "linkpredScan()", "lpOut")}
+      ${actTile("⚖️", "Tegenspraak", "Vind sterk-gelijkende memories die elkaar tegenspreken; de Swarm oordeelt (Pollen).", "contradictionScan()", "contraOut")}
+      ${actTile("🔐", "Herclassificeer gevoeligheid", "Beoordeel alle memories opnieuw met de huidige classifier (herstelt false positives).", "reclassifySensitivity()", "reclOut")}
+      ${actTile("🎚️", "Ranker trainen", "Leer van de 'heeft het geholpen?'-feedback en vervang de handmatige weegfactoren.", "trainRanker()", "ltrOut")}
+      ${actTile("🧬", "Her-embedden", "Herbereken alle embeddings — draai dit na het wisselen van embeddingmodel.", "reindexEmbeddings()", "reidxOut")}
+    </div></div>`;
+}
+function pakketHTML() {
+  return `<div class="block"><div class="bh"><span class="ic">📦</span><h3>Install-pakket voor Claude</h3></div>
+      <div class="bhint">Download de zip, geef 'm samen met een token aan iemand; Claude installeert Nectar zelf in een project (recall-hook + MCP).</div>
       <button class="action" onclick="downloadInstallZip()">Download install-zip</button></div>
-    <div class="card"><h3 style="margin-bottom:8px">Skills in de hive</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Deel-skills die je in een project kunt laden. In een hive-verbonden Claude: vraag <em>"laad skill X"</em>, of draai het commando.</p>
-      <button class="ghost" onclick="loadSkills()">Laden</button>
-      <div id="skillList"></div></div>
-    ${isAdmin ? `
-    <div class="card"><h3 style="margin-bottom:8px">Onderhoud</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Beoordeel alle memories opnieuw met de huidige gevoeligheids-classifier (herstelt oude false positives).</p>
-      <button class="ghost" onclick="reclassifySensitivity()">Herclassificeer gevoeligheid</button> <span id="reclOut" class="ok"></span>
-      <p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Opruim-scan: zoek kennis die niet onder een topic hangt en open (veilige, niet-verwijderende) Pollen die 'm onder het dichtstbijzijnde topic voorstellen. Het re-organiseren verloopt zo via de Pollen.</p>
-      <button class="ghost" onclick="tidyScan()">Opruim-scan draaien</button> <span id="tidyOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Staleness-scan: oude maar veelgebruikte kennis die al lang niet herzien is, als review-Pollen ("klopt dit nog?"). Toepassen ververst + bevestigt, verwijdert nooit.</p><button class="ghost" onclick="stalenessScan()">Staleness-scan draaien</button> <span id="staleOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Topic-samenvattingen (deterministisch) bijwerken zodat elk topic toont wat het bevat.</p><button class="ghost" onclick="rebuildSummaries()">Samenvattingen bijwerken</button> <span id="sumOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">PageRank (structureel belang) herberekenen: centrale, goed-verbonden kennis komt iets hoger in recall.</p><button class="ghost" onclick="pagerankScan()">PageRank bijwerken</button> <span id="prOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Link-predictie: stel RELATES-koppelingen voor tussen waarschijnlijk-gerelateerde memories (als Pollen — nooit auto-gelinkt).</p><button class="ghost" onclick="linkpredScan()">Link-predictie draaien</button> <span id="lpOut" class="ok"></span><p style="color:var(--dim);font-size:13px;margin:12px 0 8px">Ranker trainen: leert van de "heeft het geholpen?"-feedback en vervangt de handmatige weegfactoren (valt terug op de defaults tot er genoeg feedback is).</p><button class="ghost" onclick="trainRanker()">Ranker trainen</button> <span id="ltrOut" class="ok"></span></div>
-    <div class="card"><h3 style="margin-bottom:8px">Swarm — consensus</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Minimale Swarm-grootte: hoeveel <strong>stemmen</strong> een Pollen nodig heeft voordat 'ie oppakbaar wordt (<em>ready</em>). Zet op <strong>1</strong> voor een kleine/solo swarm zodat één stem al genoeg is. Elk lid mag daarna ready Pollen oppakken.</p>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="consensusInput" type="number" min="1" style="width:90px;margin:0" value="">
-        <button class="action" onclick="saveConsensus()">Opslaan</button> <span id="consensusOut" class="ok"></span></div></div>
-    <div class="card"><h3 style="margin-bottom:8px">Back-up &amp; restore</h3>
-      <p style="color:var(--dim);font-size:13px;margin-bottom:8px">Volledige export van de hele hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <em>samenvoegen</em> (upsert) of <em>vervangen</em> (hive eerst leegmaken = echte restore).</p>
-      <button class="action" onclick="exportBackup()">Exporteren (download)</button> <span id="expOut" class="ok"></span>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-        <input id="importFile" type="file" accept="application/json,.json" style="margin-bottom:8px">
-        <select id="importMode"><option value="merge">samenvoegen (upsert)</option>
-          <option value="replace">vervangen (wipe + restore)</option></select>
-        <button class="ghost" onclick="importBackup()">Importeren</button> <span id="impOut" class="ok"></span></div></div>
-    <p style="color:var(--dim);margin-bottom:14px">Je bent ingelogd als <strong>org_admin</strong> — accounts en tokens beheer je hieronder met je eigen sessie. Geen apart admin-token nodig.</p>` + `
-    <div class="card"><h3 style="margin-bottom:8px">Nieuw account</h3>
-      <input id="accName" placeholder="accountnaam">
-      <input id="accPerson" placeholder="persoon (de mens achter dit account)">
-      <select id="accTeam"><option value="">— geen team —</option></select>
-      <select id="accRole"><option value="member">member — lezen &amp; schrijven</option>
+    <div class="block"><div class="bh"><span class="ic">✨</span><h3>Skills in de Hive</h3></div>
+      <div class="bhint">Deel-skills die je in een project kunt laden. In een hive-verbonden Claude: vraag <em>"laad skill X"</em>, of draai het commando.</div>
+      <div id="skillList"></div></div>`;
+}
+function dataHTML() {
+  return `<div class="block"><div class="bh"><span class="ic">💾</span><h3>Back-up &amp; restore</h3></div>
+    <div class="bhint">Volledige export van de hele Hive (nodes, relaties, tags én bijlagen) als één JSON-bestand. Terugzetten kan <b>samenvoegen</b> (upsert) of <b>vervangen</b> (Hive eerst leegmaken = echte restore).</div>
+    <button class="action" onclick="exportBackup()">Exporteren (download)</button> <span id="expOut" class="ok"></span>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+      <label class="fl">Back-up-bestand</label>
+      <input id="importFile" type="file" accept="application/json,.json" style="margin-bottom:8px">
+      <label class="fl">Modus</label>
+      <select id="importMode"><option value="merge">samenvoegen (upsert)</option>
+        <option value="replace">vervangen (wipe + restore)</option></select>
+      <button class="ghost" onclick="importBackup()">Importeren</button> <span id="impOut" class="ok"></span></div></div>`;
+}
+function toegangHTML() {
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--gap)">
+    <div class="block"><div class="bh"><span class="ic">👤</span><h3>Nieuw account</h3></div>
+      <label class="fl">Naam</label><input id="accName" placeholder="accountnaam">
+      <label class="fl">Persoon (de mens erachter)</label><input id="accPerson" placeholder="naam van de persoon">
+      <label class="fl">Team</label><select id="accTeam"><option value="">— geen team —</option></select>
+      <label class="fl">Rol</label><select id="accRole"><option value="member">member — lezen &amp; schrijven</option>
         <option value="maintainer">maintainer — + onderhoud</option>
         <option value="org_admin">org_admin — + reviewen</option></select>
-      <button class="action" onclick="createAccount()">Aanmaken</button><span id="accOut" class="ok"></span></div>
-    <div class="card"><h3 style="margin-bottom:8px">Nieuw token voor account</h3>
-      <select id="tokAcc"><option value="">— kies account —</option></select>
-      <input id="tokLabel" placeholder="label (bv. laptop)">
-      <button class="action" onclick="createToken()">Token maken</button>
-      <pre id="tokOut" style="display:none"></pre></div>
-    <div class="card"><h3 style="margin-bottom:8px">Accounts &amp; tokens</h3>
-      <button class="ghost" onclick="loadAccounts()">Laden</button>
-      <button class="ghost" onclick="cleanupTokens()">Verlopen/ingetrokken tokens opruimen</button>
-      <div id="accList"></div></div>`
-    : `<p style="color:var(--dim)">Accountbeheer is voorbehouden aan org_admins. Vraag een org_admin om een account of token.</p>`}`;
-  if (isAdmin) { loadConsensus(); loadBeheerOptions(); }
+      <button class="action" style="margin-top:10px" onclick="createAccount()">Aanmaken</button><span id="accOut" class="ok"></span></div>
+    <div class="block"><div class="bh"><span class="ic">🎟️</span><h3>Token voor account</h3></div>
+      <div class="bhint">Een token geeft een machine/persoon toegang namens een account. Eenmalig zichtbaar.</div>
+      <label class="fl">Account</label><select id="tokAcc"><option value="">— kies account —</option></select>
+      <label class="fl">Label</label><input id="tokLabel" placeholder="bv. werk-laptop">
+      <label class="fl">Rol van dit token (optioneel — anders de accountrol)</label>
+      <select id="tokRole"><option value="">— accountrol —</option><option value="member">member</option>
+        <option value="maintainer">maintainer</option><option value="org_admin">org_admin</option></select>
+      <button class="action" style="margin-top:10px" onclick="createToken()">Token maken</button>
+      <pre id="tokOut" style="display:none;margin-top:10px"></pre></div>
+    <div class="block"><div class="bh"><span class="ic">✉️</span><h3>Uitnodigingen</h3></div>
+      <div class="bhint">Een invite-code laat iemand zichzelf registreren met een vaste rol — zonder dat jij vooraf een account maakt.</div>
+      <label class="fl">Rol</label><select id="invRole"><option value="member">member</option>
+        <option value="maintainer">maintainer</option><option value="org_admin">org_admin</option></select>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label class="fl">Keer bruikbaar</label><input id="invUses" type="number" min="1" value="1"></div>
+        <div style="flex:1"><label class="fl">Verloopt na (dagen)</label><input id="invExpires" type="number" min="1" value="14"></div>
+      </div>
+      <button class="action" style="margin-top:6px" onclick="createInvite()">Uitnodiging maken</button>
+      <div id="invNewOut"></div>
+      <div id="invList" style="margin-top:12px"></div></div>
+    </div>
+    <div class="block"><div class="bh"><span class="ic">🗝️</span><h3>Accounts &amp; tokens</h3>
+        <button class="ghost badge2" style="margin-left:auto;cursor:pointer" onclick="cleanupTokens()">verlopen opruimen</button></div>
+      <div id="accList"><div class="t" style="color:var(--dim)">laden…</div></div></div>`;
 }
 async function loadBeheerOptions() {
   try {
@@ -1223,18 +1682,101 @@ async function loadBeheerOptions() {
       teams.map(t => `<option value="${t.uid}">${esc(t.name)}</option>`).join("");
   } catch (e) {}
 }
+/* --- settings (read-only tuning view + editable consensus) --- */
+async function loadSettings() {
+  const box = document.getElementById("settingsBox");
+  let data; try { data = await api("/manage/settings"); } catch (e) { box.innerHTML = `<p style="color:var(--red)">${esc(e.message)}</p>`; return; }
+  const how = it => it.editable
+    ? "Live aanpasbaar hierboven — de wijziging is direct actief."
+    : (it.env
+      ? `Aanpasbaar via de omgevingsvariabele${it.env.includes("/") ? "n" : ""} <code>${esc(it.env).split(" / ").join("</code> / <code>")}</code> in <code>.env</code>, gevolgd door een herbouw van de container (<code>docker compose up -d --build</code>).`
+      : "Niet aanpasbaar.");
+  const groups = (data.groups || []).map(g => `<div class="block">
+    <div class="bh"><span class="ic">${g.icon || "⚙️"}</span><h3>${esc(g.title)}</h3></div>
+    ${g.items.map(it => `<div class="setrow">
+      <div class="setline">
+        <div class="setkey">${esc(it.key)}${it.editable ? `<span class="pill live">live</span>` : ""}</div>
+        ${it.editable
+          ? `<div class="ra"><input id="consensusInput" type="number" min="1" style="width:74px;margin:0" value="${esc(it.value)}">
+             <button class="action" onclick="saveConsensus()">Opslaan</button><span id="consensusOut" class="ok"></span></div>`
+          : `<span class="pill role">${esc(it.value)}</span>`}
+      </div>
+      ${it.what ? `<div class="setwhat">${esc(it.what)}</div>` : ""}
+      <details class="setdet"><summary>Aanpassen &amp; risico</summary>
+        <div class="sethow">${how(it)}</div>
+        ${it.risk ? `<div class="setrisk"><span class="ic">⚠️</span><span>${esc(it.risk)}</span></div>` : ""}
+      </details></div>`).join("")}</div>`).join("");
+  box.innerHTML = `<div class="bhint" style="margin-bottom:14px">Zo staat het brein afgesteld. Alleen de <b>consensus-drempel</b> is live aanpasbaar; de rest zet je via <code>.env</code>/config (actief na een herstart). Klik <b>Aanpassen &amp; risico</b> voor uitleg per instelling.</div>${groups}`;
+}
+async function reindexEmbeddings() {
+  const out = document.getElementById("reidxOut");
+  if (!confirm("Alle embeddings opnieuw berekenen? Kan even duren bij een grote Hive.")) return;
+  out.textContent = " bezig…";
+  try { const r = await api("/graph/reindex", { method: "POST" }); out.textContent = r.note ? ` ${r.note}` : ` ✓ ${r.reembedded ?? 0} her-embed${r.skipped ? `, ${r.skipped} overgeslagen` : ""}`; }
+  catch (e) { out.textContent = ""; alert(e.message); }
+}
+/* --- invites --- */
+async function createInvite() {
+  const role = document.getElementById("invRole").value;
+  const uses = parseInt(document.getElementById("invUses").value, 10) || 1;
+  const expires_days = parseInt(document.getElementById("invExpires").value, 10) || null;
+  try {
+    const r = await api("/manage/invites", { method: "POST", body: JSON.stringify({ role, uses, expires_days }) });
+    document.getElementById("invNewOut").innerHTML = `<div class="guard" style="margin-top:10px"><span class="ic">🔑</span>
+      <span>Code (eenmalig!): <strong style="font-family:monospace">${esc(r.code)}</strong> · rol ${esc(r.role)} · ${r.uses}× —
+      <a href="#" onclick='copyText(${JSON.stringify(r.code)});return false' style="color:var(--honey2)">kopieer</a></span></div>`;
+    loadInvites();
+  } catch (e) { alert(e.message); }
+}
+async function loadInvites() {
+  const el = document.getElementById("invList"); if (!el) return;
+  try {
+    const invs = await api("/manage/invites");
+    const active = invs.filter(i => (i.uses_left || 0) > 0);
+    const fmt = ms => ms ? new Date(ms).toLocaleDateString("nl-NL") : "geen einddatum";
+    el.innerHTML = active.length ? active.map(i => `<div class="lrow">
+      <div class="grow"><div class="l1">rol ${esc(i.role)} · ${i.uses_left}× over</div>
+        <div class="l2">verloopt: ${fmt(i.expires_at)}</div></div>
+      <div class="ra"><button class="ghost danger" onclick="revokeInvite('${i.code_hash}')">intrekken</button></div></div>`).join("")
+      : `<div class="t" style="color:var(--dim)">geen actieve uitnodigingen</div>`;
+  } catch (e) {}
+}
+async function revokeInvite(hash) {
+  if (!confirm("Deze uitnodiging intrekken?")) return;
+  try { await api("/manage/invites/" + hash + "/revoke", { method: "POST" }); loadInvites(); }
+  catch (e) { alert(e.message); }
+}
 async function loadSkills() {
+  const el = document.getElementById("skillList"); if (!el) return;
   try {
     const skills = await api("/skills");
-    const el = document.getElementById("skillList");
-    if (!skills.length) { el.innerHTML = `<div class="t" style="color:var(--dim)">Nog geen skills in de hive.</div>`; return; }
+    if (!skills.length) { el.innerHTML = `<div class="t" style="color:var(--dim)">Nog geen skills in de Hive.</div>`; return; }
     el.innerHTML = skills.map(s => {
       const cmd = `.hivemind/scripts/hive-skill-install.sh "${s.title}"`;
-      return `<div class="item"><strong>${esc(s.title)}</strong>
-        <button class="ghost" style="float:right" onclick='copyText(${JSON.stringify(cmd)})'>kopieer commando</button>
-        <div class="t" style="margin-top:4px;font-family:monospace;opacity:.8">${esc(cmd)}</div></div>`;
+      return `<div class="lrow" style="flex-wrap:wrap">
+        <div class="grow"><div class="l1">✨ ${esc(s.title)}</div>
+          <div class="l2 skillcode">${esc(cmd)}</div></div>
+        <div class="ra">
+          <button class="ghost" onclick="viewSkill('${s.uid}', this)">bekijken</button>
+          <button class="ghost" onclick="showTab('mind');jumpTo('${s.uid}')">naar node</button>
+          <button class="ghost" onclick='copyText(${JSON.stringify(cmd)})'>kopieer commando</button></div>
+        <div id="sk-${s.uid}" style="flex-basis:100%"></div></div>`;
     }).join("");
   } catch (e) { alert(e.message); }
+}
+async function viewSkill(uid, btn) {
+  const box = document.getElementById("sk-" + uid);
+  if (box.dataset.open === "1") { box.innerHTML = ""; box.dataset.open = ""; if (btn) btn.textContent = "bekijken"; return; }
+  box.innerHTML = `<div class="t" style="color:var(--dim);margin-top:8px">laden…</div>`;
+  try {
+    const s = await api("/skills/" + uid);
+    const files = (s.files || []).map(f =>
+      `<div><div class="fp">${esc(f.path)}</div><pre>${esc(f.content)}</pre></div>`).join("");
+    box.innerHTML = `<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+      ${s.description ? `<div class="bhint" style="margin-bottom:8px">${esc(s.description)}</div>` : ""}
+      ${files || `<div class="t" style="color:var(--dim)">deze skill heeft geen bestanden</div>`}</div>`;
+    box.dataset.open = "1"; if (btn) btn.textContent = "verbergen";
+  } catch (e) { box.innerHTML = `<div class="t" style="color:var(--red);margin-top:8px">${esc(e.message)}</div>`; }
 }
 function copyText(t) {
   navigator.clipboard?.writeText(t).then(
@@ -1294,6 +1836,11 @@ async function linkpredScan() {
   try { const r = await api("/graph/linkpred-scan", { method: "POST" }); out.textContent = ` ✓ ${r.candidates} kandidaten, ${r.opened} voorstel-Pollen — zie de Pollen-tab`; }
   catch (e) { out.textContent = ""; alert(e.message); }
 }
+async function contradictionScan() {
+  const out = document.getElementById("contraOut"); out.textContent = " bezig…";
+  try { const r = await api("/graph/contradiction-scan", { method: "POST" }); out.textContent = ` ✓ ${r.opened} tegenspraak-Pollen — zie de Pollen-tab`; }
+  catch (e) { out.textContent = ""; alert(e.message); }
+}
 async function trainRanker() {
   const out = document.getElementById("ltrOut"); out.textContent = " bezig…";
   try {
@@ -1306,16 +1853,33 @@ async function loadAnalytics() {
   el.innerHTML = `<div class="t" style="color:var(--dim)">laden…</div>`;
   try {
     const a = await api("/graph/analytics");
+    const rankerTrained = a.ranker && a.ranker.trained;
+    const tiles = `<div class="tiles">
+      <div class="tile" style="--accent:var(--honey)"><div class="tnum">${a.total || 0}</div><div class="tlbl">memories totaal</div></div>
+      <div class="tile" style="--accent:var(--gray)"><div class="tnum">${a.never_used || 0}</div><div class="tlbl">nooit opgehaald</div><div class="tsub">archiveer-kandidaten</div></div>
+      <div class="tile" style="--accent:${rankerTrained ? "var(--green)" : "var(--orange)"}"><div class="tnum" style="font-size:19px;padding-top:5px">${rankerTrained ? "Getraind" : "Handmatig"}</div><div class="tlbl">ranker</div><div class="tsub">${a.ranker ? a.ranker.examples : 0} feedback-voorbeelden</div></div>
+    </div>`;
+    const life = [["mature", a.mature || 0, "var(--green)"], ["validated", a.validated || 0, "var(--teal)"],
+                  ["captured", a.captured || 0, "var(--blue)"], ["deprecated", a.deprecated || 0, "var(--gray)"]];
+    const lifeTotal = life.reduce((s, x) => s + x[1], 0) || 1;
+    const lifeBar = `<div class="block"><div class="bh"><span class="ic">🌸</span><h3>Bloom-levenscyclus</h3></div>
+      <div class="bhint">Kennis rijpt: captured → validated → mature. Bewezen kennis stijgt vanzelf; deprecated zakt weg.</div>
+      <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:10px">
+        ${life.map(([k, v, c]) => v ? `<div title="${k}: ${v}" style="width:${v / lifeTotal * 100}%;background:${c}"></div>` : "").join("")}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">${life.map(([k, v, c]) =>
+        `<span class="t"><span class="dot" style="background:${c}"></span> ${k} <strong>${v}</strong></span>`).join("")}</div></div>`;
+    const most = (a.most_used || []).map((m, i) => `<div class="lrow">
+      <span class="pill" style="min-width:26px;text-align:center">${i + 1}</span>
+      <div class="grow"><div class="l1">${esc(m.title)}</div></div>
+      <span class="badge2">${m.use_count}× gebruikt</span></div>`).join("");
     const gaps = (a.gaps || []).length
-      ? `<div class="section"><h3>Kennis-gaten (herhaalde lege recalls)</h3>` +
-        a.gaps.map(g => `<div class="t">• ${esc(g.query)} <span style="color:var(--dim)">(${g.count}×)</span></div>`).join("") + `</div>`
-      : `<div class="t" style="color:var(--dim)">geen kennis-gaten geregistreerd</div>`;
-    const most = (a.most_used || []).map(m => `<div class="t">• ${esc(m.title)} <span style="color:var(--dim)">(${m.use_count}×)</span></div>`).join("");
-    el.innerHTML = `
-      <div class="t">Totaal: <strong>${a.total||0}</strong> · mature ${a.mature||0} · validated ${a.validated||0} · captured ${a.captured||0} · deprecated ${a.deprecated||0}</div>
-      <div class="t" style="margin-top:4px">Nooit opgehaald (archiveer-kandidaten): <strong>${a.never_used||0}</strong></div>
-      <div class="t" style="margin-top:4px">Ranker: <strong>${a.ranker && a.ranker.trained ? "getraind" : "handmatige gewichten"}</strong> · ${a.ranker ? a.ranker.examples : 0} feedback-voorbeelden</div>
-      <div class="section" style="margin-top:8px"><h3>Meest gebruikt</h3>${most || '<div class="t" style="color:var(--dim)">nog niets</div>'}</div>
+      ? `<div class="block"><div class="bh"><span class="ic">🕳️</span><h3>Kennis-gaten</h3><span class="badge2">${a.gaps.length}</span></div>
+         <div class="bhint">Zoekopdrachten die herhaaldelijk niks opleverden — dit mist de Hive nog.</div>
+         ${a.gaps.map(g => `<div class="lrow"><div class="grow"><div class="l1">${esc(g.query)}</div></div><span class="badge2">${g.count}× leeg</span></div>`).join("")}</div>`
+      : "";
+    el.innerHTML = `${tiles}${lifeBar}
+      <div class="block"><div class="bh"><span class="ic">🔥</span><h3>Meest gebruikt</h3></div>
+        ${most || '<div class="t" style="color:var(--dim)">nog niets opgehaald</div>'}</div>
       ${gaps}`;
   } catch (e) { el.innerHTML = `<div class="t" style="color:var(--red)">${esc(e.message)}</div>`; }
 }
@@ -1352,31 +1916,42 @@ async function importBackup() {
   } catch (e) { out.textContent = ""; alert(e.message); }
 }
 async function loadAccounts() {
+  const el = document.getElementById("accList"); if (!el) return;
   try {
     const accs = await api("/manage/accounts");
-    document.getElementById("accList").innerHTML = accs.map(a => `<div class="item">
-      <strong>${esc(a.name)}</strong> <span class="t">${esc(a.role)} · ${esc(a.person || "geen persoon")}
-      · ${a.active}/${a.tokens} tokens actief</span>
-      <button class="ghost" style="float:right" onclick="loadTokens('${a.uid}','${esc(a.name)}')">tokens</button>
-      <div id="tk-${a.uid}"></div></div>`).join("");
+    el.innerHTML = accs.map(a => `<div class="lrow" style="flex-wrap:wrap">
+      <div class="grow"><div class="l1">${esc(a.name)} ${a.person ? `<span class="t" style="font-weight:400;color:var(--dim)">· ${esc(a.person)}</span>` : ""}</div>
+        <div class="l2">${a.active}/${a.tokens} tokens actief</div></div>
+      <div class="ra"><span class="pill role">${esc(a.role)}</span>
+        <button class="ghost" onclick="loadTokens('${a.uid}')">tokens</button></div>
+      <div id="tk-${a.uid}" style="flex-basis:100%"></div></div>`).join("")
+      || `<div class="t" style="color:var(--dim)">nog geen accounts</div>`;
   } catch (e) { alert(e.message); }
 }
-async function loadTokens(accUid, name) {
+async function loadTokens(accUid) {
+  const box = document.getElementById("tk-" + accUid);
   const tks = await api("/manage/accounts/" + accUid + "/tokens");
   const fmt = ms => ms ? new Date(ms).toLocaleDateString("nl-NL") : "—";
-  document.getElementById("tk-" + accUid).innerHTML = tks.map(t => `<div class="t"
-    style="padding:4px 0;border-top:1px solid var(--line)">
-    ${t.active ? "🟢" : "⚪"} ${esc(t.label || "(geen label)")} · aangemaakt ${fmt(t.created)}
-    · laatst ${fmt(t.last_used)}
-    ${t.active ? `<button class="ghost" style="float:right" onclick="rotateToken('${t.hash}')">roteren</button>` : ""}
-    </div>`).join("") || `<div class="t">geen tokens</div>`;
+  box.innerHTML = `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">` +
+    (tks.map(t => `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px">
+      <span class="pill ${t.active ? "on" : "off"}">${t.active ? "actief" : "in/verlopen"}</span>
+      <span style="flex:1;min-width:0">${esc(t.label || "(geen label)")}
+        <span style="color:var(--dim)">· aangemaakt ${fmt(t.created)} · laatst ${fmt(t.last_used)}</span></span>
+      ${t.active ? `<button class="ghost" style="padding:3px 9px" onclick="rotateToken('${t.hash}')">roteren</button>
+        <button class="ghost danger" style="padding:3px 9px" onclick="revokeToken('${t.hash}','${accUid}')">intrekken</button>` : ""}
+    </div>`).join("") || `<div class="t" style="color:var(--dim)">geen tokens</div>`) + `</div>`;
 }
 async function rotateToken(hash) {
   try {
     const out = await api("/manage/tokens/" + hash + "/rotate", { method: "POST" });
-    alert("Nieuw token (eenmalig!): " + out.token);
+    alert("Nieuw token (eenmalig!):\n\n" + out.token);
     loadAccounts();
   } catch (e) { alert(e.message); }
+}
+async function revokeToken(hash, accUid) {
+  if (!confirm("Dit token intrekken? De client die het gebruikt verliest direct toegang.")) return;
+  try { await api("/manage/tokens/" + hash + "/revoke", { method: "POST" }); loadTokens(accUid); }
+  catch (e) { alert(e.message); }
 }
 async function cleanupTokens() {
   try {
@@ -1397,45 +1972,66 @@ async function createAccount() {
 }
 async function createToken() {
   try {
-    const out = await api("/manage/tokens", { method: "POST", body: JSON.stringify({
+    const body = {
       account_uid: document.getElementById("tokAcc").value.trim(),
-      label: document.getElementById("tokLabel").value.trim() || null }) });
+      label: document.getElementById("tokLabel").value.trim() || null };
+    const role = document.getElementById("tokRole").value;
+    if (role) body.role = role;
+    const out = await api("/manage/tokens", { method: "POST", body: JSON.stringify(body) });
     const el = document.getElementById("tokOut");
     el.style.display = "block";
-    el.textContent = "Token (eenmalig zichtbaar!): " + out.token;
+    el.textContent = "Token (eenmalig zichtbaar!):\n" + out.token;
+    loadAccounts();
   } catch (e) { alert(e.message); }
 }
 
 /* ---------- focus ---------- */
-const STEP_ICON = { done: "✓", current: "▶", open: "○" };
 async function loadFocus() {
   const page = document.getElementById("focusPage");
   let foci;
   try { foci = await api("/focus"); } catch (e) { page.innerHTML = `<p style="color:var(--red)">${esc(e.message)}</p>`; return; }
   const cards = foci.map(f => {
-    const steps = (f.steps || []).map((s, i) =>
-      `<div class="t" style="padding:1px 0">${STEP_ICON[s.status] || "○"} ${i + 1}. ${esc(s.text)}</div>`).join("");
-    const guards = (f.guardrails || []).map(g => `<li>${esc(g)}</li>`).join("");
-    const proj = f.project || "(geen project)";
+    const total = (f.steps || []).length;
+    const done = (f.steps || []).filter(s => s.status === "done").length;
+    const pct = total ? Math.round(done / total * 100) : 0;
     const enc = encodeURIComponent(f.project || "");
-    return `<div class="card">
-      <h3 style="margin-bottom:4px">▶ ${esc(f.goal)}</h3>
-      <div class="t" style="margin-bottom:8px">project: <strong>${esc(proj)}</strong>${f.updated ? " · " + new Date(f.updated).toLocaleString("nl-NL") : ""}</div>
-      ${steps ? `<div style="margin-bottom:8px">${steps}</div>` : ""}
-      ${guards ? `<div style="margin-bottom:8px"><strong style="font-size:13px">Guardrails</strong><ul style="margin:2px 0 0 18px;font-size:13px">${guards}</ul></div>` : ""}
-      ${f.done_when ? `<div class="t" style="margin-bottom:6px">Klaar wanneer: ${esc(f.done_when)}</div>` : ""}
-      ${(f.notes && f.notes.length) ? `<div class="t" style="margin-bottom:8px">Laatste voortgang: ${esc(f.notes[f.notes.length - 1])}</div>` : ""}
+    const steps = (f.steps || []).map((s, i) => {
+      const mark = s.status === "done" ? "✓" : (s.status === "current" ? "▶" : "");
+      const clickable = s.status !== "done";
+      return `<div class="step ${s.status}" ${clickable ? `onclick="completeStep('${enc}',${i + 1})" title="Markeer als klaar"` : ""}>
+        <span class="box">${mark}</span><span class="txt">${esc(s.text)}</span></div>`;
+    }).join("");
+    const guards = (f.guardrails || []).map(g =>
+      `<div class="guard"><span class="ic">🛡️</span><span>${esc(g)}</span></div>`).join("");
+    const proj = f.project || "(geen project)";
+    return `<div class="block">
+      <div class="bh"><span class="ic">🎯</span><h3>${esc(f.goal)}</h3>
+        <span class="badge2">${esc(proj)}</span></div>
+      <div class="bhint" style="margin-bottom:10px">${f.updated ? "bijgewerkt " + new Date(f.updated).toLocaleString("nl-NL") : "de koers die bij elke prompt wordt her-ingespoten"}</div>
+      ${total ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">
+        <div class="prog" style="flex:1"><i style="width:${pct}%"></i></div>
+        <span class="t" style="color:var(--dim);font-variant-numeric:tabular-nums">${done}/${total}</span></div>
+        <div class="steps">${steps}</div>` : ""}
+      ${guards ? `<div class="guards">${guards}</div>` : ""}
+      ${f.done_when ? `<div class="bhint" style="margin:8px 0 0"><strong style="color:var(--dim)">Klaar wanneer:</strong> ${esc(f.done_when)}</div>` : ""}
+      ${(f.notes && f.notes.length) ? `<div class="bhint" style="margin:6px 0 0"><strong style="color:var(--dim)">Laatste voortgang:</strong> ${esc(f.notes[f.notes.length - 1])}</div>` : ""}
       <div class="btnrow">
-        <button class="ghost" onclick="advanceFocus('${enc}')">Stap afvinken</button>
+        <button class="ghost" onclick="advanceFocus('${enc}')">Notitie / stap</button>
         <button class="ghost" onclick='editFocus(${JSON.stringify(f)})'>Bewerken</button>
         <button class="ghost danger" onclick="clearFocus('${enc}')">Wissen</button>
       </div>
     </div>`;
   }).join("");
-  page.innerHTML = `<h2 style="margin-bottom:6px">Actieve focus</h2>
-    <p style="color:var(--dim);margin-bottom:12px">De koers die bij elke prompt wordt her-ingespoten — per project. Hier zie en stuur je 'm bij.</p>
-    <button class="action" style="margin-bottom:14px" onclick='editFocus(null)'>Nieuwe focus</button>
-    ${cards || `<p style="color:var(--dim)">Nog geen actieve focus. Maak er een aan, of laat Claude 'm zetten met focus_set.</p>`}`;
+  page.innerHTML = `<div class="phdr">
+      <div class="htxt"><h2><span class="ic">🎯</span>Actieve focus</h2>
+        <div class="sub">De koers die bij élke prompt bovenaan wordt her-ingespoten — per project. Overleeft compaction, voorkomt drift. Klik een stap aan om 'm af te vinken.</div></div>
+      <div class="hact"><button class="action" onclick='editFocus(null)'>+ Nieuwe focus</button></div>
+    </div>
+    ${cards || `<div class="empty"><span class="big">🧭</span>Nog geen actieve focus.<br>Maak er een aan, of laat een agent 'm zetten met <code>focus_set</code>.</div>`}`;
+}
+async function completeStep(enc, n) {
+  try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ project: decodeURIComponent(enc), completed_step: n }) }); loadFocus(); }
+  catch (e) { alert(e.message); }
 }
 function editFocus(f) {
   const isNew = !f;
@@ -1446,7 +2042,7 @@ function editFocus(f) {
   page.innerHTML = `<h2 style="margin-bottom:10px">${isNew ? "Nieuwe focus" : "Focus bewerken"}</h2>
     <div class="card">
       <label class="t">Project (slug)</label>
-      <input id="fProject" value="${esc(f.project || "")}" placeholder="bv. gemeente-krimpenerwaard" ${isNew ? "" : "readonly"}>
+      <input id="fProject" value="${esc(f.project || "")}" placeholder="korte project-naam (slug)" ${isNew ? "" : "readonly"}>
       <label class="t">Doel</label>
       <input id="fGoal" value="${esc(f.goal || "")}" placeholder="wat bereiken we, in één zin">
       <label class="t">Stappen (één per regel; begin met 'x ' voor afgerond)</label>
@@ -1494,7 +2090,8 @@ async function clearFocus(enc) {
 function boot() {
   document.getElementById("who").textContent = ME.name + " · " + ME.role;
   document.getElementById("choreBadge").innerHTML = ME.ready_chores ? `<span class="badge">${ME.ready_chores}</span>` : "";
-  if (ME.can_review) document.getElementById("reviewTab").style.display = "";
+  document.getElementById("choreDotM").style.display = ME.ready_chores ? "block" : "none";
+  if (ME.can_review) { document.getElementById("reviewTab").style.display = ""; document.getElementById("reviewTabM").style.display = ""; }
   document.getElementById("histBtn").style.display = ME.role === "org_admin" ? "" : "none";
   applySciFi();
   // On phones the side panels are slide-in overlays; start with the left one closed so the

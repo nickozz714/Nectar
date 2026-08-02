@@ -49,3 +49,32 @@ def test_skills_requires_auth(client):
     # no bearer at all -> rejected (422 missing header); a bogus bearer -> 401
     assert client.get("/skills").status_code in (401, 403, 422)
     assert client.get("/skills", headers={"Authorization": "Bearer nope"}).status_code == 401
+
+
+def test_put_skill_over_http(client, graph, account):
+    admin = account("nick", role="org_admin")
+    headers = {"Authorization": f"Bearer {_token_for(graph, admin)}"}
+    body = {
+        "title": "Published Skill",
+        "description": "made via HTTP",
+        "parent_topics": ["Fabric werkwijzen"],
+        "scope": "org",
+        "files": [
+            {"path": "SKILL.md", "content": "# Published\nGeneric, client-agnostic."},
+            {"path": "run.py", "content": "import os\nprint(os.getenv('X',''))"},
+        ],
+    }
+    r = client.post("/skills", headers=headers, json=body)
+    assert r.status_code == 200, r.text
+    uid = r.json()["uid"]
+    got = client.get(f"/skills/{uid}", headers=headers).json()
+    assert got["title"] == "Published Skill"
+    assert {f["path"] for f in got["files"]} == {"SKILL.md", "run.py"}
+
+
+def test_put_skill_requires_skill_md(client, graph, account):
+    admin = account("nick", role="org_admin")
+    headers = {"Authorization": f"Bearer {_token_for(graph, admin)}"}
+    r = client.post("/skills", headers=headers, json={
+        "title": "No Manifest", "files": [{"path": "run.py", "content": "print(1)"}]})
+    assert r.status_code == 400
