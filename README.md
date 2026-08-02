@@ -6,6 +6,7 @@ local in one container** (Neo4j + API + local models) — no cloud, no data leav
 
 - **New here? → [INSTALL.md](INSTALL.md)** — zero to a working hive in ~5 minutes.
 - **How it works & why → [DESIGN.md](DESIGN.md)**
+- **Deep dive → [docs/](docs/)** — architecture diagrams, ML & formulas, deployment (server/Azure/OpenShift), security, Cypher cookbook, API/MCP reference, and more.
 
 > This README is kept up to date as a plain-language overview of what's inside. A shareable
 > version lives as an artifact; the two are kept in sync.

@@ -1,0 +1,19 @@
+Copyright (c) 2026 The Nectar authors. All rights reserved.
+
+This software and its source code ("HiveMind" / "Nectar") are proprietary and
+confidential. No license, express or implied, is granted to any party. You may
+not copy, use, modify, distribute, sublicense, or create derivative works of
+this software, in whole or in part, without the prior written permission of the
+copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+NOTE: This is a conservative default for a private repository. If you intend to
+open-source Nectar (e.g. AGPL-3.0, as with ND3X) or offer it commercially,
+replace this file with the chosen license before making the repository public.
