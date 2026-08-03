@@ -142,10 +142,13 @@ def hive_resolve_think(pollen_uid: str, decision: str, merged_title: str = "",
       • ADD — they are genuinely distinct, keep both
       • UPDATE — merge into one better memory (supply merged_title + merged_content); the new
         one is archived and the merged memory is confirmed 'validated'
+      • REPLACE — the new memory is the current truth; supersede the existing one (new wins, old
+        stays findable but sinks)
       • DELETE — the new memory is a duplicate, archive it
       • NOOP — leave as-is
-    SAFEGUARD: UPDATE/DELETE may NOT be done by the agent that wrote the new memory — a different
-    Swarm member must judge the merge. Read both memories with hive_get first."""
+    If the payload has merge_requested=true, a human asked for a merge → do an UPDATE.
+    SAFEGUARD: UPDATE/DELETE/REPLACE may NOT be done by the agent that wrote the new memory — a
+    different Swarm member must judge it. Read both memories with hive_get first."""
     with _authed() as (session, account):
         from src.services import governance_service
         return governance_service.resolve_think(

@@ -68,8 +68,12 @@ Recall geeft je bij elke prompt één **Pollen** (taak) mee. Past het bij je wer
   niet te doen, geef 'm vrij met `hive_release`.
 - **Los op** met `hive_chores()` → beoordeel → `hive_resolve_chore(uid, "apply"|"reject")`.
 - **op_route Pollen** (twee bijna-gelijke memories): lees beide met `hive_get` en beslis met
-  `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP", ...)`. **Belangrijk:** UPDATE/DELETE mag je NIET
-  doen op een memory die je zélf schreef — dat oordeel is voor een ánder Swarm-lid.
+  `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP"|"REPLACE", ...)`. ADD = allebei houden;
+  REPLACE = de nieuwe wint en de bestaande wordt gesuperseded; DELETE = de nieuwe schrappen; UPDATE =
+  samenvoegen (lever `merged_title` + `merged_content`); NOOP = laten staan. Staat er
+  `merge_requested` in de payload, dan heeft een mens om samenvoegen gevraagd → doe een UPDATE en
+  schrijf de gecombineerde tekst. **Belangrijk:** UPDATE/DELETE/REPLACE mag je NIET doen op een memory
+  die je zélf schreef — dat oordeel is voor een ánder Swarm-lid.
 - **contradiction_check Pollen** (twee sterk gelijkende memories): lees beide met `hive_get` en oordeel of
   ze elkaar tegenspreken. Zo ja: welke is de huidige waarheid? Los op met
   `hive_resolve_contradiction(uid, "contradiction", current=<uid nieuwste>, outdated=<uid oude>)` — de oude

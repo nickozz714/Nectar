@@ -64,3 +64,40 @@ def test_add_keeps_both_and_writer_allowed(graph, account):
     out = governance_service.resolve_think(graph, w, p["uid"], "ADD")   # non-destructive, writer allowed
     assert out["decision"] == "ADD"
     assert graph_repo.get_node(graph, w, new["uid"]).get("lifecycle") != "deprecated"
+
+
+def test_replace_supersedes_existing_with_new(graph, account):
+    w = account("nick", role="member")
+    other = account("bee", role="member")
+    keep = _mem(graph, w, "Bestaand weetje over tool Zeta bouwen", "Inhoud die lang genoeg is voor de gate hier.")
+    new = _mem(graph, w, "Nieuw bijna-dubbel over tool Zeta bouwen", "Andere inhoud die lang genoeg is voor de gate.")
+    p = _think(graph, w, new["uid"], keep["uid"])
+    out = governance_service.resolve_think(graph, other, p["uid"], "REPLACE")
+    assert out["decision"] == "REPLACE"
+    # the EXISTING (kept) memory is now superseded by the NEW one; the new one stays current
+    old = graph_repo.get_node(graph, other, keep["uid"])
+    assert old["superseded_by"] == new["uid"] and old["lifecycle"] == "deprecated"
+    assert not graph_repo.get_node(graph, other, new["uid"]).get("superseded_by")
+
+
+def test_org_admin_may_replace_own_write(graph, account):
+    admin = account("nick", role="org_admin")
+    keep = _mem(graph, admin, "Bestaand weetje over tool Zeta bouwen", "Inhoud die lang genoeg is voor de gate hier.")
+    new = _mem(graph, admin, "Nieuw bijna-dubbel over tool Zeta bouwen", "Andere inhoud die lang genoeg is voor de gate.")
+    p = _think(graph, admin, new["uid"], keep["uid"])
+    # org_admin bypasses producer≠reviewer (a human reviewer resolving in the GUI)
+    out = governance_service.resolve_think(graph, admin, p["uid"], "REPLACE")
+    assert out["status"] == "resolved"
+
+
+def test_request_merge_flags_pollen_and_keeps_it_open(graph, account):
+    w = account("nick", role="member")
+    keep = _mem(graph, w, "Bestaand weetje over tool Zeta bouwen", "Inhoud die lang genoeg is voor de gate hier.")
+    new = _mem(graph, w, "Nieuw bijna-dubbel over tool Zeta bouwen", "Andere inhoud die lang genoeg is voor de gate.")
+    p = _think(graph, w, new["uid"], keep["uid"])
+    out = governance_service.request_merge(graph, w, p["uid"])
+    assert out["status"] == "merge_requested"
+    chore = governance_repo.get_chore(graph, w.org_uid, p["uid"])
+    assert chore["status"] == "ready"   # still open for the swarm
+    view = governance_service.build_pollen_view(graph, w, chore)
+    assert view["merge_requested"] is True

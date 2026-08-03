@@ -1432,10 +1432,14 @@ function pButtons(c) {
   }
   if (v.route === "op_route") {
     if (c.status !== "ready") return pWait();
+    const merge = v.merge_requested
+      ? `<span class="pill role">samenvoegen aangevraagd · wacht op de zwerm</span>`
+      : `<button class="ghost" onclick="requestMerge('${p}')">Samenvoegen (zwerm)</button>`;
     return `<div class="btnrow">
-      <button class="ghost" onclick="resolveThink('${p}','ADD')">Apart houden</button>
-      <button class="action" onclick="resolveThinkUpdate('${p}')">Samenvoegen…</button>
+      <button class="ghost" onclick="resolveThink('${p}','ADD')">Allebei houden</button>
+      <button class="action" onclick="resolveThink('${p}','REPLACE')">Nieuwe vervangt bestaande</button>
       <button class="ghost danger" onclick="resolveThink('${p}','DELETE')">Nieuwe schrappen</button>
+      ${merge}
       <button class="ghost" onclick="resolveThink('${p}','NOOP')">Laten staan</button></div>`;
   }
   if (v.route === "human")
@@ -1510,11 +1514,8 @@ async function resolveThink(pollen, decision) {
   catch (e) { alert(e.message); }
   loadChores();
 }
-async function resolveThinkUpdate(pollen) {
-  const merged_content = prompt("Samengevoegde inhoud (de twee memories tot één betere):");
-  if (merged_content == null || !merged_content.trim()) return;
-  const merged_title = prompt("Titel voor de samengevoegde memory (leeg = titel van de bestaande):", "") || "";
-  try { await api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, decision: "UPDATE", merged_title, merged_content, note: "via GUI" }) }); }
+async function requestMerge(pollen) {
+  try { await api("/graph/think/request-merge", { method: "POST", body: JSON.stringify({ pollen_uid: pollen, note: "via GUI" }) }); }
   catch (e) { alert(e.message); }
   loadChores();
 }

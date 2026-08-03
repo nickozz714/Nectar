@@ -359,12 +359,32 @@ def resolve_think(
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
-    """Resolve an op_route think-Pollen (swarm decides ADD/UPDATE/DELETE/NOOP for a near-duplicate).
-    UPDATE/DELETE require a different account than the one who wrote the new memory."""
+    """Resolve an op_route think-Pollen (swarm decides ADD/UPDATE/DELETE/NOOP/REPLACE for a
+    near-duplicate). UPDATE/DELETE/REPLACE require a different account than the one who wrote the
+    new memory (org_admin may always resolve). REPLACE = the new memory supersedes the existing one."""
     try:
         return governance_service.resolve_think(
             session, account, body.pollen_uid, body.decision,
             body.merged_title, body.merged_content, body.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class MergeRequestBody(BaseModel):
+    pollen_uid: str
+    note: str = ""
+
+
+@router.post("/think/request-merge")
+def request_merge(
+    body: MergeRequestBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Flag an op_route think-Pollen as 'merge wanted' — it stays open for the Swarm to perform the
+    actual merge. Lets a human queue a merge without hand-typing the combined text."""
+    try:
+        return governance_service.request_merge(session, account, body.pollen_uid, body.note)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

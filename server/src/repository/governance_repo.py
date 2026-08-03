@@ -11,6 +11,24 @@ from src.repository.graph_repo import VISIBLE, _acc_params
 POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest", "contradiction_check"}
 
 
+def flag_pollen(session: Session, org_uid: str, pollen_uid: str, key: str, value=True) -> bool:
+    """Merge a flag into a Pollen's JSON payload (e.g. mark an op_route as 'merge_requested')
+    without resolving it. Idempotent."""
+    rec = session.run(
+        "MATCH (c:Pollen {org_uid: $o, uid: $u}) RETURN c.payload AS payload",
+        o=org_uid, u=pollen_uid,
+    ).single()
+    if rec is None:
+        return False
+    payload = json.loads(rec["payload"] or "{}")
+    payload[key] = value
+    session.run(
+        "MATCH (c:Pollen {org_uid: $o, uid: $u}) SET c.payload = $p",
+        o=org_uid, u=pollen_uid, p=json.dumps(payload),
+    )
+    return True
+
+
 def nodes_text(session: Session, account: AuthedAccount, uids: list[str]) -> dict:
     """Batch-resolve a set of node uids to their {title, content, scope} — scope-checked, so a
     caller only ever sees memories visible to them. Used to give the Pollen queue real context

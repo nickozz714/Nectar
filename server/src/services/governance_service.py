@@ -4,7 +4,7 @@ import json
 
 from neo4j import Session
 
-from src.authentication.deps import AuthedAccount, assert_role
+from src.authentication.deps import AuthedAccount, assert_role, has_role
 from src.components.config import get_settings
 from src.repository import audit_repo, governance_repo, graph_repo, tenancy_repo
 from src.components.embeddings import embed
@@ -304,9 +304,11 @@ def build_pollen_view(session: Session, account: AuthedAccount, chore: dict) -> 
             primary["label"] = "Nieuwe memory"
         view["compare"] = node_of(payload.get("duplicate_uid"), "Bestaande memory die erop lijkt")
         view["headline"] = "Bijna-duplicaat: hoe verwerken?"
-        view["explain"] = ("Een nieuwe memory lijkt sterk op een bestaande. Kies: apart houden "
-                           "(ADD), samenvoegen (UPDATE), het nieuwe schrappen (DELETE), of laten "
-                           "staan (NOOP). Een ánder lid dan de schrijver oordeelt over samenvoegen/schrappen.")
+        view["merge_requested"] = bool(payload.get("merge_requested"))
+        view["explain"] = ("Een nieuwe memory lijkt sterk op een bestaande. Kies wat er gebeurt: "
+                           "allebei houden, de nieuwe laten winnen (de bestaande wordt gesuperseded), "
+                           "de nieuwe schrappen, of laten staan. Samenvoegen zet je klaar als taak voor "
+                           "de zwerm — die schrijft de gecombineerde tekst.")
     elif kind == "contradiction_check":
         view["route"] = "contradiction"
         view["primary"] = {"title": payload.get("a_title", ""),
@@ -359,8 +361,8 @@ def resolve_think(
     of an UPDATE enters lifecycle 'validated' (a peer confirmed it); the new node is archived."""
     assert_role(account, "member", "Resolving a think-Pollen")
     decision = (decision or "").strip().upper()
-    if decision not in ("ADD", "UPDATE", "DELETE", "NOOP"):
-        raise ValueError("decision must be ADD, UPDATE, DELETE or NOOP")
+    if decision not in ("ADD", "UPDATE", "DELETE", "NOOP", "REPLACE"):
+        raise ValueError("decision must be ADD, UPDATE, DELETE, NOOP or REPLACE")
     chore = governance_repo.get_chore(session, account.org_uid, pollen_uid)
     if chore is None or chore["type"] != "op_route":
         raise ValueError("op_route think-Pollen not found")
@@ -373,9 +375,13 @@ def resolve_think(
     if new_node is None:
         raise ValueError("the new memory no longer exists")
 
-    if decision in ("UPDATE", "DELETE") and new_node.get("created_by") == account.uid:
-        raise ValueError("producer≠reviewer: a DIFFERENT Swarm member must judge this merge — "
-                         "you wrote the new memory. Ask another agent, or choose ADD/NOOP.")
+    # producer≠reviewer on the destructive decisions — but an org_admin (a human reviewer) may always
+    # resolve, otherwise a human who happens to own the token would be locked out of their own GUI.
+    if (decision in ("UPDATE", "DELETE", "REPLACE")
+            and new_node.get("created_by") == account.uid
+            and not has_role(account, "org_admin")):
+        raise ValueError("producer≠reviewer: a DIFFERENT Swarm member must judge this — you wrote "
+                         "the new memory. Ask another agent, or choose ADD/NOOP.")
 
     if decision in ("ADD", "NOOP"):
         result = "kept both — judged as distinct" if decision == "ADD" else "left as-is"
@@ -383,6 +389,13 @@ def resolve_think(
         graph_repo.archive_node(session, new_uid)
         graph_repo.set_lifecycle(session, account.org_uid, new_uid, "deprecated")
         result = "new memory archived as a duplicate"
+    elif decision == "REPLACE":     # the NEW memory becomes the truth; the existing one is superseded
+        if not keep_uid:
+            raise ValueError("REPLACE needs the existing memory it replaces")
+        got = graph_repo.supersede(session, account, keep_uid, new_uid)  # old=keep_uid, new=new_uid
+        if not got:
+            raise ValueError("could not supersede — a node is not visible")
+        result = "existing memory superseded by the new one (new wins, old stays findable)"
     else:  # UPDATE — merge into the kept node
         if not keep_uid or not merged_content.strip():
             raise ValueError("UPDATE needs the existing memory + merged_content")
@@ -398,6 +411,22 @@ def resolve_think(
     audit_repo.log(session, account.org_uid, account.uid, "resolve_think", pollen_uid,
                    {"kind": "op_route", "decision": decision, "new": new_uid, "keep": keep_uid})
     return {"status": "resolved", "decision": decision, "result": result}
+
+
+def request_merge(session: Session, account: AuthedAccount, pollen_uid: str, note: str = "") -> dict:
+    """A human can't sensibly hand-type a merge in the GUI (it's a reasoning task). So instead of
+    resolving, they FLAG the op_route Pollen as 'merge wanted'; it stays open for the Swarm, and a
+    visiting agent performs the actual UPDATE-merge. The producer≠reviewer rule still applies when
+    that agent resolves it."""
+    assert_role(account, "member", "Requesting a merge")
+    chore = governance_repo.get_chore(session, account.org_uid, pollen_uid)
+    if chore is None or chore["type"] != "op_route":
+        raise ValueError("op_route think-Pollen not found")
+    if chore["status"] not in ("open", "ready"):
+        raise ValueError(f"already handled ('{chore['status']}')")
+    governance_repo.flag_pollen(session, account.org_uid, pollen_uid, "merge_requested", True)
+    audit_repo.log(session, account.org_uid, account.uid, "request_merge", pollen_uid, {"kind": "op_route"})
+    return {"status": "merge_requested"}
 
 
 def resolve_contradiction(
