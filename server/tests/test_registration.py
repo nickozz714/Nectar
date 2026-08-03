@@ -6,7 +6,7 @@ def test_first_user_bootstraps_org_admin(client):
     status = client.get("/register").json()
     assert status["first_run"] is True
 
-    r = client.post("/register", json={"name": "Alice", "email": "you@example.com"})
+    r = client.post("/register", json={"name": "Alice", "email": "alice@example.com"})
     assert r.status_code == 200
     body = r.json()
     assert body["role"] == "org_admin" and body["token"]

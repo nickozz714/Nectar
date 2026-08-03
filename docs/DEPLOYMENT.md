@@ -44,7 +44,7 @@ open http://localhost:8642/ui        # first account becomes org_admin
   OPERATIONS) — it holds the graph *and* the vault key.
 - **TLS:** an optional Caddy sidecar terminates HTTPS on `:8643` (self-signed by default; point it
   at a real cert for production). MCP clients that require TLS use `:8643`.
-- **Remote access:** put it behind a reverse proxy with a real cert, or a VPN tunnel — do
+- **Remote access:** put it behind a reverse proxy with a real cert, or a VPN — do
   **not** expose `7474`/`7687` publicly.
 - **Updates:** `rsync` the code (or pull) and `docker compose up -d --build`. Migrations run
   idempotently on startup — no manual DB steps.

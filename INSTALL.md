@@ -32,7 +32,7 @@ API=http://localhost:8642
 
 # first user of a fresh hive -> org_admin, no invite:
 curl -s -X POST $API/register -H "Content-Type: application/json" \
-  -d '{"name":"The Nectar authors","email":"you@example.com"}'
+  -d '{"name":"Your Name","email":"you@example.com"}'
 # -> {"token":"...","role":"org_admin", ...}   <-- store the token
 ```
 
@@ -79,7 +79,7 @@ cd ~/projects/mycompany-dataplatform
 
 # register a user and store the token in one go (first user needs no invite):
 /path/to/Nectar/plugin/scripts/hive-init "Data Modelling,MyCompany" \
-    --register "The Nectar authors" you@example.com [invite-code-if-not-first]
+    --register "Your Name" you@example.com [invite-code-if-not-first]
 
 # ...or, if you already have a token:
 #   HIVE_TOKEN=<token> /path/to/Nectar/plugin/scripts/hive-init "Data Modelling,MyCompany"
@@ -109,19 +109,9 @@ That's it — start Claude in that directory and the hive is live.
 
 ## Remote access
 
-To reach the hive when you're not on the home network, run the bundled VPN container
-on the machine that hosts the hive:
-
-```bash
-cd deploy/VPN
-docker compose up -d
-docker exec VPN /app/show-peer a-device   # QR / config for a device
-```
-
-Then forward **UDP 51820** on your router to that machine. VPN is silent to anyone
-without a key. Full notes (per-device enrolment, split tunnel, revoking a device) in
-[`deploy/VPN/README.md`](deploy/VPN/README.md). Once connected, point `HIVE_URL`
-at the hive's LAN address.
+To reach the hive when you're off the local network, put it behind an authenticated reverse
+proxy with a real TLS certificate, or a VPN of your choice. Do **not** expose ports `7474`/`7687`
+(Neo4j) to the public internet. Once connected, point `HIVE_URL` at the hive's address.
 
 ## Operations
 

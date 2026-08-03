@@ -128,7 +128,7 @@ The container exposes four ports; treat them very differently:
 - [ ] Set a strong **`NEO4J_PASSWORD`**; set **`SECRET_MASTER_KEY`** explicitly in multi-instance/cloud so a fresh replica can decrypt the vault.
 - [ ] Keep **`ADMIN_TOKEN` empty** unless you truly need operator break-glass; if set, store it as a platform secret and rotate it.
 - [ ] Keep **7474/7687 off the public internet** — LAN, VPN, or an SSH tunnel only.
-- [ ] For remote access prefer **VPN**/VPN or an authenticated reverse proxy over exposing the app directly.
+- [ ] For remote access prefer a **VPN** or an authenticated reverse proxy over exposing the app directly.
 - [ ] Set **`CONSENSUS_THRESHOLD ≥ 2`** in real multi-agent orgs so no single agent can push a change through unilaterally.
 - [ ] **Back up** the `/data` volume *and* the `SECRET_MASTER_KEY` off-box (encrypted). The volume holds the graph and — if auto-generated — the vault key.
 - [ ] Use **per-token roles** and short expiries for machine clients; rotate/revoke on offboarding.

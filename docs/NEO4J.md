@@ -14,7 +14,7 @@ the GUI cover day-to-day use — but for audits, ad-hoc analysis, or emergency f
 ### 1. Neo4j Browser (visual, read/query)
 Exposed on **`:7474`** (HTTP) → connects over Bolt `:7687`. Open `http://<host>:7474`, connect with
 `neo4j` / `NEO4J_PASSWORD`. **Never expose 7474/7687 to the public internet** — keep them on the LAN
-or behind VPN/a tunnel.
+or behind a VPN/tunnel.
 
 ### 2. cypher-shell (CLI, inside the container)
 ```bash

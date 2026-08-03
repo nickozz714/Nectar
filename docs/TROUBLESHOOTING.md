@@ -4,8 +4,7 @@
 
 **MCP tools show `FailedToOpenSocket` on macOS, but curl works.**
 Known Claude Code CLI bug on macOS: the Bun binary lacks the Local Network entitlement, so macOS TCC
-blocks connections to a **private IP** (192.168.x / 10.x / 172.16.x) — including over VPN
-(10.x). Fix: run the MCP over a **localhost tunnel**. A launchd agent keeps
+blocks connections to a **private IP** (192.168.x / 10.x / 172.16.x) — including over a VPN. Fix: run the MCP over a **localhost tunnel**. A launchd agent keeps
 `ssh -N -L 8642:localhost:8642 user@host` up, and the MCP URL points at `http://localhost:8642/mcp`.
 The recall hook can keep using the LAN IP (curl has network access). The install-zip sets this up
 automatically on macOS.

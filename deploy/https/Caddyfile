@@ -1,16 +1,15 @@
 {
 	admin off
-	# Clients connecting by IP send no SNI; serve the IP's cert as the default so the
-	# TLS handshake succeeds (Bun/Claude Code connects by IP without SNI).
-	default_sni your-server
+	# Clients connecting by IP send no SNI; serve the host's cert as the default so the
+	# TLS handshake succeeds (some MCP clients connect by IP/host without SNI).
+	default_sni {$NECTAR_HOST}
 }
 
-# HTTPS in front of the HiveMind API — Claude Code's MCP client (Bun) connects reliably
-# over TLS where plain HTTP to a LAN IP fails at the socket level. Self-signed via Caddy's
-# internal CA (valid for the IP below); install the root CA on client devices from /ca.crt.
-https://your-server:8643 {
-	# Listen on all interfaces (your-server isn't a local address inside the container),
-	# but keep the cert subject = the IP so clients validating https://your-server pass.
+# HTTPS in front of the Nectar API — some MCP clients connect reliably over TLS where
+# plain HTTP to a LAN host fails at the socket level. Self-signed via Caddy's internal CA
+# (valid for NECTAR_HOST); install the root CA on client devices from /ca.crt.
+# Set NECTAR_HOST to your server's hostname or IP in the environment.
+https://{$NECTAR_HOST}:8643 {
 	bind 0.0.0.0
 	tls internal
 
@@ -20,7 +19,7 @@ https://your-server:8643 {
 		rewrite * /root.crt
 		file_server
 		header Content-Type application/x-x509-ca-cert
-		header Content-Disposition "attachment; filename=hivemind-ca.crt"
+		header Content-Disposition "attachment; filename=nectar-ca.crt"
 	}
 
 	handle {
