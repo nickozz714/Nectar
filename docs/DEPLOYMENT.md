@@ -78,7 +78,7 @@ behave:
 
 ```bash
 az containerapp create -n nectar -g <rg> --environment <env> \
-  --image <registry>/hivemind:latest \
+  --image ghcr.io/nickozz714/nectar:latest \
   --min-replicas 1 --max-replicas 1 \
   --ingress external --target-port 8642 \
   --secrets neo4jpw=... masterkey=... \
@@ -125,7 +125,7 @@ spec:
       securityContext: { fsGroup: 7474 } # make /data group-writable for the random UID
       containers:
         - name: nectar
-          image: <registry>/hivemind:latest
+          image: ghcr.io/nickozz714/nectar:latest
           ports: [{ containerPort: 8642 }]
           envFrom: [{ secretRef: { name: nectar-secrets } }, { configMapRef: { name: nectar-config } }]
           readinessProbe: { httpGet: { path: /health, port: 8642 }, initialDelaySeconds: 40 }

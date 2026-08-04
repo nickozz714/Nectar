@@ -7,9 +7,7 @@ local in one container** (Neo4j + API + local models) — no cloud, no data leav
 - **New here? → [INSTALL.md](INSTALL.md)** — zero to a working hive in ~5 minutes.
 - **How it works & why → [DESIGN.md](DESIGN.md)**
 - **Deep dive → [docs/](docs/)** — architecture diagrams, ML & formulas, deployment (server/Azure/OpenShift), security, Cypher cookbook, API/MCP reference, and more.
-
-> This README is kept up to date as a plain-language overview of what's inside. A shareable
-> version lives as an artifact; the two are kept in sync.
+- **How it compares → [docs/WHY-AND-WHEN.md](docs/WHY-AND-WHEN.md)** — honest positioning vs Mem0, Zep/Graphiti, Letta and Neo4j-labs.
 
 ---
 
@@ -170,3 +168,12 @@ Single **Neo4j 5** store (graph + native vector index + BM25 full-text) behind *
 fastmcp**, layered `routers → services → repository → components`. Embeddings and reranking are
 **local** (fastembed, ONNX/CPU). Any heavier LLM reasoning is pushed to the connected **swarm**
 (the agents themselves), never a server-side LLM — see [DESIGN.md](DESIGN.md).
+
+## License
+
+Nectar is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see
+[LICENSE](LICENSE). In short: you may use, modify and self-host it freely, but if you run a modified
+version as a network service, you must make your source available to its users. "HiveMind" is the
+internal codename of the implementation.
+
+Copyright (C) 2026 The Nectar authors.

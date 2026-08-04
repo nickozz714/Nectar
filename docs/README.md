@@ -1,6 +1,6 @@
 # Nectar — Documentation
 
-> **Nectar** (repo name: *HiveMind*) is a self-hosted, multi-tenant **organisational memory** for AI
+> **Nectar** is a self-hosted, multi-tenant **organisational memory** for AI
 > agents: one Neo4j-backed graph that hands every connected model the right knowledge on every
 > prompt, maintains itself through a swarm of the agents themselves, and runs **fully local** — no
 > cloud, no data leaving your network.

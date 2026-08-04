@@ -42,33 +42,43 @@ the whole thing healthy — with no human curation.
 
 ---
 
-## GAP analysis — how it compares
+## The landscape — a crowded, fast-moving category
 
-| Capability | Plain vector DB / RAG | Generic agent-memory (e.g. Mem0/Zep-style) | **Nectar** |
-|---|---|---|---|
-| Semantic retrieval | ✅ | ✅ | ✅ (dense) |
-| Exact-token retrieval (symbols, errors, paths) | usually ✗ | varies | ✅ (BM25 + RRF hybrid) |
-| Graph relationships / multi-hop | ✗ | some | ✅ (topics DAG, RELATES, 1-hop expand) |
-| Cross-encoder reranking | rare | rare | ✅ (local) |
-| Truth-over-time (supersession) | ✗ | rare | ✅ (bi-temporal) |
-| Maturity/lifecycle of knowledge | ✗ | ✗ | ✅ (Bloom) |
-| Learns ranking from feedback | ✗ | rare | ✅ (learning-to-rank) |
-| **Self-maintenance by the agents** | ✗ | ✗ | ✅ (Pollen: dedup, relate, stale, contradiction) |
-| Consensus before mutating knowledge | ✗ | ✗ | ✅ (distinct-account votes) |
-| Multi-tenant scope (org/team/person) | bolt-on | varies | ✅ (native, enforced per query) |
-| Secrets vault (encrypted, audited) | ✗ | ✗ | ✅ (Fernet, REST-only) |
-| Audit trail + provenance | ✗ | rare | ✅ (append-only + lineage) |
-| Fully local / no cloud LLM | depends | usually cloud | ✅ (local models only) |
-| Runs in one self-hostable container | varies | usually SaaS | ✅ |
-| Horizontal scale-out / HA | ✅ (managed DBs) | ✅ (SaaS) | ✗ (single-writer by design) |
+"Agent memory" is an established category in 2026, with several well-resourced products and many
+open-source projects. Nectar is a *differentiated take, not a first-mover* — and being honest about
+that matters. The main reference points:
 
-**Where Nectar wins:** it treats memory as a *living, governed graph* maintained by the agents
-themselves, fully on your own infrastructure — not a passive vector index you query.
+- **Mem0** — managed, drop-in memory API; strongest for user *personalisation*. Cloud-first.
+- **Zep / Graphiti** — a **bi-temporal knowledge graph** (every fact tagged valid-from / valid-to);
+  the closest to Nectar's truth-over-time model, but more managed and benchmark-driven.
+- **Letta (MemGPT)** — an agent with tiered, self-editing memory blocks managed via tools.
+- **LangMem / Cognee / Cloudflare** and a broad ecosystem (see *Awesome-Agent-Memory*).
+- **Neo4j-labs `meta-knowledge-graph` / `agent-memory`** — Neo4j's own graph-native, MCP-based,
+  self-improving memory with a contradiction gate + human review. **Architecturally the closest** to
+  Nectar.
 
-**Where alternatives win:** managed SaaS memory and cloud vector DBs give you turnkey scale/HA and
-zero ops. If you need massive multi-region throughput and don't care about self-hosting or
-self-maintenance, those are simpler. Nectar trades scale-out for **privacy, governance, and a brain
-that curates itself**.
+## How Nectar differs (honestly)
+
+| Dimension | Mem0 | Zep / Graphiti | Neo4j-labs MKG | **Nectar** |
+|---|---|---|---|---|
+| Deploy | cloud SaaS | cloud / self-host | self-host | **self-host, one container** |
+| Who *judges* what to keep/merge | LLM extraction | LLM extraction | an LLM extractor + LLM judge | **the connected agents (swarm) + deterministic detection; no server-side LLM** |
+| Maintenance model | auto-extract | auto-extract | single-LLM gate + human review | **swarm-resolved Pollen: consensus, producer≠reviewer, human-gated scope-widening** |
+| Multi-tenant (org/team/person) | limited | limited | no | **yes, enforced per query** |
+| Secrets vault + audit + provenance | — | — | partial | **yes** |
+| Fully local / no cloud LLM | no | usually no | needs your LLM keys | **yes (local embeddings + rerank)** |
+| Managed / HA / benchmarks | yes | yes | — | no (single-writer by design) |
+
+**Where Nectar is genuinely different:** it makes upkeep a *governed, multi-agent, largely LLM-free*
+process — the connected agents themselves dedup, relate and reconcile contradictions under consensus,
+rather than one server-side LLM deciding — and it ships fully local + multi-tenant with a vault and
+audit. That combination (local + swarm-governed + multi-tenant governance) is its niche.
+
+**Where the others win:** managed convenience, scale/HA, funding, benchmarks, community and
+integrations. If you want turnkey and don't care about self-hosting or agent-driven governance, a
+managed product is simpler. Nectar trades scale-out and polish for **privacy, governance, and a brain
+the swarm curates itself**.
+
 
 ---
 

@@ -4,7 +4,7 @@
 
 | Term | Meaning |
 |---|---|
-| **Nectar** | the platform / product (the repo is named *HiveMind*) |
+| **Nectar** | the platform / product ("HiveMind" is the internal codename) |
 | **Swarm** | all connected AI models/agents |
 | **Hive** | the knowledge graph (the whole store) |
 | **Memory** | one node of knowledge (`:Knowledge`, with a type) |
