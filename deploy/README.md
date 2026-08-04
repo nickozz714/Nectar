@@ -1,76 +1,76 @@
-# Nectar — uitrol & authenticatie-configuratie
+# Nectar — deployment & authentication configuration
 
-Hoe je Nectar uitrolt en daarbij bepaalt *hoe* mensen inloggen. Kern: **de image is
-identiek voor iedereen; authenticatie is puur configuratie bij uitrol.** De Entra-koppeling
-zit dus NIET in het image, maar geef je (of laat je weg) via environment/secrets op het
-moment dat je de app deployt.
+How you deploy Nectar and, in doing so, decide *how* people log in. Core idea: **the image is
+identical for everyone; authentication is purely configuration at deploy time.** The Entra
+integration is therefore NOT in the image — you supply it (or leave it out) via environment/secrets at
+the moment you deploy the app.
 
-## De drie inlogmanieren (staan altijd aan, geen config nodig)
-1. **First-time wizard** — een lege hive vraagt via de GUI om het eerste account; dat wordt
-   org_admin en krijgt meteen een token.
-2. **Wachtwoord** — gebruikersnaam + wachtwoord (scrypt); levert een token op.
-3. **Token** — plak een account-token.
+## The three login methods (always on, no config needed)
+1. **First-time wizard** — an empty hive asks via the GUI for the first account; that becomes
+   org_admin and immediately gets a token.
+2. **Password** — username + password (scrypt); yields a token.
+3. **Token** — paste an account token.
 
-Deze werken zonder enige configuratie. Een organisatie die **geen** Microsoft/Entra wil
-gebruikt gewoon deze drie — er is niets uit te zetten, want SSO is standaard uit.
+These work without any configuration. An organisation that does **not** want Microsoft/Entra
+simply uses these three — there is nothing to turn off, because SSO is off by default.
 
-## De vierde manier: Microsoft Entra SSO (optioneel, config bij uitrol)
-Verschijnt **alleen** als je bij de uitrol deze waarden meegeeft (anders blijft de knop
-verborgen en is `/auth/entra/status` → `{"enabled": false}`):
+## The fourth method: Microsoft Entra SSO (optional, config at deploy time)
+Appears **only** if you supply these values at deploy time (otherwise the button stays
+hidden and `/auth/entra/status` → `{"enabled": false}`):
 
-| Env-var | Wat | Verplicht voor SSO |
+| Env var | What | Required for SSO |
 |---|---|---|
 | `ENTRA_TENANT_ID` | Directory (tenant) ID | ✅ |
 | `ENTRA_CLIENT_ID` | Application (client) ID | ✅ |
-| `ENTRA_CLIENT_SECRET` | client secret (waarde) | ✅ |
-| `PUBLIC_BASE_URL` | publieke URL van deze deploy, bv. `https://hive.example.com` | ✅ (voor de redirect) |
-| `ENTRA_REDIRECT_URI` | expliciete callback-URL | optioneel (anders afgeleid van `PUBLIC_BASE_URL`) |
-| `ENTRA_AUTO_PROVISION` | `true` (default): elke tenant-gebruiker krijgt vanzelf een member-account; `false`: invite-only-met-SSO | optioneel |
+| `ENTRA_CLIENT_SECRET` | client secret (value) | ✅ |
+| `PUBLIC_BASE_URL` | public URL of this deploy, e.g. `https://hive.example.com` | ✅ (for the redirect) |
+| `ENTRA_REDIRECT_URI` | explicit callback URL | optional (otherwise derived from `PUBLIC_BASE_URL`) |
+| `ENTRA_AUTO_PROVISION` | `true` (default): every tenant user automatically gets a member account; `false`: invite-only-with-SSO | optional |
 
-Zie **[entra/README.md](entra/README.md)** voor de app-registratie in Azure zelf.
+See **[entra/README.md](entra/README.md)** for the app registration in Azure itself.
 
-### Zo zorg je dat de koppeling er "bij de uitrol" is (per doel-omgeving)
-De koppeling = de bovenstaande vars aanwezig hebben op het moment dat de container start.
-Dat regel je op de manier die bij je deploy-doel hoort:
+### How to make sure the integration is present "at deploy time" (per target environment)
+The integration = having the vars above present at the moment the container starts.
+You arrange that in the way that fits your deploy target:
 
-- **Docker Compose (server, huisstijl)** — zet de vars in de `.env` naast
-  `docker-compose.yml` en `docker compose up -d`. Weglaten = geen SSO.
+- **Docker Compose (server, house style)** — put the vars in the `.env` next to
+  `docker-compose.yml` and `docker compose up -d`. Leaving them out = no SSO.
   ```ini
   ENTRA_TENANT_ID=...
   ENTRA_CLIENT_ID=...
   ENTRA_CLIENT_SECRET=...
-  PUBLIC_BASE_URL=https://hive.jouwdomein.nl
+  PUBLIC_BASE_URL=https://hive.yourdomain.com
   ```
-- **Azure Container Apps** — als **secrets** + `--env-vars` (zie [azure/README.md](azure/README.md)).
-  `PUBLIC_BASE_URL` = de ACA-FQDN (`https://<app>.<region>.azurecontainerapps.io`); die is
-  meteen je redirect-URI. Weglaat je de `ENTRA_*` secrets, dan rolt dezelfde app uit zonder SSO.
-- **Kubernetes / andere** — injecteer als `env` uit een Secret. Zelfde principe.
+- **Azure Container Apps** — as **secrets** + `--env-vars` (see [azure/README.md](azure/README.md)).
+  `PUBLIC_BASE_URL` = the ACA FQDN (`https://<app>.<region>.azurecontainerapps.io`); that is
+  immediately your redirect URI. Leave out the `ENTRA_*` secrets and the same app deploys without SSO.
+- **Kubernetes / other** — inject as `env` from a Secret. Same principle.
 
-Belangrijk: de **redirect-URI is een uitrol-waarde** — hij moet exact matchen tussen (a) wat
-je in de Entra-app-registratie zet en (b) `PUBLIC_BASE_URL`/`ENTRA_REDIRECT_URI` van déze
-deploy. Per omgeving (dev/test/prod, of per klant) is dat dus een andere URL en meestal een
-andere app-registratie (of één multi-tenant registratie met meerdere redirect-URI's).
+Important: the **redirect URI is a deploy-time value** — it must match exactly between (a) what
+you set in the Entra app registration and (b) `PUBLIC_BASE_URL`/`ENTRA_REDIRECT_URI` of this
+deploy. Per environment (dev/test/prod, or per customer) that is therefore a different URL and usually a
+different app registration (or one multi-tenant registration with multiple redirect URIs).
 
-## Beslisboom bij uitrol
+## Decision tree at deploy time
 ```
-Wil de organisatie Microsoft-login?
-├─ Nee  → deploy zonder ENTRA_* . Klaar. (wizard + wachtwoord + tokens)
-└─ Ja   → 1. maak een Entra app-registratie (entra/README.md)
-          2. zet redirect-URI = <PUBLIC_BASE_URL>/auth/entra/callback
-          3. geef ENTRA_TENANT_ID/CLIENT_ID/CLIENT_SECRET + PUBLIC_BASE_URL mee bij de deploy
-          4. herstart → knop "Inloggen met Microsoft" verschijnt
-             (auto-provisioning aan tenzij ENTRA_AUTO_PROVISION=false)
+Does the organisation want Microsoft login?
+├─ No   → deploy without ENTRA_* . Done. (wizard + password + tokens)
+└─ Yes  → 1. create an Entra app registration (entra/README.md)
+          2. set redirect URI = <PUBLIC_BASE_URL>/auth/entra/callback
+          3. supply ENTRA_TENANT_ID/CLIENT_ID/CLIENT_SECRET + PUBLIC_BASE_URL at deploy time
+          4. restart → the "Sign in with Microsoft" button appears
+             (auto-provisioning on unless ENTRA_AUTO_PROVISION=false)
 ```
 
-## Overige uitrol-secrets (kort)
-- `NEO4J_PASSWORD` — zet 'm als je de DB-poorten exposeert; anders default.
-- `SECRET_MASTER_KEY` — vault-sleutel; laat leeg → auto-gegenereerd + gepersisteerd op `/data`.
-- `ADMIN_TOKEN` — optioneel infra-break-glass; leeg = `/admin` uit, alles via org_admin.
-- Alles staat in [`../.env.example`](../.env.example); volledige walkthrough in
+## Other deploy secrets (briefly)
+- `NEO4J_PASSWORD` — set it if you expose the DB ports; otherwise default.
+- `SECRET_MASTER_KEY` — vault key; leave empty → auto-generated + persisted on `/data`.
+- `ADMIN_TOKEN` — optional infra break-glass; empty = `/admin` off, everything via org_admin.
+- Everything is in [`../.env.example`](../.env.example); full walkthrough in
   [`../INSTALL.md`](../INSTALL.md).
 
-## Samengevat
-De image kent geen enkele klant-specifieke koppeling. Auth is een **uitrol-keuze**: laat de
-`ENTRA_*` weg voor een zelfstandige hive (wizard/wachtwoord/token), of geef ze mee om
-Microsoft-SSO aan te zetten. Zo rol je dezelfde Nectar uit voor een organisatie mét of
-zónder Entra, zonder de app te wijzigen.
+## In summary
+The image carries no customer-specific integration at all. Auth is a **deploy-time choice**: leave the
+`ENTRA_*` out for a standalone hive (wizard/password/token), or supply them to turn on
+Microsoft SSO. This is how you deploy the same Nectar for an organisation with or
+without Entra, without changing the app.

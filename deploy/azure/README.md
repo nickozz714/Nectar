@@ -1,24 +1,24 @@
-# Nectar op Azure Container Apps
+# Nectar on Azure Container Apps
 
-Ja, dit kan. Nectar is één image (Neo4j + API + lokale embeddings), volledig
-env-gestuurd, met alle state op één volume (`/data`) — precies wat Azure Container Apps
-(ACA) nodig heeft. Bonus: ACA geeft een echte **HTTPS-hostname**, wat meteen twee dingen
-oplost:
-- de macOS-privé-IP-MCP-bug is weg (geen LAN-IP meer, maar een publieke hostname);
-- het is een geldige **Entra redirect-URI** voor SSO.
+Yes, this works. Nectar is one image (Neo4j + API + local embeddings), fully
+env-driven, with all state on one volume (`/data`) — exactly what Azure Container Apps
+(ACA) needs. Bonus: ACA gives a real **HTTPS hostname**, which immediately solves two
+things:
+- the macOS private-IP MCP bug is gone (no LAN IP anymore, but a public hostname);
+- it is a valid **Entra redirect URI** for SSO.
 
-## Belangrijke keuzes / caveats
-- **Eén replica.** Neo4j draait ín de container en is niet horizontaal deelbaar. Zet
+## Important choices / caveats
+- **One replica.** Neo4j runs inside the container and is not horizontally shareable. Set
   `--min-replicas 1 --max-replicas 1`.
-- **Persistente opslag = Azure Files.** Mount een file share op `/data` (Neo4j-store +
-  vault-key + install-zip-state). **Gebruik NFS-protocol** voor de share — Neo4j's
-  file-locking werkt slecht op SMB. (Zwaar productiegebruik? Overweeg Neo4j los op een
-  managed disk via AKS; voor normaal gebruik volstaat ACA + Azure Files NFS.)
-- **Ingress** op de API-poort **8000** (HTTPS automatisch). Neo4j Browser (7474) en bolt
-  (7687) exposeer je niet — niet nodig in productie.
-- **Secrets** via ACA secrets: `NEO4J_PASSWORD`, optioneel `SECRET_MASTER_KEY` (auto-gen +
-  persist op het volume als je 'm weglaat), optioneel `ADMIN_TOKEN`, en de `ENTRA_*` als je
-  SSO gebruikt. Zet `PUBLIC_BASE_URL` op de ACA-URL.
+- **Persistent storage = Azure Files.** Mount a file share on `/data` (Neo4j store +
+  vault key + install-zip state). **Use the NFS protocol** for the share — Neo4j's
+  file locking works poorly on SMB. (Heavy production use? Consider running Neo4j separately on a
+  managed disk via AKS; for normal use ACA + Azure Files NFS is enough.)
+- **Ingress** on the API port **8000** (HTTPS automatic). Neo4j Browser (7474) and bolt
+  (7687) you do not expose — not needed in production.
+- **Secrets** via ACA secrets: `NEO4J_PASSWORD`, optionally `SECRET_MASTER_KEY` (auto-gen +
+  persist on the volume if you leave it out), optionally `ADMIN_TOKEN`, and the `ENTRA_*` if you
+  use SSO. Set `PUBLIC_BASE_URL` to the ACA URL.
 
 ## Deploy (az CLI)
 
@@ -76,14 +76,14 @@ az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqd
 
 Set `PUBLIC_BASE_URL=https://<fqdn>` (env var) so redirects/Entra use the real URL.
 
-## Na deploy
-- GUI: `https://<fqdn>/ui` — de **first-time wizard** vraagt om het eerste account (wordt
-  org_admin), daarna kun je tokens uitdelen en de install-zip downloaden.
-- MCP-clients: `https://<fqdn>/mcp` (echte HTTPS-hostname → **geen** localhost-tunnel meer
-  nodig op macOS). Recall-hook: `https://<fqdn>`.
-- Entra SSO: zie `deploy/entra/README.md`; redirect-URI = `https://<fqdn>/auth/entra/callback`.
+## After deploy
+- GUI: `https://<fqdn>/ui` — the **first-time wizard** asks for the first account (becomes
+  org_admin), after which you can hand out tokens and download the install-zip.
+- MCP clients: `https://<fqdn>/mcp` (real HTTPS hostname → **no** localhost tunnel needed
+  on macOS). Recall hook: `https://<fqdn>`.
+- Entra SSO: see `deploy/entra/README.md`; redirect URI = `https://<fqdn>/auth/entra/callback`.
 
-## Startup-noot
-De container start Neo4j en dan de API; `init_db` retryt tot bolt klaar is. Geef ACA een
-ruime startup (health `/health`); bij een koude Azure-Files-mount kan de eerste boot wat
-langer duren.
+## Startup note
+The container starts Neo4j and then the API; `init_db` retries until bolt is ready. Give ACA a
+generous startup (health `/health`); on a cold Azure Files mount the first boot may take a
+bit longer.

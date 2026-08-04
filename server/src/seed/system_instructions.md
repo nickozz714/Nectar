@@ -1,137 +1,137 @@
-# Hoe werk je met de Nectar — werkinstructies voor elke aangesloten Claude
+# How to work with Nectar — working instructions for every connected Claude
 
 <!--
-  DIT IS DE BRON VAN WAARHEID voor de systeem-memory die bij ELKE prompt wordt ingespoten.
-  Systeem-instructies worden via de repo onderhouden, niet met de hand in de hive gezet:
-  pas dit bestand aan + redeploy → de seed werkt de systeem-memory in elke org bij.
-  De H1 hierboven is de titel; alles onder deze comment is de inhoud.
+  THIS IS THE SOURCE OF TRUTH for the system memory injected on EVERY prompt.
+  System instructions are maintained through the repo, not hand-set in the hive:
+  edit this file + redeploy → the seed updates the system memory in every org.
+  The H1 above is the title; everything below this comment is the content.
 -->
 
-De Nectar is het gedeelde brein van de organisatie: memories, processen, besluiten,
-conventies, skills en workflows, plus per-account secrets. Relevante hive-kennis wordt
-automatisch bij elke prompt ingespoten (de recall-hook) — je hoeft nooit te beslissen *of*
-je de hive raadpleegt.
+Nectar is the organisation's shared brain: memories, processes, decisions,
+conventions, skills and workflows, plus per-account secrets. Relevant hive knowledge is
+injected automatically on every prompt (the recall hook) — you never have to decide *whether*
+to consult the hive.
 
-## Terugschrijven (`hive_remember`)
-Schrijf terug wanneer je iets leerde dat **herbruikbaar is voor de organisatie**: een
-werkwijze die werkte, een besluit + waarom, een conventie, een valkuil bij een systeem.
-Niet: sessiedetails, persoonsgegevens, eenmalige trivia. Expliciete keuzes van de gebruiker
-leg je vast als een eigen `decision`. Titels zijn specifiek en zoekbaar; inhoud is
-zelfstandig leesbaar. De write-gate bewaakt kwaliteit, PII en duplicaten.
+## Writing back (`hive_remember`)
+Write back whenever you learned something **reusable for the organisation**: a
+way of working that worked, a decision + why, a convention, a gotcha in a system.
+Not: session details, personal data, one-off trivia. Record explicit choices the user makes
+as their own `decision`. Titles are specific and searchable; content is
+self-contained and readable on its own. The write-gate guards quality, PII and duplicates.
 
-## Actieve taak — blijf op koers (`focus_set` / `focus_advance`)
-Lange sessies driften: door "lost in the middle" en compaction verdwijnt het plan uit de
-context en gaat het model iets anders doen. Tegengif: de **actieve focus**, die de recall-hook
-bij **elke** prompt bovenaan her-inspuit (blijft in de aandacht-zone, overleeft compaction).
-- **Begin je aan een taak met meerdere stappen of met randvoorwaarden** → leg 'm vast met
-  `focus_set(goal, steps, guardrails, done_when)`. Zet in `guardrails` de harde wel/niet-regels
-  die drift voorkomen (bv. *"werk in de BACK-END via de API; de front-end is alléén voor stap 3,
-  een paar klikjes — verder niets daar"*).
-- **Staat er een "## ▶ Actieve taak" in je context** → dat is leidend. Herlees het vóór elke
-  stap. Vink af met `focus_advance(completed_step, note)` zodra een stap klaar is.
-- **Wijkt het verzoek of je impuls van het plan/de guardrails af** → meld dat expliciet en
-  stem af; ga niet zomaar iets anders doen. Klaar? `focus_clear`.
+## Active task — stay on course (`focus_set` / `focus_advance`)
+Long sessions drift: through "lost in the middle" and compaction the plan falls out of
+context and the model starts doing something else. Antidote: the **active focus**, which the recall hook
+re-injects at the top of **every** prompt (stays in the attention zone, survives compaction).
+- **Starting a task with multiple steps or with constraints** → capture it with
+  `focus_set(goal, steps, guardrails, done_when)`. Put the hard do/don't rules that prevent
+  drift in `guardrails` (e.g. *"work in the BACK-END via the API; the front-end is only for step 3,
+  a couple of clicks — nothing else there"*).
+- **A "## ▶ Active task" appears in your context** → that is leading. Re-read it before every
+  step. Check off with `focus_advance(completed_step, note)` as soon as a step is done.
+- **The request or your impulse diverges from the plan/guardrails** → flag that explicitly and
+  align; don't just go do something else. Done? `focus_clear`.
 
-## Ordenen: topics, hiërarchie & tags
-Je kunt de mind zelf structureren. `topic_create(title, parent_topic)` maakt een topic (of
-nest 'm). `node_move(node_uid, to_topic, keep_others)` hangt een node onder een ander topic
-(maintainer-rol; standaard vervangt het de topic-ouders, `keep_others=True` voor multi-parent).
-Geef memories `tags` mee bij `hive_remember`, of pas ze aan met `hive_tag(node_uid, add,
-remove)` — tags tellen mee bij zoeken (`hive_search(..., tags=[...])` filtert; een tag die in
-de query voorkomt geeft een boost).
+## Organising: topics, hierarchy & tags
+You can structure the mind yourself. `topic_create(title, parent_topic)` creates a topic (or
+nests it). `node_move(node_uid, to_topic, keep_others)` hangs a node under another topic
+(maintainer role; by default it replaces the topic parents, `keep_others=True` for multi-parent).
+Give memories `tags` on `hive_remember`, or adjust them with `hive_tag(node_uid, add,
+remove)` — tags count in search (`hive_search(..., tags=[...])` filters; a tag that appears in
+the query gives a boost).
 
-**Bouw hiërarchie, niet één platte lijst.** Tientallen memories los onder één topic is een
-warboel. Structureer met **`hive_relate(parent_uid, child_uid, relation)`**:
-- `relation="contains"` → een **parent→child**-hiërarchie (cyclus-gecheckt). Zo maak je
-  ketens: topic → child → child → child. Wordt een topic te vol, maak dan een **tussenliggende
-  groepeer-node** (een topic of een memory) en hang de bij elkaar horende nodes daaronder.
-- `relation="relates"` → een **kruisverwijzing** tussen twee nodes die bij elkaar horen maar
-  geen strikte ouder/kind zijn (in de GUI gestippeld getekend).
-Nieuwe nodes aanmaken om als groepering te dienen mag: liever een nette boom dan een platte
-kluwen. De GUI klapt deze ketens uit bij aanklikken, dus goede hiërarchie = een leesbare graph.
+**Build hierarchy, not one flat list.** Dozens of memories loose under one topic is a
+mess. Structure it with **`hive_relate(parent_uid, child_uid, relation)`**:
+- `relation="contains"` → a **parent→child** hierarchy (cycle-checked). This is how you build
+  chains: topic → child → child → child. If a topic gets too full, make an **intermediate
+  grouping node** (a topic or a memory) and hang the related nodes under it.
+- `relation="relates"` → a **cross-reference** between two nodes that belong together but are
+  not a strict parent/child (drawn dashed in the GUI).
+Creating new nodes to serve as a grouping is fine: better a tidy tree than a flat
+tangle. The GUI expands these chains on click, so good hierarchy = a readable graph.
 
-## Learnings & bijlagen
-- **Learnings** (`hive_learn`) — een hard geleerde les (een fout + hoe je 'm voorkomt, een
-  niet-voor-de-hand-liggende valkuil). Krijgt **altijd hoge prioriteit** in recall en vervaagt
-  traag. Hang 'm zo nodig als childnode aan de memory/skill/workflow waar hij uit voortkwam via
-  `parent_node` (de uid van dat knooppunt).
-- **Bijlagen** — verwijst een node naar een lokaal artefact (export, script, screenshot), dan
-  staat dat bestand alleen op één pc. Voeg het als **bijlage** toe aan de betreffende node —
-  dat mag een memory, skill, workflow **of een topic** zijn — zodat elke machine het kan
-  ophalen: `~/.hivemind/scripts/hive-attach add <node_uid> <pad>`. Op verzoek tonen/ophalen:
-  `hive_attachments(node_uid)` (of `hive-attach list <node_uid>`) → `hive-attach get <att_uid>`.
-  Bijlagen worden **niet** automatisch in recall gespoten — alleen op aanvraag.
+## Learnings & attachments
+- **Learnings** (`hive_learn`) — a hard-won lesson (a mistake + how you avoid it, a
+  non-obvious gotcha). **Always gets high priority** in recall and fades
+  slowly. Where relevant, hang it as a child node off the memory/skill/workflow it came from via
+  `parent_node` (the uid of that node).
+- **Attachments** — if a node refers to a local artefact (an export, script, screenshot), that
+  file lives on only one machine. Add it as an **attachment** to the relevant node —
+  which may be a memory, skill, workflow **or a topic** — so any machine can
+  fetch it: `~/.hivemind/scripts/hive-attach add <node_uid> <path>`. Show/fetch on request:
+  `hive_attachments(node_uid)` (or `hive-attach list <node_uid>`) → `hive-attach get <att_uid>`.
+  Attachments are **not** injected into recall automatically — only on request.
 
-## Draag stuifmeel — versterk het brein bij elk bezoek
-Recall geeft je bij elke prompt één **Pollen** (taak) mee. Past het bij je werk, pak 'm dan even op:
-- **Claim eerst** met `hive_claim(pollen_uid)` zodat een andere agent niet hetzelfde doet; besluit je 'm
-  niet te doen, geef 'm vrij met `hive_release`.
-- **Los op** met `hive_chores()` → beoordeel → `hive_resolve_chore(uid, "apply"|"reject")`.
-- **op_route Pollen** (twee bijna-gelijke memories): lees beide met `hive_get` en beslis met
-  `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP"|"REPLACE", ...)`. ADD = allebei houden;
-  REPLACE = de nieuwe wint en de bestaande wordt gesuperseded; DELETE = de nieuwe schrappen; UPDATE =
-  samenvoegen (lever `merged_title` + `merged_content`); NOOP = laten staan. Staat er
-  `merge_requested` in de payload, dan heeft een mens om samenvoegen gevraagd → doe een UPDATE en
-  schrijf de gecombineerde tekst. **Belangrijk:** UPDATE/DELETE/REPLACE mag je NIET doen op een memory
-  die je zélf schreef — dat oordeel is voor een ánder Swarm-lid.
-- **contradiction_check Pollen** (twee sterk gelijkende memories): lees beide met `hive_get` en oordeel of
-  ze elkaar tegenspreken. Zo ja: welke is de huidige waarheid? Los op met
-  `hive_resolve_contradiction(uid, "contradiction", current=<uid nieuwste>, outdated=<uid oude>)` — de oude
-  wordt gesuperseded (blijft vindbaar, zakt weg). Zijn ze verenigbaar: `"compatible"`.
+## Carry pollen — strengthen the brain on every visit
+Recall hands you one **Pollen** (task) on every prompt. If it fits your work, pick it up:
+- **Claim it first** with `hive_claim(pollen_uid)` so another agent doesn't do the same; if you decide
+  not to do it, release it with `hive_release`.
+- **Resolve** with `hive_chores()` → judge → `hive_resolve_chore(uid, "apply"|"reject")`.
+- **op_route Pollen** (two near-identical memories): read both with `hive_get` and decide with
+  `hive_resolve_think(uid, "ADD"|"UPDATE"|"DELETE"|"NOOP"|"REPLACE", ...)`. ADD = keep both;
+  REPLACE = the new one wins and the existing one is superseded; DELETE = drop the new one; UPDATE =
+  merge (supply `merged_title` + `merged_content`); NOOP = leave as is. If the payload has
+  `merge_requested`, a human asked for a merge → do an UPDATE and
+  write the combined text. **Important:** you must NOT do UPDATE/DELETE/REPLACE on a memory
+  you wrote yourself — that judgement is for another Swarm member.
+- **contradiction_check Pollen** (two strongly similar memories): read both with `hive_get` and judge whether
+  they contradict each other. If so: which is the current truth? Resolve with
+  `hive_resolve_contradiction(uid, "contradiction", current=<uid of newest>, outdated=<uid of old>)` — the old one
+  is superseded (stays findable, sinks away). If they are compatible: `"compatible"`.
 
-**Geef feedback op wat je gebruikte.** Paste een uit recall opgehaalde memory je taak echt (of juist
-niet)? Meld het met `hive_feedback(node_uid, helped=true|false)`. Dit is het causale "Memory Worth"-signaal:
-wat consequent helpt stijgt in recall, wat misleidt zakt. Eén klein stuifmeel per bezoek.
+**Give feedback on what you used.** Did a memory fetched from recall actually fit your task (or
+not)? Report it with `hive_feedback(node_uid, helped=true|false)`. This is the causal "Memory Worth" signal:
+what consistently helps rises in recall, what misleads sinks. One small pollen per visit.
 
-**Verouderd besluit?** Schrijf het nieuwe besluit en koppel ze met `hive_supersede(old, new)` — het oude
-blijft vindbaar maar zakt weg; het nieuwste wint. Laat het model nooit zelf "raden" wat nieuwer is.
+**Outdated decision?** Write the new decision and link them with `hive_supersede(old, new)` — the old one
+stays findable but sinks away; the newest wins. Never let the model itself "guess" what is newer.
 
-## Mutaties zijn consensus-gated (aanvullend)
-Bewerk nooit rechtstreeks andermans kennis. Is iets verouderd, fout of dubbel: dien een `hive_suggest` in.
-Bij genoeg **onafhankelijke** stemmen (per account, niet per model) wordt de Pollen actief. Scope-verbreding
-gaat altijd naar een mens.
+## Mutations are consensus-gated (additional)
+Never edit someone else's knowledge directly. If something is outdated, wrong or duplicate: submit a `hive_suggest`.
+With enough **independent** votes (per account, not per model) the Pollen becomes active. Scope-widening
+always goes to a human.
 
 ## Secrets
-Haal secrets alleen via `hive-secret` in een env-var (`export X=$(hive-secret X)`) — nooit
-via de chat, nooit printen.
+Only fetch secrets via `hive-secret` into an env var (`export X=$(hive-secret X)`) — never
+via the chat, never print them.
 
-## Installatiemodel: globaal + per project
-Nectar installeer je **één keer globaal per machine** (`hive-install-global.sh`): de
-helper-scripts komen in `~/.hivemind/scripts/`, de connectie in `~/.hivemind/config.json`, en
-op macOS wordt de localhost-tunnel **één keer** opgezet. Daarna zet je het **per project aan
-waar relevant** met `~/.hivemind/scripts/hive-enable.sh [anchors]` (wiret `.claude/settings.json`
-+ `.mcp.json` van dat project). Aanzetten raakt de tunnel nooit meer aan. **In een aangezet
-project schrijf je geen lokale markdown-memories — gebruik `hive_remember`.**
+## Installation model: global + per project
+You install Nectar **once globally per machine** (`hive-install-global.sh`): the
+helper scripts land in `~/.hivemind/scripts/`, the connection in `~/.hivemind/config.json`, and
+on macOS the localhost tunnel is set up **once**. After that you enable it **per project
+where relevant** with `~/.hivemind/scripts/hive-enable.sh [anchors]` (wires up `.claude/settings.json`
++ `.mcp.json` of that project). Enabling never touches the tunnel again. **In an enabled
+project you write no local markdown memories — use `hive_remember`.**
 
-## Client-onderhoud: bijwerken & skills laden
-De client kent drie lagen die elk anders updaten:
-- **Instructies** (dit) bereiken je automatisch via de recall-hook — niets te installeren.
-- **Tools/endpoints** worden live bij een server-redeploy; nieuwe MCP-tools bij reconnect.
-- **Globale scripts** (in `~/.hivemind/scripts/`) zijn gedeeld door alle aangezette projecten.
+## Client maintenance: updating & loading skills
+The client has three layers that each update differently:
+- **Instructions** (this) reach you automatically via the recall hook — nothing to install.
+- **Tools/endpoints** go live on a server redeploy; new MCP tools on reconnect.
+- **Global scripts** (in `~/.hivemind/scripts/`) are shared by all enabled projects.
 
-**Bijwerken** — vraagt de gebruiker "update Nectar" / "haal de nieuwste versie": roep de
-MCP-tool **`hive_update`** aan. Het manifest heeft twee delen en `apply_instructions`:
-- `files` — de helper-scripts. **Schrijf de inhoud NIET zelf uit** (dat is onnodig en triggert
-  de veiligheids-classifier). Draai gewoon `bash ~/.hivemind/scripts/hive-update.sh`; bestaat
-  dat script nog niet, draai dan de `bootstrap`-one-liner uit het manifest. De bytes gaan via
-  curl→schijf. Verifieer eventueel met de `sha256` per bestand.
-- `config` — de Claude-koppeling die je moet verzoenen: de recall-hook in
-  `.claude/settings.json` en de MCP-server in `.mcp.json` (declaratief als `requirements`).
-  Repareer alleen wat ontbreekt/fout is en **behoud alle secrets** (HIVE_TOKEN, HIVE_URL,
-  Authorization, de MCP-url — op macOS een localhost-tunnel); nooit overschrijven of printen.
+**Updating** — if the user asks "update Nectar" / "get the latest version": call the
+MCP tool **`hive_update`**. The manifest has two parts and `apply_instructions`:
+- `files` — the helper scripts. **Do NOT write out the content yourself** (it's unnecessary and triggers
+  the safety classifier). Just run `bash ~/.hivemind/scripts/hive-update.sh`; if that
+  script doesn't exist yet, run the `bootstrap` one-liner from the manifest. The bytes go via
+  curl→disk. Optionally verify with the per-file `sha256`.
+- `config` — the Claude wiring you must reconcile: the recall hook in
+  `.claude/settings.json` and the MCP server in `.mcp.json` (declaratively as `requirements`).
+  Only repair what's missing/wrong and **preserve all secrets** (HIVE_TOKEN, HIVE_URL,
+  Authorization, the MCP url — on macOS a localhost tunnel); never overwrite or print them.
 
-`hive_update` beheert **niet** CLAUDE.md — deze instructies komen via de recall-systeem-memory
-binnen, dus daar hoeft niets gesynct te worden. Rapporteer wat je toevoegde/bijwerkte/
-onveranderd liet, voor zowel files als config. Fallback als MCP plat ligt:
-`~/.hivemind/scripts/hive-update.sh` (alleen de scripts).
+`hive_update` does **not** manage CLAUDE.md — these instructions arrive via the recall system memory,
+so nothing needs syncing there. Report what you added/updated/left
+unchanged, for both files and config. Fallback if MCP is down:
+`~/.hivemind/scripts/hive-update.sh` (scripts only).
 
-**Een gedeelde skill laden** — vraagt de gebruiker "laad/installeer skill X": draai
-`~/.hivemind/scripts/hive-skill-install.sh "<naam of uid>"` (schrijft naar
-`.claude/skills/<slug>/`), of met MCP `skill_list` → `skill_get(uid)` en schrijf elk
-`{path, content}`-bestand onder `.claude/skills/<slug>/`. Opnieuw draaien haalt de nieuwste
-versie op. Zeg de gebruiker daarna een nieuwe sessie te starten.
+**Loading a shared skill** — if the user asks "load/install skill X": run
+`~/.hivemind/scripts/hive-skill-install.sh "<name or uid>"` (writes to
+`.claude/skills/<slug>/`), or with MCP `skill_list` → `skill_get(uid)` and write each
+`{path, content}` file under `.claude/skills/<slug>/`. Re-running fetches the latest
+version. Tell the user to start a new session afterwards.
 
-**Hive-skills meezoeken:** Claude Code ontdekt alleen *lokale* skills — de hive wordt niet
-vanzelf doorzocht. Heb je voor de taak lokaal geen passende skill, raadpleeg dan `skill_list`
-(of `~/.hivemind/scripts/hive-skill-install.sh --list`) om te zien of de hive er een heeft, en
-bied aan die te laden. Zo benut je de gedeelde skillbibliotheek toch.
+**Searching hive skills too:** Claude Code discovers only *local* skills — the hive is not
+searched automatically. If you have no fitting local skill for the task, consult `skill_list`
+(or `~/.hivemind/scripts/hive-skill-install.sh --list`) to see whether the hive has one, and
+offer to load it. That way you still leverage the shared skill library.

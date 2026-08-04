@@ -1,54 +1,54 @@
-# Microsoft Entra (Azure AD) SSO voor Nectar
+# Microsoft Entra (Azure AD) SSO for Nectar
 
-Laat mensen inloggen met hun **Microsoft organisatie-account**. Optioneel — Nectar werkt
-zonder; is het niet geconfigureerd, dan is de Microsoft-knop simpelweg verborgen.
+Let people log in with their **Microsoft organisation account**. Optional — Nectar works
+without it; if it's not configured, the Microsoft button is simply hidden.
 
-## Hoe het werkt
-- GUI toont "Inloggen met Microsoft" → `/auth/entra/login` → Microsoft-login →
-  `/auth/entra/callback` → Nectar wisselt de code in, leest **e-mail/naam** uit het
-  id-token, en logt de gebruiker in — **het Microsoft-account IS de identiteit**:
-  - bestaat er al een account met die e-mail → inloggen (token, 30 dagen);
-  - is de hive nog leeg (first run) → die persoon wordt org_admin;
-  - anders → **automatisch een member-account aangemaakt** (auto-provisioning). Omdat je
-    app single-tenant is, is de Microsoft-tenant de toegangsgrens: alleen jouw org-leden
-    kunnen inloggen, en iedereen die inlogt krijgt vanzelf een account.
-- Het Nectar-token gaat via de URL-fragment terug naar de GUI (nooit server-side gelogd).
-- Auto-provisioning uitzetten (invite-only-met-SSO)? Zet `ENTRA_AUTO_PROVISION=false`.
+## How it works
+- The GUI shows "Sign in with Microsoft" → `/auth/entra/login` → Microsoft login →
+  `/auth/entra/callback` → Nectar exchanges the code, reads the **email/name** from the
+  id token, and logs the user in — **the Microsoft account IS the identity**:
+  - an account with that email already exists → log in (token, 30 days);
+  - the hive is still empty (first run) → that person becomes org_admin;
+  - otherwise → **a member account is created automatically** (auto-provisioning). Because your
+    app is single-tenant, the Microsoft tenant is the access boundary: only your org members
+    can log in, and everyone who logs in automatically gets an account.
+- The Nectar token is returned to the GUI via the URL fragment (never logged server-side).
+- Turn off auto-provisioning (invite-only-with-SSO)? Set `ENTRA_AUTO_PROVISION=false`.
 
-## 1. App-registratie in Entra
-In het Azure-portaal → **Microsoft Entra ID → App registrations → New registration**:
-- Naam: `Nectar`.
+## 1. App registration in Entra
+In the Azure portal → **Microsoft Entra ID → App registrations → New registration**:
+- Name: `Nectar`.
 - Supported account types: *Accounts in this organizational directory only* (single tenant)
-  — of multi-tenant als je dat wilt.
-- Redirect URI (type **Web**): `https://<jouw-host>/auth/entra/callback`
-  (bijv. de ACA-FQDN of je eigen domein; voor lokaal testen `http://localhost:8642/auth/entra/callback`).
-- Na aanmaken: noteer **Application (client) ID** en **Directory (tenant) ID**.
-- **Certificates & secrets → New client secret** → noteer de secret-**waarde**.
+  — or multi-tenant if you want that.
+- Redirect URI (type **Web**): `https://<your-host>/auth/entra/callback`
+  (e.g. the ACA FQDN or your own domain; for local testing `http://localhost:8642/auth/entra/callback`).
+- After creating: note the **Application (client) ID** and **Directory (tenant) ID**.
+- **Certificates & secrets → New client secret** → note the secret **value**.
 
-Scopes: de standaard `User.Read` (delegated) volstaat — geen admin-consent nodig voor
-alleen e-mail/naam.
+Scopes: the default `User.Read` (delegated) is enough — no admin consent needed for
+just email/name.
 
-## 2. Nectar configureren
-Zet deze env-vars (server-`.env` of ACA-secrets):
+## 2. Configure Nectar
+Set these env vars (server `.env` or ACA secrets):
 ```ini
 ENTRA_TENANT_ID=<Directory (tenant) ID>
 ENTRA_CLIENT_ID=<Application (client) ID>
 ENTRA_CLIENT_SECRET=<client secret value>
-PUBLIC_BASE_URL=https://<jouw-host>          # voor de redirect-URI
-# optioneel expliciet: ENTRA_REDIRECT_URI=https://<jouw-host>/auth/entra/callback
+PUBLIC_BASE_URL=https://<your-host>          # for the redirect URI
+# optionally explicit: ENTRA_REDIRECT_URI=https://<your-host>/auth/entra/callback
 ```
-Herstart de container. Check: `GET /auth/entra/status` → `{"enabled": true}`, en de
-Microsoft-knop verschijnt in de GUI.
+Restart the container. Check: `GET /auth/entra/status` → `{"enabled": true}`, and the
+Microsoft button appears in the GUI.
 
-## 3. Gebruikers toelaten
-- **Eerste keer**: de allereerste Microsoft-login op een lege hive wordt org_admin.
-- **Daarna, standaard (auto-provisioning aan)**: iedereen uit je Microsoft-tenant kan
-  inloggen en krijgt automatisch een **member**-account. Wil je iemand meer rechten geven,
-  promoveer dan met `hive_set_role`. De tenant zelf is de toegangsgrens.
-- **Invite-only-met-SSO** (`ENTRA_AUTO_PROVISION=false`): dan moet de e-mail vooraf een
-  account hebben (admin-API/`/manage`/Beheer-tab); onbekende e-mails worden geweigerd.
+## 3. Admitting users
+- **First time**: the very first Microsoft login on an empty hive becomes org_admin.
+- **After that, by default (auto-provisioning on)**: anyone from your Microsoft tenant can
+  log in and automatically gets a **member** account. To give someone more rights,
+  promote them with `hive_set_role`. The tenant itself is the access boundary.
+- **Invite-only-with-SSO** (`ENTRA_AUTO_PROVISION=false`): then the email must have an
+  account beforehand (admin API/`/manage`/Beheer tab); unknown emails are rejected.
 
-## Noten
-- De redirect-URI in Entra moet **exact** matchen met wat Nectar gebruikt (schema, host,
-  pad). Achter een reverse proxy: zet `PUBLIC_BASE_URL` op de publieke URL.
-- Wachtwoord-login en token-login blijven gewoon werken naast SSO.
+## Notes
+- The redirect URI in Entra must match **exactly** what Nectar uses (scheme, host,
+  path). Behind a reverse proxy: set `PUBLIC_BASE_URL` to the public URL.
+- Password login and token login keep working alongside SSO.

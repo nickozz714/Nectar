@@ -1,69 +1,67 @@
 # Nectar — TODO
 
-Status: v0.1 werkt end-to-end (27/27 smoke-checks, alles-in-één container, lokale
-embeddings). Dit is wat er nog open staat, ruwweg op volgorde van belangrijkheid.
+Status: v0.1 works end-to-end (27/27 smoke checks, all-in-one container, local
+embeddings). This is what's still open, roughly in order of importance.
 
-## Naar echt gebruik
-- [x] **Zelf-registratie + rol-op-token + zero-config** (2026-07-26): `/register` (eerste user =
-      org_admin, daarna invite-only via `/manage/invites`), rol gebonden aan token, ADMIN_TOKEN
-      optioneel, vault-key auto-gegenereerd. `hive-init --register` registreert en slaat token op.
-- [ ] **Plugin in Claude Code installeren en er echt mee werken** (per project via `hive-init`,
-      opt-in) — de skill-instructies, recall-ranking en decay-parameters slijpen zich pas in de praktijk bij.
-- [ ] **Server-deploy in huisstijl** (compose op de server + Caddy-sidecar HTTPS) zodra gewenst.
-      alleen UDP 51820, per-device keys, split tunnel, geen web-UI. Boot-gevalideerd.
-      Resteert: op de server draaien + KPN-router port-forward (handmatige stap, zie README).
-      (Tritium-H5/OpenVPN bleek dood op het netwerk — vervangen i.p.v. herstellen.)
-- [x] **Governance & datagevoeligheid à la Purview** (2026-07-26): sensitivity-classificatie,
-      /graph/governance-dashboard, /graph/audit, persoon-koppeling, /graph/lineage + GUI-tab.
-- [x] **Tokens aan personen + lineage** (2026-07-26): account → persoon; lineage per node.
-- [ ] **Mind export/import & sync**: export van (een deel van) de graph, import in een andere
-      hive, en eventueel sync tussen hives — nodig zodra er meer dan één omgeving is.
-- [ ] **Backups automatiseren**: `scripts/backup.sh` bestaat (stop → tar volume → start);
-      periodiek draaien + bewaarbeleid.
+## Toward real use
+- [x] **Self-registration + role-on-token + zero-config** (2026-07-26): `/register` (first user =
+      org_admin, then invite-only via `/manage/invites`), role bound to the token, ADMIN_TOKEN
+      optional, vault key auto-generated. `hive-init --register` registers and stores the token.
+- [ ] **Install the plugin in Claude Code and really work with it** (per project via `hive-init`,
+      opt-in) — the skill instructions, recall ranking and decay parameters only settle in with real use.
+- [ ] **Server deploy in house style** (compose on the server + Caddy sidecar HTTPS) once wanted.
+      Remaining: run it on the server + router port-forward (a manual step, see README).
+- [x] **Governance & data sensitivity à la Purview** (2026-07-26): sensitivity classification,
+      /graph/governance-dashboard, /graph/audit, person linking, /graph/lineage + GUI tab.
+- [x] **Tokens tied to people + lineage** (2026-07-26): account → person; lineage per node.
+- [ ] **Mind export/import & sync**: export of (part of) the graph, import into another
+      hive, and optionally sync between hives — needed once there is more than one environment.
+- [ ] **Automate backups**: `scripts/backup.sh` exists (stop → tar volume → start);
+      run it periodically + retention policy.
 
-## Ontbrekende functionaliteit
-- [x] **Skills schrijven naar de hive**: `skill_put` (2026-07-25) — SKILL.md verplicht,
-      PII-filter over alle bestanden, maker mag eigen skill bijwerken, anderen via `hive_suggest`.
-- [x] **Audit-inzage** (2026-07-26): /graph/audit (org_admin) + Governance-tab tonen de
-      append-only trail van elke write/mutatie/secret-read.
-- [x] **Admin hard-delete** (2026-07-26): org_admin kan een memory permanent verwijderen
-      (hive_delete / DELETE /graph/node/{uid} / GUI-knop) — escape-hatch buiten de consensus, audited.
-- [x] **Token-beheer** (2026-07-26): /admin/accounts (+ token-tellingen), /admin/accounts/{uid}/tokens,
-      /admin/tokens/{hash}/rotate (revoke+nieuw), /admin/tokens/cleanup (verlopen/ingetrokken weg);
-      Beheer-tab toont accounts + tokens met roteren/opruimen.
-- [x] **Re-embedding job** (2026-07-26): /admin/reembed?org_uid= — batch-herindexering na modelwissel.
+## Missing functionality
+- [x] **Write skills to the hive**: `skill_put` (2026-07-25) — SKILL.md required,
+      PII filter over all files, author may update their own skill, others via `hive_suggest`.
+- [x] **Audit visibility** (2026-07-26): /graph/audit (org_admin) + Governance tab show the
+      append-only trail of every write/mutation/secret-read.
+- [x] **Admin hard-delete** (2026-07-26): org_admin can permanently delete a memory
+      (hive_delete / DELETE /graph/node/{uid} / GUI button) — an escape hatch outside consensus, audited.
+- [x] **Token management** (2026-07-26): /admin/accounts (+ token counts), /admin/accounts/{uid}/tokens,
+      /admin/tokens/{hash}/rotate (revoke+new), /admin/tokens/cleanup (drop expired/revoked);
+      Beheer tab shows accounts + tokens with rotate/cleanup.
+- [x] **Re-embedding job** (2026-07-26): /admin/reembed?org_uid= — batch re-indexing after a model change.
 
-## Robuustheid
-- [x] **Testsuite + CI** (2026-07-26): 20 pytest-tests (`server/tests/`) tegen echte Neo4j met
-      deterministische fake-embedder; dekt tenancy/rollen/tokens, write-gate (kwaliteit/PII/dedup-banden/
-      sensitivity/topic-hergebruik), multi-parent + promotie-consensus + scope-widening-gate, ranking
-      (anchor/decision/touch) en vault. GitHub Actions `.github/workflows/ci.yml` (Neo4j-service).
-      README + INSTALL.md geschreven voor directe ingebruikname.
-- [ ] **Chore claiming/locking**: nu wint de eerste resolver (races zijn onschuldig op deze
-      schaal); netjes claimen bij meer bijen.
-- [ ] **Backups**: volume-snapshot of `neo4j-admin database dump` periodiek.
-- [ ] **Rate limiting / abuse-bescherming** op de publieke endpoints.
-- [ ] **Full-text index** in Neo4j voor de fallback-zoekweg (nu woord-CONTAINS-scan).
+## Robustness
+- [x] **Test suite + CI** (2026-07-26): 20 pytest tests (`server/tests/`) against a real Neo4j with
+      a deterministic fake embedder; covers tenancy/roles/tokens, write-gate (quality/PII/dedup bands/
+      sensitivity/topic reuse), multi-parent + promotion consensus + scope-widening gate, ranking
+      (anchor/decision/touch) and vault. GitHub Actions `.github/workflows/ci.yml` (Neo4j service).
+      README + INSTALL.md written for immediate adoption.
+- [ ] **Chore claiming/locking**: right now the first resolver wins (races are harmless at this
+      scale); claim cleanly with more bees.
+- [ ] **Backups**: volume snapshot or `neo4j-admin database dump` periodically.
+- [ ] **Rate limiting / abuse protection** on the public endpoints.
+- [ ] **Full-text index** in Neo4j for the fallback search path (currently a word-CONTAINS scan).
 
-## Gebouwd 2026-07-27
-- [x] Wachtwoord-login (GUI + MCP) + org_admin reset; scrypt.
-- [x] Microsoft Entra (Azure AD) SSO — config-driven, e-mail-mapping; `deploy/entra/README.md`.
-- [x] First-time wizard: lege hive → GUI-wizard maakt het eerste account (org_admin) + token.
-- [x] Install-zip downloadbaar uit de GUI (`GET /install.zip`, in de image gebakken).
-- [x] Sessie-status: session_save/list/resume/delete (per-account, resumebaar op elk apparaat).
-- [x] Dedup-force op hive_remember; systeem-memories (altijd in recall).
-- [x] Azure Container Apps-deploy mogelijk + instructie (`deploy/azure/README.md`).
+## Built 2026-07-27
+- [x] Password login (GUI + MCP) + org_admin reset; scrypt.
+- [x] Microsoft Entra (Azure AD) SSO — config-driven, email mapping; `deploy/entra/README.md`.
+- [x] First-time wizard: empty hive → GUI wizard creates the first account (org_admin) + token.
+- [x] Install-zip downloadable from the GUI (`GET /install.zip`, baked into the image).
+- [x] Session state: session_save/list/resume/delete (per account, resumable on any device).
+- [x] Dedup-force on hive_remember; system memories (always in recall).
+- [x] Azure Container Apps deploy possible + instructions (`deploy/azure/README.md`).
 
-## Later / ideeën
-- [x] Web-UI: hive GUI op `/ui` (2026-07-25) — graph-verkenner, zoeken, chores, review, beheer.
-      Nog uit te breiden: nodes bewerken via suggesties vanuit de GUI, audit-inzage, teams/secrets-overzicht.
-- [x] Rollen: member → maintainer → org_admin (2026-07-25) — onderhoud en review zijn rol-gebonden.
-- [ ] Skill-versionering.
-- [x] Dedup-drempel bijgesteld (2026-07-26): DEDUP_REVIEW_THRESHOLD 0.80 → 0.85 (dichte
-      werk-corpora gaven te veel grey-zone chores). Half-lifes/gewichten: verder tunen op echt gebruik.
-- [x] GUI node-bewerking via suggesties (2026-07-26): "Wijziging voorstellen" in het detailpaneel
+## Later / ideas
+- [x] Web UI: hive GUI at `/ui` (2026-07-25) — graph explorer, search, chores, review, admin.
+      Still to extend: edit nodes via suggestions from the GUI, audit visibility, teams/secrets overview.
+- [x] Roles: member → maintainer → org_admin (2026-07-25) — maintenance and review are role-bound.
+- [ ] Skill versioning.
+- [x] Dedup threshold adjusted (2026-07-26): DEDUP_REVIEW_THRESHOLD 0.80 → 0.85 (dense
+      work corpora gave too many grey-zone chores). Half-lives/weights: tune further on real use.
+- [x] GUI node editing via suggestions (2026-07-26): "Propose change" in the detail panel
       (edit/invalidate/promotion/scope_widening) → /graph/suggest, consensus-gated.
-- [x] Meerdere orgs zichtbaar/beheerbaar (2026-07-26): /admin/orgs met account/node-tellingen
-      (datamodel ondersteunde het al; nu ook in beheer inzichtelijk).
-- [ ] Decision-extractie voortzetten: bees leggen expliciete besluiten voortaan apart vast
-      (skill-instructie staat); bestaande corpus periodiek nalopen op impliciete besluiten.
+- [x] Multiple orgs visible/manageable (2026-07-26): /admin/orgs with account/node counts
+      (the data model already supported it; now also visible in admin).
+- [ ] Continue decision extraction: bees now record explicit decisions separately
+      (skill instruction is in place); periodically re-scan the existing corpus for implicit decisions.

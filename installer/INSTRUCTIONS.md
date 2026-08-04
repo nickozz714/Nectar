@@ -1,64 +1,64 @@
-# Nectar — installeren & aanzetten (instructies voor Claude)
+# Nectar — install & enable (instructions for Claude)
 
-Je hebt dit install-pakket (`hivemind-install.zip`) gekregen. Het model is **één keer
-globaal installeren per machine**, daarna **per project aanzetten waar relevant**. In een
-aangezet project worden org-memories automatisch bij elke prompt opgehaald (recall-hook) en
-werk je met de MCP-tools (`hive_search`, `hive_remember`, …).
+You've been given this install kit (`hivemind-install.zip`). The model is **install once
+globally per machine**, then **enable per project where relevant**. In an enabled
+project, org memories are fetched automatically on every prompt (the recall hook) and
+you work with the MCP tools (`hive_search`, `hive_remember`, …).
 
-**Dit pakket bevat GEEN token.** Vraag de gebruiker om de gegevens hieronder.
+**This kit contains NO token.** Ask the user for the details below.
 
-## Wat je van de gebruiker nodig hebt
-- **HIVE_URL** — bijv. `http://your-server:8642` (server-API op het LAN).
-- **HIVE_TOKEN** — het account-token (per persoon/machine; los intrekbaar).
-- **anchors** (optioneel, per project) — komma-lijst van topics waar dit project op leunt.
-- **Op macOS met een LAN-IP: een SSH-target** `user@host` (bijv. `user@your-server`) — voor
-  de eenmalige tunnel. Zie de macOS-uitleg hieronder.
+## What you need from the user
+- **HIVE_URL** — e.g. `http://your-server:8642` (the server API on the LAN).
+- **HIVE_TOKEN** — the account token (per person/machine; individually revocable).
+- **anchors** (optional, per project) — comma list of topics this project leans on.
+- **On macOS with a LAN IP: an SSH target** `user@host` (e.g. `user@your-server`) — for
+  the one-time tunnel. See the macOS explanation below.
 
-## ⚠️ Belangrijk op macOS (lees dit)
-De Claude Code CLI-binary kan op macOS **geen socket openen naar een privé-LAN-IP**
-(192.168.x / 10.x / 172.16.x) — een bekende bug (issues #27828 / #55169). Daarom loopt de MCP
-via een **localhost-tunnel** (`launchd`, `localhost:<poort>` → server). Die tunnel is
-**globaal en wordt één keer opgezet** door de globale installatie — projecten aanzetten raakt
-hem nooit meer aan. Nodig: **passwordless SSH naar de server**:
+## ⚠️ Important on macOS (read this)
+On macOS the Claude Code CLI binary **cannot open a socket to a private LAN IP**
+(192.168.x / 10.x / 172.16.x) — a known bug (issues #27828 / #55169). That's why the MCP runs
+via a **localhost tunnel** (`launchd`, `localhost:<port>` → server). That tunnel is
+**global and set up once** by the global install — enabling projects never touches
+it again. Required: **passwordless SSH to the server**:
 ```bash
-ssh-copy-id user@host    # eenmalig, als 'ssh user@host' nog om een wachtwoord vraagt
+ssh-copy-id user@host    # one-time, if 'ssh user@host' still asks for a password
 ```
-Op **Linux** speelt dit niet: de MCP praat direct met het LAN-IP (geen tunnel).
+On **Linux** this doesn't apply: the MCP talks directly to the LAN IP (no tunnel).
 
-## Stap 1 — globaal installeren (één keer per machine)
+## Step 1 — install globally (once per machine)
 ```bash
 unzip -o hivemind-install.zip
 cd hivemind-install
-# macOS (met LAN-IP): geef het ssh-target mee
+# macOS (with a LAN IP): supply the ssh target
 ./hive-install-global.sh "<HIVE_URL>" "<HIVE_TOKEN>" "user@host"
-# Linux / publieke server: ssh-target mag weg
+# Linux / public server: the ssh target may be omitted
 ./hive-install-global.sh "<HIVE_URL>" "<HIVE_TOKEN>"
 ```
-Dit plaatst de helper-scripts in `~/.hivemind/scripts/`, bewaart de connectie in
-`~/.hivemind/config.json` (chmod 600), en zet op macOS+LAN-IP de tunnel op (idempotent —
-draai je het nog eens, dan blijft een actieve tunnel ongemoeid).
+This places the helper scripts in `~/.hivemind/scripts/`, stores the connection in
+`~/.hivemind/config.json` (chmod 600), and on macOS+LAN-IP sets up the tunnel (idempotent —
+run it again and an active tunnel is left untouched).
 
-## Stap 2 — aanzetten per project (waar relevant)
+## Step 2 — enable per project (where relevant)
 ```bash
 cd <project>
-~/.hivemind/scripts/hive-enable.sh "<anchors>"     # anchors optioneel
+~/.hivemind/scripts/hive-enable.sh "<anchors>"     # anchors optional
 ```
-Dit merget in dit project: `.claude/settings.json` (recall-hook + `HIVE_ENABLED=1` + creds)
-en `.mcp.json` (de `hivemind` MCP-server, alleen hier). Geen tunnel-gedoe. Start daarna een
-**nieuwe** Claude-sessie en keur de `hivemind` MCP-server goed.
+This merges into this project: `.claude/settings.json` (recall hook + `HIVE_ENABLED=1` + creds)
+and `.mcp.json` (the `hivemind` MCP server, only here). No tunnel fuss. Then start a
+**new** Claude session and approve the `hivemind` MCP server.
 
-> Eén-commando-variant (doet stap 1 idempotent + stap 2 voor het huidige project):
+> One-command variant (does step 1 idempotently + step 2 for the current project):
 > `./install.sh "<HIVE_URL>" "<HIVE_TOKEN>" "<anchors>" "user@host"`
 
-## Verifiëren
-- `claude mcp list` → `hivemind ... ✔` (op macOS pas na de tunnel + localhost-URL).
-- Of stel een projectspecifieke vraag die alleen uit de Nectar te beantwoorden is.
+## Verifying
+- `claude mcp list` → `hivemind ... ✔` (on macOS only after the tunnel + localhost URL).
+- Or ask a project-specific question that can only be answered from Nectar.
 
-## Belangrijk
-- **Token niet committen.** In een git-repo: `.claude/settings.json` en `.mcp.json` in
-  `.gitignore` (of `settings.local.json`).
-- **In een aangezet project: geen lokale markdown-memories.** Schrijf memories in de Nectar
-  via `hive_remember` (type `decision` voor keuzes), skills via `skill_put`.
-- **Bijwerken** gaat via de MCP-tool `hive_update` (of `~/.hivemind/scripts/hive-update.sh`) —
-  die ververst de globale scripts; je hoeft niet opnieuw te installeren.
-- Geen token? Vraag een org_admin: `hive_invite` (invite-code) of `/manage/tokens`.
+## Important
+- **Don't commit the token.** In a git repo: `.claude/settings.json` and `.mcp.json` in
+  `.gitignore` (or `settings.local.json`).
+- **In an enabled project: no local markdown memories.** Write memories into Nectar
+  via `hive_remember` (type `decision` for choices), skills via `skill_put`.
+- **Updating** goes via the MCP tool `hive_update` (or `~/.hivemind/scripts/hive-update.sh`) —
+  which refreshes the global scripts; you don't need to reinstall.
+- No token? Ask an org_admin: `hive_invite` (invite code) or `/manage/tokens`.
