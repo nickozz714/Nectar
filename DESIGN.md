@@ -212,12 +212,17 @@ tokens (plaintext shown once), grant secrets, and the **human review queue** for
 
 ## 12. v1 scope & open items
 
-**In v1**: everything above, plus the **hive GUI** at `/ui` (2026-07-25): a dependency-free
-single page (works offline) with an interactive force-directed graph of the mind
-(click = detail, double-click = expand neighborhood), semantic search, the swarm chore
-queue (resolve buttons for maintainers), the human review queue (org_admins) and basic
-account/token administration. Browsing the GUI does not rejuvenate memories — only
-actual use does.
+**In v1**: everything above, plus the **hive GUI** at `/ui` (2026-07-25): a single page
+(works offline) with an interactive force-directed graph of the mind
+(click = detail + expand, double-click = collapse, hover = tooltip), semantic search, the
+swarm chore queue (resolve buttons for maintainers), the human review queue (org_admins)
+and basic account/token administration. Browsing the GUI does not rejuvenate memories —
+only actual use does. Since 2026-08-09 the mind graph is a **React Flow island**
+(`graph-ui/`, Vite + d3-force layout with collision, bundled self-contained to
+`server/src/static/assets/` and served at `/ui/assets/`); the rest of the page stays
+vanilla JS and talks to it via the small `window.NectarGraph` bridge API. Rebuild with
+`cd graph-ui && npm install && npm run build`; the built bundle is committed, so the
+Docker image needs no Node.
 **Deliberately later**: rate
 limiting, full-text index for fallback search, backup automation (volume snapshots for
 now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking

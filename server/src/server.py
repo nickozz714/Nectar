@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.authentication.deps import AuthedAccount, require_account
 from src.components.config import get_settings
@@ -105,6 +106,9 @@ def ui():
     """The hive GUI: click through the mind, handle chores, review, manage accounts."""
     return (_STATIC / "index.html").read_text()
 
+
+# Built UI assets (the React Flow graph island bundle from graph-ui/): public, immutable files.
+app.mount("/ui/assets", StaticFiles(directory=_STATIC / "assets"), name="ui_assets")
 
 # Mounted last so named routes win; the MCP endpoint lives at /mcp.
 app.mount("/", mcp_app)

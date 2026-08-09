@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nectar</title>
+<!-- Favicon: a honey-amber honeycomb cell (self-contained SVG, no external file). -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l12 7v14l-12 7-12-7V9z' fill='%23f5a623'/%3E%3Cpath d='M16 8l6.5 3.75v7.5L16 23l-6.5-3.75v-7.5z' fill='%23b9741a'/%3E%3C/svg%3E">
+<!-- The mind-graph island (React Flow), built from graph-ui/ — self-contained, no CDN. -->
+<link rel="stylesheet" href="/ui/assets/graph.css">
 <style>
   :root {
     --bg: #14120e; --panel: #1e1b15; --panel2: #26221a; --line: #3a342a;
@@ -26,7 +30,7 @@
   #left { width: 290px; background: var(--panel); border-right: 1px solid var(--line); padding: 12px; }
   #center { flex: 1; position: relative; }
   #right { width: 360px; background: var(--panel); border-left: 1px solid var(--line); padding: 14px; display: none; }
-  svg { width: 100%; height: 100%; display: block; cursor: grab; }
+  #graphRoot { position: absolute; inset: 0; }
   input, select, textarea { width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 14px; margin-bottom: 8px; }
   .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); margin: 2px 0 10px; cursor: pointer; }
   .check input[type=checkbox] { width: auto; margin: 0; accent-color: var(--honey); }
@@ -406,7 +410,7 @@
     </div>
   </div>
   <div id="center">
-    <svg id="svg"></svg>
+    <div id="graphRoot"></div>
     <div class="gtoolbar">
       <button title="Inzoomen" onclick="zoomBy(0.8)">＋</button>
       <button title="Uitzoomen" onclick="zoomBy(1.25)">−</button>
@@ -441,6 +445,7 @@
   <button data-tab="beheer" onclick="showTab('beheer')"><span class="mi">⚙️</span><span class="ml">Beheer</span></button>
 </nav>
 
+<script src="/ui/assets/graph.js"></script>
 <script>
 const COLORS = { topic:"#e8a723", memory:"#5aa9e6", process:"#6cc551", workflow:"#3fc1c9",
                  skill:"#b085f5", convention:"#f08a4b", decision:"#e4572e", glossary:"#8d99ae",
@@ -463,11 +468,11 @@ function renderTypeFilter() {
 }
 function toggleType(t) {
   activeTypes.has(t) ? activeTypes.delete(t) : activeTypes.add(t);
-  renderTypeFilter(); render(); doSearch();
+  renderTypeFilter(); NectarGraph.setTypeFilter([...activeTypes]); doSearch();
 }
 function setAllTypes(on) {
   Object.keys(COLORS).forEach(t => on ? activeTypes.add(t) : activeTypes.delete(t));
-  renderTypeFilter(); render(); doSearch();
+  renderTypeFilter(); NectarGraph.setTypeFilter([...activeTypes]); doSearch();
 }
 let TOKEN = localStorage.getItem("hive_token") || "";
 let ME = null;
@@ -554,212 +559,22 @@ document.addEventListener("click", e => {
   if (m && m.classList.contains("open") && !m.contains(e.target) && e.target.id !== "acctBtn") closeAcctMenu();
 });
 
-/* ---------- force graph ---------- */
-const nodes = new Map();   // uid -> {uid,title,type,x,y,vx,vy}
-const links = [];          // {a,b}
-const linkKeys = new Set();
-const expanded = new Set(); // uids whose neighbours are shown (double-click toggles)
-let selected = null, dragging = null, panning = null, vb = {x:-500,y:-350,w:1000,h:700};
-let projectRoot = null;   // uid of the pinned project-topic centre (project filter), or null
+/* ---------- mind graph (React Flow island — bron: graph-ui/, bundle: /ui/assets/graph.js) ---------- */
 let sciFi = localStorage.getItem("hive_scifi") !== "off";   // sci-fi graph theme (default on, toggleable)
-const svg = document.getElementById("svg");
-
-function addNode(n) {
-  if (nodes.has(n.uid)) return nodes.get(n.uid);
-  const node = { ...n, x: (Math.random()-.5)*400, y: (Math.random()-.5)*300, vx:0, vy:0 };
-  nodes.set(n.uid, node); return node;
-}
-function addLink(a, b, rel) {
-  const k = a < b ? a+"|"+b : b+"|"+a;
-  if (linkKeys.has(k) || a === b) return;
-  linkKeys.add(k); links.push({ a, b, rel: rel || "contains" });
-}
-
-function tick() {
-  const ns = [...nodes.values()];
-  for (let i = 0; i < ns.length; i++) for (let j = i+1; j < ns.length; j++) {
-    const p = ns[i], q = ns[j];
-    let dx = q.x-p.x, dy = q.y-p.y, d2 = dx*dx+dy*dy || 1, d = Math.sqrt(d2);
-    const f = Math.min(3600/d2, 12);   // stronger repulsion — more air between nodes
-    dx /= d; dy /= d;
-    p.vx -= dx*f; p.vy -= dy*f; q.vx += dx*f; q.vy += dy*f;
-  }
-  for (const l of links) {
-    const p = nodes.get(l.a), q = nodes.get(l.b);
-    let dx = q.x-p.x, dy = q.y-p.y, d = Math.sqrt(dx*dx+dy*dy) || 1;
-    const f = (d-205)*0.02; dx /= d; dy /= d;   // longer rest length → more air, less clutter
-    p.vx += dx*f; p.vy += dy*f; q.vx -= dx*f; q.vy -= dy*f;
-  }
-  for (const n of ns) {
-    if (n.uid === HIVE_UID || n.uid === projectRoot) { n.x = 0; n.y = 0; n.vx = 0; n.vy = 0; continue; }  // pinned centre
-    if (n === dragging) continue;
-    n.vx -= n.x*0.0015; n.vy -= n.y*0.0015;
-    n.vx *= 0.85; n.vy *= 0.85; n.x += n.vx; n.y += n.vy;
-  }
-  render();
-  requestAnimationFrame(tick);
-}
-
-function render() {
-  svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
-  const showEdgeLabels = vb.w < 1600;  // hide relation labels when zoomed far out
-  const sf = sciFi, T = Date.now() / 1000;
-  // Soft focus: when a node is selected, dim everything that isn't it or a direct neighbour —
-  // enough to draw the eye, not so much that the rest disappears or becomes unclickable.
-  const focusUid = selected ? selected.uid : null;
-  let focusSet = null;
-  if (focusUid) {
-    focusSet = new Set([focusUid]);
-    for (const l of links) { if (l.a === focusUid) focusSet.add(l.b); if (l.b === focusUid) focusSet.add(l.a); }
-  }
-  const nodeOp = uid => (!focusSet || focusSet.has(uid)) ? 1 : 0.3;
-  const edgeLit = l => !focusSet || l.a === focusUid || l.b === focusUid;
-  let out = `<defs><marker id="arw" viewBox="0 0 10 10" refX="19" refY="5"
-    markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-    <path d="M0,0L10,5L0,10z" fill="${sf ? "#2f9fd8" : "#5c523f"}"/></marker>`;
-  if (sf) out += `<filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <radialGradient id="core" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#eaffff" stop-opacity="0.9"/>
-      <stop offset="32%" stop-color="#4fd6ff" stop-opacity="0.5"/>
-      <stop offset="100%" stop-color="#0a3a66" stop-opacity="0"/></radialGradient>`;
-  out += `</defs>`;
-  // edges
-  for (const l of links) {
-    const p = nodes.get(l.a), q = nodes.get(l.b);
-    if (!typeVisible(p.type) || !typeVisible(q.type)) continue;
-    const lit = edgeLit(l);
-    if (sf) {
-      const dash = l.rel === "relates" ? "3 9" : "7 7";   // animated energy flowing along the link
-      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#3aa8e0" stroke-width="1.5" stroke-dasharray="${dash}" stroke-dashoffset="${((-T * 22) % 14).toFixed(1)}" opacity="${lit ? 0.6 : 0.13}" marker-end="url(#arw)"/>`;
-    } else {
-      const dashed = l.rel === "relates" ? ` stroke-dasharray="5 4"` : "";   // RELATES = relaterend
-      out += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#4a4234" stroke-width="1.4"${dashed} opacity="${lit ? 1 : 0.15}" marker-end="url(#arw)"/>`;
-    }
-    if (showEdgeLabels && lit) {
-      const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
-      out += `<text x="${mx}" y="${my - 4}" text-anchor="middle" font-size="9"
-        fill="${sf ? "#6fb9dd" : "#8d8471"}" paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${l.rel}</text>`;
-    }
-  }
-  // the living reactor core (the "brain") behind the nodes, on the pinned hub / project root
-  if (sf) {
-    const c = nodes.get(HIVE_UID) || (projectRoot && nodes.get(projectRoot));
-    if (c) out += _sciCore(c.x, c.y, T);
-  }
-  for (const n of nodes.values()) {
-    if (!typeVisible(n.type)) continue;
-    const isHive = n.type === "hive", isAtt = n.type === "attachment";
-    const r = isHive ? 26 : isAtt ? 7 : n.type === "topic" ? 16 : 10;
-    const fill = isHive ? (sf ? "#eaffff" : HIVE_COLOR) : isAtt ? ATT_COLOR : (COLORS[n.type] || "#8d99ae");
-    let shape, extra = "";
-    if (sf) {
-      const st = n === selected ? `stroke="#eaffff" stroke-width="2.4"` : `stroke="#bff0ff" stroke-width="1"`;
-      if (isHive) shape = `<circle cx="${n.x}" cy="${n.y}" r="17" fill="url(#core)"/><circle cx="${n.x}" cy="${n.y}" r="6.5" fill="#eaffff" filter="url(#glow)"/>`;
-      else if (isAtt) shape = `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${st} filter="url(#glow)"/>`;
-      else shape = `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${st} filter="url(#glow)"/>`;
-    } else {
-      const sel = n === selected ? `stroke="#f6c85f" stroke-width="3"` : `stroke="#14120e" stroke-width="1.5"`;
-      shape = isAtt
-        ? `<rect x="${n.x - r}" y="${n.y - r}" width="${2*r}" height="${2*r}" rx="2" fill="${fill}" ${sel}/>`
-        : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" ${sel}/>`;
-    }
-    const label = `<text x="${n.x}" y="${n.y + r + 13}" text-anchor="middle" font-size="${isHive ? 13 : isAtt ? 9 : 11}" font-weight="${isHive ? 700 : 400}" fill="${sf ? "#dff4ff" : "#ded6c4"}"
-        paint-order="stroke" stroke="${sf ? "#04121f" : "#14120e"}" stroke-width="3">${esc((isAtt ? "📎 " : "") + (n.title.length > 28 ? n.title.slice(0,27)+"…" : n.title))}</text>`;
-    out += `<g data-uid="${n.uid}" style="cursor:pointer" opacity="${nodeOp(n.uid)}">${shape}${extra}${label}</g>`;
-  }
-  // Subtle collapse affordance: a small "−" badge on the selected node when it has visible children.
-  if (selected && selected.uid !== HIVE_UID && typeVisible(selected.type) && hasVisibleChildren(selected.uid)) {
-    const n = selected, r = _nodeRadius(n), bx = n.x + r + 9, by = n.y - r - 9;
-    const bc = sf ? "#4fd6ff" : "#f6c85f", bg = sf ? "#04121f" : "#26221a";
-    out += `<g data-collapse="${n.uid}" style="cursor:pointer"><title>Inklappen</title>
-      <circle cx="${bx}" cy="${by}" r="8.5" fill="${bg}" stroke="${bc}" stroke-width="1.3" opacity="0.95"/>
-      <line x1="${bx - 4}" y1="${by}" x2="${bx + 4}" y2="${by}" stroke="${bc}" stroke-width="1.7"/></g>`;
-  }
-  svg.innerHTML = out;
-}
-// The living reactor core (HUD rings + pulsing glow) drawn around the hub — the "brain".
-function _sciCore(cx, cy, T) {
-  const pulse = 0.6 + 0.4 * Math.sin(T * 1.6);
-  const rot = s => ((T * s) % 360).toFixed(1);
-  let s = `<circle cx="${cx}" cy="${cy}" r="165" fill="url(#core)" opacity="${(0.20 + 0.12 * pulse).toFixed(3)}"/>`;
-  s += `<circle cx="${cx}" cy="${cy}" r="40" fill="none" stroke="#8fe9ff" stroke-width="1.6" opacity="0.85" filter="url(#glow)"/>`;
-  s += `<circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="#38b6ff" stroke-width="3" stroke-dasharray="14 10" opacity="0.7" filter="url(#glow)" transform="rotate(${rot(16)} ${cx} ${cy})"/>`;
-  s += `<circle cx="${cx}" cy="${cy}" r="76" fill="none" stroke="#2b9fe6" stroke-width="2" stroke-dasharray="4 13" opacity="0.6" transform="rotate(${rot(-11)} ${cx} ${cy})"/>`;
-  s += `<circle cx="${cx}" cy="${cy}" r="95" fill="none" stroke="#1f7fc0" stroke-width="6" stroke-dasharray="2 28" opacity="0.5" filter="url(#glow)" transform="rotate(${rot(7)} ${cx} ${cy})"/>`;
-  return s;
-}
-function _nodeRadius(n) {
-  return n.type === "hive" ? 26 : n.type === "attachment" ? 7 : n.type === "topic" ? 16 : 10;
-}
-// A node is collapsible when it currently has a visible child hanging off it (directed child link).
-function hasVisibleChildren(uid) {
-  return links.some(l => l.a === uid && nodes.has(l.b) && typeVisible(nodes.get(l.b).type));
-}
-
-let pendingCollapse = null;   // set when the pointer goes down on a collapse badge
-svg.addEventListener("pointerdown", e => {
-  const cb = e.target.closest("[data-collapse]");
-  if (cb) { pendingCollapse = cb.getAttribute("data-collapse"); return; }  // don't drag/pan
-  const g = e.target.closest("g[data-uid]");
-  if (g) { dragging = nodes.get(g.dataset.uid); }
-  else panning = { dx: 0, dy: 0 };   // track movement so a still click ≠ a pan
-});
-svg.addEventListener("pointermove", e => {
-  const scale = vb.w / svg.clientWidth;
-  if (dragging) { dragging.x += e.movementX*scale; dragging.y += e.movementY*scale; }
-  else if (panning) { panning.dx += e.movementX; panning.dy += e.movementY; vb.x -= e.movementX*scale; vb.y -= e.movementY*scale; }
-});
-let clickTimer = null;   // defer the single-click expand so a double-click can cancel it
-svg.addEventListener("pointerup", e => {
-  if (pendingCollapse) { const u = pendingCollapse; pendingCollapse = null; collapseAndFocusParent(u); return; }
-  const wasPan = panning;
-  const g = e.target.closest("g[data-uid]");
-  const isClick = dragging && g && nodes.get(g.dataset.uid) === dragging;
-  const uid = isClick ? dragging.uid : null;
-  dragging = null; panning = null;
-  if (isClick) {
-    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
-    clickTimer = setTimeout(() => { clickTimer = null; clickNode(uid); }, 220);
-    return;
-  }
-  // a click in empty space (a pan that didn't really move) → drop focus, whole model back
-  if (wasPan && Math.hypot(wasPan.dx, wasPan.dy) < 4) clearGraphFocus();
-});
-svg.addEventListener("wheel", e => {
-  e.preventDefault();
-  zoomBy(e.deltaY > 0 ? 1.1 : 0.9);
-}, { passive: false });
-svg.addEventListener("dblclick", e => {   // double-click collapses (single-click expands)
-  if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }   // cancel the pending expand
-  const g = e.target.closest("g[data-uid]");
-  if (g && !g.dataset.uid.startsWith("att:") && g.dataset.uid !== HIVE_UID) collapseAndFocusParent(g.dataset.uid);
-});
 
 /* ---------- theme + zoom & panel controls ---------- */
 function applySciFi() {
   const c = document.getElementById("center"); if (c) c.classList.toggle("scifi", sciFi);
   const b = document.getElementById("sciBtn"); if (b) b.style.color = sciFi ? "#4fd6ff" : "";
+  NectarGraph.setSciFi(sciFi);
 }
 function toggleSciFi() {
   sciFi = !sciFi;
   localStorage.setItem("hive_scifi", sciFi ? "on" : "off");
   applySciFi();
 }
-function zoomBy(f) {   // f<1 zooms in, f>1 zooms out; keeps the viewBox centre fixed
-  vb = { x: vb.x + vb.w*(1-f)/2, y: vb.y + vb.h*(1-f)/2, w: vb.w*f, h: vb.h*f };
-}
-function fitView() {   // frame every visible node with padding
-  const vis = [...nodes.values()].filter(n => typeVisible(n.type));
-  if (!vis.length) { vb = { x:-500, y:-350, w:1000, h:700 }; return; }
-  let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
-  for (const n of vis) { minX=Math.min(minX,n.x); minY=Math.min(minY,n.y); maxX=Math.max(maxX,n.x); maxY=Math.max(maxY,n.y); }
-  const pad = 130; minX-=pad; minY-=pad; maxX+=pad; maxY+=pad;
-  let w = maxX-minX, h = maxY-minY;
-  const ar = (svg.clientWidth / svg.clientHeight) || 1.43;
-  if (w/h < ar) w = h*ar; else h = w/ar;
-  vb = { x: (minX+maxX)/2 - w/2, y: (minY+maxY)/2 - h/2, w, h };
-}
+function zoomBy(f) { f < 1 ? NectarGraph.zoomIn() : NectarGraph.zoomOut(); }
+function fitView() { NectarGraph.fit(); }
 function toggleLeft() {
   const el = document.getElementById("left");
   const hidden = el.classList.toggle("collapsed");
@@ -768,7 +583,7 @@ function toggleLeft() {
 function toggleRight() {
   const el = document.getElementById("right");
   const show = el.style.display === "none" || !el.style.display;
-  if (show && !selected) el.innerHTML = `<div class="section" style="color:var(--dim)">Selecteer een knoop om details te zien.</div>`;
+  if (show && !NectarGraph.getSelected()) el.innerHTML = `<div class="section" style="color:var(--dim)">Selecteer een knoop om details te zien.</div>`;
   el.style.display = show ? "block" : "none";
   document.getElementById("rightTab").textContent = show ? "›" : "‹";
 }
@@ -829,131 +644,12 @@ async function openHistory() {
 function closeHistory() { document.getElementById("histDrawer").classList.remove("open"); }
 async function histJump(uid) { closeHistory(); try { await jumpTo(uid); } catch (_) {} }
 
-// Single click: attachment → preview it; any other node → show its panel AND expand it.
-async function clickNode(uid) {
-  if (uid.startsWith("att:")) {
-    const a = nodes.get(uid); if (a) showAttachment(a.attUid, a.filename);
-    return;
-  }
-  if (uid === HIVE_UID) { selected = nodes.get(uid) || null; return; }
-  await selectNode(uid);
-  await expandNode(uid);
-}
+/* Thin wrappers around the graph island; the rest of the page keeps calling these. */
+async function expandNode(uid) { await NectarGraph.expand(uid); }
+async function selectNode(uid) { await NectarGraph.select(uid); }
 
-async function expandNode(uid) {
-  if (uid === HIVE_UID || uid.startsWith("att:")) return;   // not real graph nodes
-  const data = await api("/graph/neighbors/" + uid);
-  addNode(data);
-  const fresh = [];   // newly added children, to place them tidily
-  for (const nb of data.neighbors) {
-    const existed = nodes.has(nb.uid);
-    addNode(nb);
-    const rel = (nb.relation || "CONTAINS").toLowerCase();
-    nb.direction === "out" ? addLink(uid, nb.uid, rel) : addLink(nb.uid, uid, rel);
-    if (!existed) fresh.push(nb.uid);
-  }
-  // attachments show as small child nodes, so the overview is clearer
-  try {
-    for (const a of await api("/graph/node/" + uid + "/attachments")) {
-      const nid = "att:" + a.uid;
-      const existed = nodes.has(nid);
-      addNode({ uid: nid, title: a.filename, type: "attachment", attUid: a.uid, filename: a.filename });
-      addLink(uid, nid, "bijlage");
-      if (!existed) fresh.push(nid);
-    }
-  } catch (e) { /* attachments optional */ }
-  placeRadially(uid, fresh);   // directional fan into the free space, like a branch
-  expanded.add(uid);
-}
-// The node this one hangs off (its first visible parent via a contains/relates edge), so we
-// know which way is "inward". Falls back to the hub/origin for a top-level topic.
-function _parentAnchor(uid) {
-  for (const l of links) if (l.b === uid && l.a !== uid && nodes.has(l.a)) return nodes.get(l.a);
-  return { x: 0, y: 0 };
-}
-// Fan a node's freshly-shown children into an OUTWARD arc — away from the parent it hangs off —
-// so an expansion looks like an organized branch reaching into free space, not a ring/hairball.
-function placeRadially(parentUid, childUids) {
-  const p = nodes.get(parentUid); if (!p || !childUids.length) return;
-  const n = childUids.length;
-  const radius = Math.max(230, 120 + n * 26);
-  // outward direction = from the node's own parent (or the centre) toward this node
-  const anchor = _parentAnchor(parentUid);
-  let dx = p.x - anchor.x, dy = p.y - anchor.y, len = Math.hypot(dx, dy);
-  if (len < 1) { dx = p.x; dy = p.y; len = Math.hypot(dx, dy); }   // p near centre → radiate outward
-  const base = len < 1 ? 0 : Math.atan2(dy, dx);
-  const span = Math.min(Math.PI, 0.6 + n * 0.3);                   // at most a HALF circle, always fanning outward
-  const step = n > 1 ? span / (n - 1) : 0;
-  childUids.forEach((k, i) => {
-    const node = nodes.get(k); if (!node) return;
-    const ang = base + (i - (n - 1) / 2) * step;   // centred on the outward direction
-    node.x = p.x + radius * Math.cos(ang);
-    node.y = p.y + radius * Math.sin(ang);
-    node.vx = node.vy = 0;
-  });
-}
-
-function _adjacency() {
-  const m = new Map();
-  const add = (a, b) => { (m.get(a) || m.set(a, new Set()).get(a)).add(b); };
-  for (const l of links) { add(l.a, l.b); add(l.b, l.a); }
-  return m;
-}
-// nodes reachable from `start`, without ever passing THROUGH `block` (block itself stays reachable)
-function _reach(start, block) {
-  const adj = _adjacency(), seen = new Set([start]), q = [start];
-  while (q.length) {
-    const u = q.shift();
-    if (u === block) continue;
-    for (const v of (adj.get(u) || [])) if (!seen.has(v)) { seen.add(v); q.push(v); }
-  }
-  return seen;
-}
-function _parentUid(uid) {   // the node this one hangs off (first visible CONTAINS/RELATES parent)
-  for (const l of links) if (l.b === uid && l.a !== uid && nodes.has(l.a)) return l.a;
-  return null;
-}
-function clearGraphFocus() {   // deselect → render dims nothing, whole model visible again
-  selected = null;
-  document.getElementById("right").style.display = "none";
-}
-// Collapse a node's subtree and move the focus to its parent (so you walk back up the branch).
-function collapseAndFocusParent(uid) {
-  const parentUid = _parentUid(uid);   // capture before collapsing changes the graph
-  collapseNode(uid);
-  if (parentUid && parentUid !== HIVE_UID && nodes.has(parentUid)) selectNode(parentUid);
-  else if (parentUid === HIVE_UID) { selected = nodes.get(HIVE_UID) || null; document.getElementById("right").style.display = "none"; }
-  else clearGraphFocus();
-}
-function collapseNode(uid) {
-  // descendants of uid via directed child links (a = parent)
-  const childAdj = new Map();
-  for (const l of links) (childAdj.get(l.a) || childAdj.set(l.a, []).get(l.a)).push(l.b);
-  const desc = new Set(); const q = [uid];
-  while (q.length) { const u = q.shift(); for (const c of (childAdj.get(u) || [])) if (c !== uid && !desc.has(c)) { desc.add(c); q.push(c); } }
-  // keep any descendant still reachable from the hub WITHOUT going through uid (anchored elsewhere)
-  const blocked = _reach(HIVE_UID, uid);
-  const gone = new Set([...desc].filter(d => !blocked.has(d)));
-  if (!gone.size) { expanded.delete(uid); return; }
-  for (const k of gone) {
-    nodes.delete(k); expanded.delete(k);
-    if (selected && selected.uid === k) { selected = null; document.getElementById("right").style.display = "none"; }
-  }
-  for (let i = links.length - 1; i >= 0; i--)
-    if (gone.has(links[i].a) || gone.has(links[i].b)) links.splice(i, 1);
-  linkKeys.clear();
-  for (const l of links) linkKeys.add(l.a < l.b ? l.a + "|" + l.b : l.b + "|" + l.a);
-  expanded.delete(uid);
-}
-
-async function selectNode(uid) {
-  if (uid === HIVE_UID) { selected = nodes.get(uid) || null; return; }
-  if (uid.startsWith("att:")) {   // attachment node — preview it, don't download yet
-    const a = nodes.get(uid);
-    if (a) showAttachment(a.attUid, a.filename);
-    return;
-  }
-  selected = nodes.get(uid) || null;
+/* Renders the right-hand detail panel for a node (the island calls this on select). */
+async function renderNodePanel(uid) {
   const n = await api("/graph/node/" + uid);
   const right = document.getElementById("right");
   right.style.display = "block";
@@ -1077,7 +773,7 @@ async function supersedeNode(oldUid) {
   try { await api("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: oldUid, new_uid: sel.uid }) }); await selectNode(oldUid); }
   catch (e) { alert(e.message); }
 }
-async function jumpTo(uid) { await expandNode(uid); await selectNode(uid); }
+async function jumpTo(uid) { await NectarGraph.jumpTo(uid); }
 async function loadAttachments(uid) {
   const el = document.getElementById("attList"); if (!el) return;
   try {
@@ -1155,9 +851,8 @@ async function moveNode(uid) {
   const keep = document.getElementById("moveKeep").checked;
   try {
     await api(`/graph/node/${uid}/move`, { method: "POST", body: JSON.stringify({ to_topic: to, keep_others: keep }) });
-    links.length = 0; linkKeys.clear(); nodes.clear(); expanded.clear();  // rebuild graph so the new parent shows
-    selected = null;
-    await loadTopics(); await selectNode(uid);
+    await loadTopics();   // rebuild graph so the new parent shows
+    await jumpTo(uid);
   } catch (e) { alert(e.message); }
 }
 async function mergeTopic() {
@@ -1168,7 +863,6 @@ async function mergeTopic() {
   try {
     await api("/graph/topics/merge", { method: "POST", body: JSON.stringify({ from_topic: from, into_topic: into }) });
     document.getElementById("right").style.display = "none";
-    nodes.clear(); links.length = 0; linkKeys.clear(); expanded.clear(); selected = null;
     await loadTopics();
   } catch (e) { alert(e.message); }
 }
@@ -1176,7 +870,7 @@ async function newTopic() {
   const title = prompt("Naam van het nieuwe topic:"); if (!title) return;
   const parent = prompt("Onder welk bestaand topic hangen? (leeg = top-level)") || "";
   try { await api("/graph/topics", { method: "POST", body: JSON.stringify({ title, parent_topic: parent }) });
-    nodes.clear(); links.length = 0; linkKeys.clear(); expanded.clear(); await loadTopics(); }
+    await loadTopics(); }
   catch (e) { alert(e.message); }
 }
 
@@ -1191,11 +885,8 @@ async function loadTopics() {
   renderProjectFilter();
   // One central Nectar hub. Default view = ONLY the top-level topics hang off it;
   // sub-topics and member nodes stay hidden until you click a topic to expand it.
-  addNode({ uid: HIVE_UID, title: "Nectar", type: "hive" });
-  for (const t of data.topics) if (!hasParent.has(t.uid)) {
-    addNode({ uid: t.uid, title: t.title, type: "topic" });
-    addLink(HIVE_UID, t.uid, "bevat");
-  }
+  NectarGraph.setRoot(data.topics.filter(t => !hasParent.has(t.uid))
+    .map(t => ({ uid: t.uid, title: t.title })));
   document.getElementById("topicList").innerHTML = data.topics.map(t =>
     `<div class="item" onclick="jumpTo('${t.uid}')">${esc(t.title)} <span class="t">${t.children} items</span></div>`).join("")
     || `<div class="t" style="color:var(--dim)">Nog geen topics — de eerste hive_remember maakt ze.</div>`;
@@ -1209,15 +900,10 @@ function renderProjectFilter() {
 }
 // Focus the graph on one project (a top-level topic + its subtree), or reset to the full hub.
 async function selectProject(uid) {
-  nodes.clear(); links.length = 0; linkKeys.clear(); expanded.clear(); selected = null;
   document.getElementById("right").style.display = "none";
-  vb = { x: -600, y: -420, w: 1200, h: 840 };
-  if (!uid) { projectRoot = null; await loadTopics(); return; }
-  projectRoot = uid;   // pin the project topic at the centre for a clean sunburst
+  if (!uid) { await loadTopics(); return; }
   const p = PROJECTS.find(x => x.uid === uid);
-  const root = addNode({ uid, title: p ? p.title : "project", type: "topic" });
-  root.x = 0; root.y = 0;
-  await expandNode(uid);   // show the project's direct children; expand further as needed
+  await NectarGraph.setProject(uid, p ? p.title : "project");
 }
 
 async function doSearch() {
@@ -1235,9 +921,7 @@ async function deleteNode(uid, title) {
   try {
     await api("/graph/node/" + uid, { method: "DELETE" });
     document.getElementById("right").style.display = "none";
-    nodes.delete(uid); linkKeys.clear();
-    for (let i = links.length - 1; i >= 0; i--) if (links[i].a === uid || links[i].b === uid) links.splice(i, 1);
-    selected = null;
+    NectarGraph.remove(uid);
   } catch (e) { alert(e.message); }
 }
 
@@ -2105,8 +1789,19 @@ function boot() {
     `<span><span class="dot" style="background:${c}"></span>${t}</span>`).join("")
     + `<span style="opacity:.6">· dubbelklik knoop: uit-/inklappen</span>`;
   renderTypeFilter();
+  // The graph island: React Flow + d3-force (see graph-ui/). The bridge gives it the API
+  // + callbacks into this page; everything else here talks to it via window.NectarGraph.
+  NectarGraph.mount(document.getElementById("graphRoot"), {
+    api,
+    colors: COLORS, hiveColor: HIVE_COLOR, attColor: ATT_COLOR,
+    hiveUid: HIVE_UID, hiveTitle: "Nectar",
+    onShowNode: renderNodePanel,
+    onAttachmentOpen: showAttachment,
+    onSelectionCleared: () => { document.getElementById("right").style.display = "none"; },
+  });
+  NectarGraph.setSciFi(sciFi);
+  NectarGraph.setTypeFilter([...activeTypes]);
   loadTopics();
-  requestAnimationFrame(tick);
 }
 
 async function doWizard() {
