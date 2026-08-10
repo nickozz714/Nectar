@@ -19,6 +19,16 @@ Not: session details, personal data, one-off trivia. Record explicit choices the
 as their own `decision`. Titles are specific and searchable; content is
 self-contained and readable on its own. The write-gate guards quality, PII and duplicates.
 
+**Local model memory (MEMORY.md, auto-memory, notepads) is scratch, not long-term memory.**
+Modern clients (Claude Code CLI among them) keep their own local memory files. Treat those as
+what they are: short-term, machine-local scratch — session state, personal working notes,
+drafts. They live on one machine, under one account, unversioned by the org, invisible to every
+other agent, and they rot. They are NOT the organisation's long-term memory; the hive is. The
+working rule: the moment something in a local memory file proves **reusable for the
+organisation** (a way of working, a decision, a gotcha, a convention), promote it — write it to
+the hive with `hive_remember` and let the local note expire. Never let org knowledge fork into
+local files: if it matters beyond this machine and this week, it belongs in the hive.
+
 ## Active task — stay on course (`focus_set` / `focus_advance`)
 Long sessions drift: through "lost in the middle" and compaction the plan falls out of
 context and the model starts doing something else. Antidote: the **active focus**, which the recall hook
