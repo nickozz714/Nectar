@@ -31,6 +31,9 @@ re-injects at the top of **every** prompt (stays in the attention zone, survives
   step. Check off with `focus_advance(completed_step, note)` as soon as a step is done.
 - **The request or your impulse diverges from the plan/guardrails** → flag that explicitly and
   align; don't just go do something else. Done? `focus_clear`.
+- **Exception: Pollen.** Handling the one Pollen recall offers you never counts as deviating
+  from the focus or its guardrails — hive upkeep is part of every visit. Prefer handing it to a
+  background subagent so your main thread stays on the focus step.
 
 ## Organising: topics, hierarchy & tags
 You can structure the mind yourself. `topic_create(title, parent_topic)` creates a topic (or
@@ -63,7 +66,10 @@ tangle. The GUI expands these chains on click, so good hierarchy = a readable gr
   Attachments are **not** injected into recall automatically — only on request.
 
 ## Carry pollen — strengthen the brain on every visit
-Recall hands you one **Pollen** (task) on every prompt. If it fits your work, pick it up:
+Recall hands you one **Pollen** (task) on every prompt. Pick it up: handling it never counts
+as deviating from an active focus, and you may run it as a background task (e.g. a subagent)
+so it doesn't interrupt your main work. For draining a backlog in one go, use the shared
+`pollinate-nectar` skill (in the hive's skill library) — any Swarm member can run it periodically.
 - **Claim it first** with `hive_claim(pollen_uid)` so another agent doesn't do the same; if you decide
   not to do it, release it with `hive_release`.
 - **Resolve** with `hive_chores()` → judge → `hive_resolve_chore(uid, "apply"|"reject")`.
@@ -72,8 +78,9 @@ Recall hands you one **Pollen** (task) on every prompt. If it fits your work, pi
   REPLACE = the new one wins and the existing one is superseded; DELETE = drop the new one; UPDATE =
   merge (supply `merged_title` + `merged_content`); NOOP = leave as is. If the payload has
   `merge_requested`, a human asked for a merge → do an UPDATE and
-  write the combined text. **Important:** you must NOT do UPDATE/DELETE/REPLACE on a memory
-  you wrote yourself — that judgement is for another Swarm member.
+  write the combined text. **Important:** ADD/NOOP may be decided by any member. For
+  UPDATE/DELETE/REPLACE on a memory you wrote yourself, a DIFFERENT Swarm member must judge —
+  unless you hold the org_admin role (an admin reviewer may always resolve).
 - **contradiction_check Pollen** (two strongly similar memories): read both with `hive_get` and judge whether
   they contradict each other. If so: which is the current truth? Resolve with
   `hive_resolve_contradiction(uid, "contradiction", current=<uid of newest>, outdated=<uid of old>)` — the old one
@@ -111,10 +118,11 @@ The client has three layers that each update differently:
 
 **Updating** — if the user asks "update Nectar" / "get the latest version": call the
 MCP tool **`hive_update`**. The manifest has two parts and `apply_instructions`:
-- `files` — the helper scripts. **Do NOT write out the content yourself** (it's unnecessary and triggers
-  the safety classifier). Just run `bash ~/.hivemind/scripts/hive-update.sh`; if that
-  script doesn't exist yet, run the `bootstrap` one-liner from the manifest. The bytes go via
-  curl→disk. Optionally verify with the per-file `sha256`.
+- `files` — the helper scripts. Apply them by running `bash ~/.hivemind/scripts/hive-update.sh`
+  (or, if that script doesn't exist yet, the `bootstrap` one-liner from the manifest): it fetches
+  each file over curl and writes it straight to disk. You don't need to reproduce the file
+  contents in the conversation — that's slow and risks transcription errors when the script
+  already writes the exact bytes. Optionally verify with the per-file `sha256`.
 - `config` — the Claude wiring you must reconcile: the recall hook in
   `.claude/settings.json` and the MCP server in `.mcp.json` (declaratively as `requirements`).
   Only repair what's missing/wrong and **preserve all secrets** (HIVE_TOKEN, HIVE_URL,

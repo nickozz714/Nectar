@@ -348,7 +348,8 @@ def render_pollen(pollen: dict) -> str:
         how = (f"Beoordeel 'm op inhoud en los 'm op met `hive_chores()` → "
                f"`hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
     return (f"🌼 **Pollen** — draag bij aan de Hive terwijl je hier toch bent: {what} "
-            f"voor *{node}*{detail}. Past het bij je taak? {how}")
+            f"voor *{node}*{detail}. Dit telt níét als afwijken van een actieve focus en mag "
+            f"als background-taak (subagent) naast je hoofdwerk. {how}")
 
 
 def resolve_think(

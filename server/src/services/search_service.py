@@ -210,7 +210,9 @@ def render_focus(focus: dict) -> str:
     if notes:
         lines.append("**Laatste voortgang:** " + notes[-1])
     lines.append("_Herlees dit vóór elke stap. Wijkt de vraag hiervan af? Meld het eerst — "
-                 "ga niet zomaar iets anders doen. Werk je stap af? Update met `focus_advance`._")
+                 "ga niet zomaar iets anders doen. Uitzondering: het aangeboden 🌼 Pollen "
+                 "afhandelen telt níét als afwijken (mag ook via een background-subagent). "
+                 "Werk je stap af? Update met `focus_advance`._")
     return "\n".join(lines)
 
 

@@ -121,8 +121,10 @@ class Settings(BaseSettings):
     ATTACHMENT_MAX_MB: int = 15
     DEDUP_SIMILARITY_THRESHOLD: float = 0.92
     # Grey zone: similar-but-not-identical writes are created AND flagged as a dedup
-    # chore so the swarm reviews them.
-    DEDUP_REVIEW_THRESHOLD: float = 0.85
+    # chore so the swarm reviews them. Kept close under the dedup threshold: a project-heavy
+    # corpus (worklogs sharing one vocabulary) clusters above 0.85, and a live backlog of 30
+    # op_route Pollen judged at 0.85 turned out to be ~90% "keep both" — false alarms.
+    DEDUP_REVIEW_THRESHOLD: float = 0.88
     # New parent topics are matched semantically against existing topics first, to
     # prevent near-duplicate topic sprawl ("Fabric" vs "Fabric werkwijzen").
     TOPIC_SIMILARITY_THRESHOLD: float = 0.85

@@ -65,6 +65,25 @@ def test_grey_zone_creates_and_files_chore(graph, account):
     assert any(c["type"] == "op_route" and c["status"] == "ready" for c in chores)
 
 
+def test_grey_zone_cross_type_skips_chore(graph, account):
+    from src.repository import governance_repo
+
+    acc = account()
+    # Same grey-band similarity as above, but the lookalike is a LEARNING next to a MEMORY:
+    # a deliberate pair (lesson next to the decision it came from), not a duplicate — so no
+    # op_route Pollen is filed, only an informational note.
+    title = "titelwoorddeel"
+    _remember(graph, acc, title,
+              "woordaaa woordbbb woordccc woordddd woordeee woordfff woordggg", ["Onderwerp"])
+    res = _remember(graph, acc, title,
+                    "woordaaa woordbbb woordccc woordddd woordeee woordhhh wooooiii", ["Onderwerp"],
+                    type_="learning")
+    assert res["created"] is True
+    assert any("different type" in n for n in res["notes"])
+    chores = governance_repo.open_chores(graph, acc, limit=10)
+    assert not any(c["type"] == "op_route" for c in chores)
+
+
 def test_sensitivity_classification(graph, account):
     acc = account()
     plain = _remember(graph, acc, "Gewone werkwijze zonder geheimen",

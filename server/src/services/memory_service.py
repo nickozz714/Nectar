@@ -154,7 +154,18 @@ def remember(
                     "or use hive_suggest to propose an edit if the existing one is outdated.",
                 }
             if sim >= settings.DEDUP_REVIEW_THRESHOLD and existing.get("type") != "topic":
-                grey_zone_of = {"uid": existing["uid"], "title": existing["title"], "sim": sim}
+                if existing.get("type") == type_:
+                    grey_zone_of = {"uid": existing["uid"], "title": existing["title"], "sim": sim}
+                else:
+                    # Cross-type lookalikes (a learning next to the decision it came from, a
+                    # process next to its pitfall) are how the hive is MEANT to grow — flagging
+                    # them buries the swarm in "keep both" verdicts, so only same-type pairs
+                    # become an op_route Pollen.
+                    notes.append(
+                        f"similar to existing '{existing['title']}' ({existing.get('type')}, "
+                        f"similarity {sim:.2f}) but of a different type; kept both without a "
+                        "review-Pollen — consider hive_relate to link them"
+                    )
 
     node = graph_repo.create_knowledge(
         session, account, type_, title, content, scope, embedding, created_by_model=model_name,
@@ -170,7 +181,9 @@ def remember(
                 "instruction": ("Twee bijna-gelijke memories. Beslis: ADD (het zijn echt aparte "
                                 "weetjes, behoud beide), UPDATE (voeg samen tot één betere — lever "
                                 "merged_title + merged_content), DELETE (dit nieuwe is een dubbel, "
-                                "schrap het), of NOOP (laat zo). Een ánder Swarm-lid moet dit oordelen."),
+                                "schrap het), of NOOP (laat zo). ADD/NOOP mag elk Swarm-lid; alleen "
+                                "voor UPDATE/DELETE/REPLACE geldt: niet door de schrijver van de "
+                                "nieuwe memory zelf, tenzij die org_admin is (een admin mag altijd)."),
                 "duplicate_uid": grey_zone_of["uid"],
                 "duplicate_title": grey_zone_of["title"],
                 "similarity": round(grey_zone_of["sim"], 3),
