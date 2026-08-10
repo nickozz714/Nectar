@@ -6,7 +6,8 @@ from src.authentication.deps import AuthedAccount, require_account
 from src.services import kit_service
 
 # Serve individual client-kit scripts so an update can FETCH them (curl -> disk) instead of
-# the model writing the bodies out — the latter is slow and trips content classifiers.
+# the model transcribing the bodies — fetching is faster and byte-exact (a re-typed script
+# risks errors).
 router = APIRouter(prefix="/kit", tags=["kit"])
 
 

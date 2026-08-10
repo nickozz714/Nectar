@@ -134,7 +134,7 @@ def read_kit_file(name: str) -> bytes | None:
 def build_manifest() -> dict:
     """Self-describing update manifest. Scripts are FETCHED (sha256 + a download path), not
     inlined — so applying an update never routes script bodies through the model (faster,
-    and it does not trip content classifiers)."""
+    and byte-exact rather than re-transcribed)."""
     zpath = _zip_path()
     if zpath is None:
         return {"error": "install package not found on the server", "files": []}
