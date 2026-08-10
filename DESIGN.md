@@ -154,8 +154,10 @@ Packaging: one **Claude Code plugin** = MCP server config + hooks + skills. Inst
   (the bee rephrases without the personal data).
 - **Dedup, two bands**: similarity ≥ `DEDUP_SIMILARITY_THRESHOLD` (0.92) → not created,
   the existing node is touched and returned. Grey zone ≥ `DEDUP_REVIEW_THRESHOLD`
-  (0.80) → created, **but a dedup chore is auto-filed** so the swarm judges whether it
-  is really new. Nothing similar slips in silently.
+  (0.88) → created, **but a dedup chore is auto-filed** so the swarm judges whether it
+  is really new — only for **same-type** pairs: a cross-type lookalike (a learning next
+  to its decision) is a deliberate pair, noted but not flagged. Nothing similar slips in
+  silently.
 - **Topic-sprawl prevention**: parent topics are matched semantically against existing
   topics first (`TOPIC_SIMILARITY_THRESHOLD`, 0.85) — "Fabric werkwijze" links under the
   existing "Fabric werkwijzen" instead of creating a near-duplicate topic. Only a
