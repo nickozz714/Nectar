@@ -109,7 +109,8 @@ def open_chores(session: Session, account: AuthedAccount, limit: int = 5) -> lis
         OPTIONAL MATCH (voter:Account)-[v:VOTED]->(c)
         WITH c, n, count(DISTINCT voter) AS votes
         RETURN c.uid AS uid, c.type AS type, c.status AS status, c.payload AS payload,
-               votes, n.uid AS node_uid, n.title AS node_title
+               votes, c.claimed_by AS claimed_by, c.claimed_at AS claimed_at,
+               n.uid AS node_uid, n.title AS node_title
         ORDER BY CASE c.status WHEN 'ready' THEN 0 ELSE 1 END, c.created
         LIMIT $limit
         """,

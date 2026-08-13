@@ -1150,7 +1150,8 @@ async function loadChores() {
         <span class="pchip">${esc(c.type)}</span>
         <span class="pchip" style="color:${sc}">${esc(c.status)}</span>
         ${v.similarity != null ? `<span class="pchip psim">gelijkenis ${Number(v.similarity).toFixed(2)}</span>` : ""}
-        ${c.status !== "ready" && c.votes != null ? `<span class="pchip">${c.votes} stem(men)</span>` : ""}</div>
+        ${c.status !== "ready" && c.votes != null ? `<span class="pchip">${c.votes} stem(men)</span>` : ""}
+        ${c.claimed_by_name ? `<span class="pchip" style="color:${c.claim_active ? "var(--honey2)" : "var(--dim)"}">🐝 ${c.claim_active ? "geclaimd door" : "eerder geclaimd door"} ${esc(c.claimed_by_name)}</span>` : ""}</div>
       ${v.explain ? `<div class="pexplain">${esc(v.explain)}</div>` : ""}
       ${pBody(v, c.type)}
       ${pButtons(c)}</div>`;
@@ -1160,7 +1161,7 @@ async function loadChores() {
     const v = c.view || {}, ok = c.status === "resolved";
     return `<div class="pcard" style="opacity:.72;padding:11px 14px">
       <div class="phead"><span class="ptitle" style="font-size:14px">${ok ? "✓" : "✗"} ${esc(v.headline || c.type)}</span>
-        <span class="pchip" style="color:${ok ? "var(--green)" : "var(--gray)"}">${ok ? "toegepast" : "afgewezen"}${c.resolved ? " · " + fmt(c.resolved) : ""}</span></div>
+        <span class="pchip" style="color:${ok ? "var(--green)" : "var(--gray)"}">${ok ? "toegepast" : "afgewezen"}${c.resolved_by_name ? " door " + esc(c.resolved_by_name) : ""}${c.resolved ? " · " + fmt(c.resolved) : ""}</span></div>
       ${v.primary && v.primary.title ? `<div class="mtitle" style="font-weight:500;color:var(--dim)">${esc(v.primary.title)}</div>` : ""}
       ${c.resolution ? `<div class="t" style="margin-top:4px;color:var(--dim)">${esc(c.resolution)}</div>` : ""}</div>`;
   }).join("") || `<p style="color:var(--dim)">Nog niets afgehandeld.</p>`;

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from src.authentication.deps import AuthedAccount, has_role, require_account
 from src.components.db import get_graph
-from src.repository import audit_repo, governance_repo, graph_repo
+from src.repository import audit_repo, governance_repo, graph_repo, tenancy_repo
 from src.models.core import ChoreDecision
 from src.services import curation_service, governance_service, memory_service, search_service
 
@@ -552,10 +552,27 @@ def chores(
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
+    import time
+
+    from src.components.config import get_settings
+
     open_ch = governance_repo.open_chores(session, account, limit=25)
     done_ch = governance_repo.resolved_chores(session, account, limit=25)
     for c in open_ch + done_ch:
         c["view"] = governance_service.build_pollen_view(session, account, c)
+    # "Who picked this up?" — map claimer/resolver uids to account names for the queue.
+    names = tenancy_repo.account_names(
+        session, account.org_uid,
+        [c.get("claimed_by") for c in open_ch] + [c.get("resolved_by") for c in done_ch])
+    claim_ttl_ms = get_settings().CLAIM_TTL_MIN * 60_000
+    now_ms = int(time.time() * 1000)
+    for c in open_ch:
+        if c.get("claimed_by"):
+            c["claimed_by_name"] = names.get(c["claimed_by"], "onbekend")
+            c["claim_active"] = bool(c.get("claimed_at") and c["claimed_at"] > now_ms - claim_ttl_ms)
+    for c in done_ch:
+        if c.get("resolved_by"):
+            c["resolved_by_name"] = names.get(c["resolved_by"], "onbekend")
     return {
         "ready": governance_repo.ready_count(session, account),
         "chores": open_ch,

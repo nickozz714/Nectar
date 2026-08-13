@@ -273,6 +273,20 @@ def set_consensus_threshold(session: Session, org_uid: str, n: int) -> int:
     return int(n)
 
 
+def account_names(session: Session, org_uid: str, uids: list[str]) -> dict:
+    """Batch-map account uids to display names (org-scoped) — for 'who claimed/resolved
+    which Pollen' in the queue, so the GUI shows names, never uids."""
+    uids = [u for u in dict.fromkeys(uids) if u]
+    if not uids:
+        return {}
+    rows = session.run(
+        "MATCH (a:Account {org_uid: $o}) WHERE a.uid IN $uids "
+        "RETURN a.uid AS uid, a.name AS name",
+        o=org_uid, uids=uids,
+    )
+    return {r["uid"]: r["name"] for r in rows}
+
+
 def get_cognition_enabled(session: Session, org_uid: str) -> bool:
     """Whether cognition-Pollen (optional world research on new memories) is on for this
     org. Off unless explicitly enabled — research costs web searches and tokens."""
