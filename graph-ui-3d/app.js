@@ -52,6 +52,7 @@ const state = {
 };
 
 const litNodes = [];
+let focusSet = null;      // ids that keep full presence while a selection dims the rest
 const linkSrc = l => (typeof l.source === "object" ? l.source.id : l.source);
 const linkTgt = l => (typeof l.target === "object" ? l.target.id : l.target);
 
@@ -101,16 +102,19 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
     halo.scale.set(r * 3.6, r * 3.6, 1);
     group.add(halo);
     n.__mat = mat; n.__halo = halo.material; n.__haloBase = halo.material.opacity;
-    if (n.type === "topic" && (n.children || 0) >= 6) {   // labels only where they earn it
-      const s = new SpriteText(n.title, 2.9, "#ffe2b8");
-      s.fontFace = "Menlo, monospace";
-      s.backgroundColor = false;
-      s.strokeColor = "#02040a";
-      s.strokeWidth = 1.4;
-      s.material.depthWrite = false;
-      s.position.y = r + 4;
-      group.add(s);
-    }
+    /* every node carries its label; semantic zoom decides visibility (see label loop) */
+    const isTopic = n.type === "topic";
+    const s = new SpriteText(n.title, isTopic ? 2.9 : 2.1, isTopic ? "#ffe2b8" : "#b9d2e4");
+    s.fontFace = "Menlo, monospace";
+    s.backgroundColor = false;
+    s.strokeColor = "#02040a";
+    s.strokeWidth = 1.4;
+    s.material.depthWrite = false;
+    s.material.transparent = true;
+    s.position.y = r + (isTopic ? 4 : 3);
+    s.visible = isTopic;
+    group.add(s);
+    n.__label = s;
     return group;
   })
   .nodeVisibility(nodeVisible)
@@ -223,14 +227,28 @@ setInterval(() => {
     Graph.emitParticle(links[Math.floor(Math.random() * links.length)]);
 }, 480);
 
-/* breathing: every node's emissive core oscillates gently around its base level */
-(function breathe() {
+/* per frame: breathing cores + semantic-zoom labels.
+   Labels: topics always (wayfinding); knowledge nodes reveal their title as the camera
+   comes near, fading in over distance. A selection narrows labels to its focus set. */
+const LABEL_NEAR = 110, LABEL_FAR = 210;
+(function frameLoop() {
   const t = performance.now();
-  for (const n of data.nodes)
+  const cam = Graph.camera().position;
+  for (const n of data.nodes) {
     if (n.__mat)
       n.__mat.emissiveIntensity =
         (n.__base ?? 0.7) + 0.14 * Math.sin(t * 0.0016 + (n.__phase ??= Math.random() * 6.28));
-  requestAnimationFrame(breathe);
+    if (n.__label && n.x !== undefined) {
+      const inFocus = !focusSet || focusSet.has(n.id);
+      if (!inFocus) { n.__label.visible = false; continue; }
+      if (n.type === "topic") { n.__label.visible = true; n.__label.material.opacity = 1; continue; }
+      const d = Math.hypot(cam.x - n.x, cam.y - n.y, cam.z - n.z);
+      const o = focusSet ? 1 : Math.max(0, Math.min(1, (LABEL_FAR - d) / (LABEL_FAR - LABEL_NEAR)));
+      n.__label.visible = o > 0.03;
+      n.__label.material.opacity = o;
+    }
+  }
+  requestAnimationFrame(frameLoop);
 })();
 
 /* starry sky, two layers: faint dust + a sparser bright layer that twinkles past the fog */
@@ -267,6 +285,7 @@ function applyDim() {
   const focus = state.selected
     ? new Set([state.selected.id, ...(nbrs.get(state.selected.id) || [])])
     : null;
+  focusSet = focus;
   for (const n of data.nodes) {
     if (!n.__mat) continue;
     if (!focus) { n.__base = 0.7; n.__halo.opacity = n.__haloBase; }
