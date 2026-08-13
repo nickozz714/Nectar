@@ -118,16 +118,6 @@
                    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
                    padding: 5px 9px !important; letter-spacing: .04em; }
 </style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "./node_modules/three/build/three.module.js",
-    "three/addons/": "./node_modules/three/examples/jsm/",
-    "3d-force-graph": "./node_modules/3d-force-graph/dist/3d-force-graph.mjs",
-    "three-spritetext": "./node_modules/three-spritetext/dist/three-spritetext.mjs"
-  }
-}
-</script>
 </head>
 <body>
 <div id="graph"></div>
@@ -167,6 +157,15 @@
 
 <div id="splash"><div class="ring"></div><div class="t">mind wordt geladen…</div></div>
 
-<script type="module" src="./app.js"></script>
+<script>
+  // never hang silently on the splash — surface any startup error in it
+  const showErr = m => { const s = document.getElementById("splash");
+    if (s) s.innerHTML = `<div class="t" style="color:#ff7847;max-width:70vw;letter-spacing:.05em">fout: ${m}</div>`; };
+  window.addEventListener("error", e => showErr(e.message || e.type));
+  window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
+</script>
+<!-- bundle.js = app.js + deps; rebuild after editing app.js:
+     npx esbuild app.js --bundle --format=esm --target=es2022 --outfile=bundle.js -->
+<script type="module" src="./bundle.js"></script>
 </body>
 </html>
