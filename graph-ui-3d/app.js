@@ -47,6 +47,8 @@ const state = {
   hovered: null,
   isolated: null,           // Set of visible ids when isolating
   hiddenTypes: new Set(),
+  expanded: new Set(),      // topic ids whose children are shown
+  showAll: false,           // full graph instead of cortex + expansions
 };
 
 const litNodes = [];
@@ -74,7 +76,6 @@ const sizeOf = n => n.type === "topic"
 
 const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .backgroundColor("#020409")
-  .graphData(data)
   .showNavInfo(false)
   .nodeId("id")
   .nodeVal(sizeOf)
@@ -123,12 +124,12 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   })
   .linkOpacity(0.2)
   .linkWidth(l => (state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id)) ? 1.2 : 0)
-  .linkDirectionalParticles(l => l.rel === "CONTAINS" ? 1 : 0)
-  .linkDirectionalParticleSpeed(0.0028)
-  .linkDirectionalParticleWidth(1.0)
+  .linkDirectionalParticles(0)              // no constant traffic — synapses FIRE (see pulse loop)
+  .linkDirectionalParticleSpeed(0.006)
+  .linkDirectionalParticleWidth(1.6)
   .linkDirectionalParticleColor(l => l.rel === "CONTAINS" ? "#e8a13d" : "#2fb8d8")
   .onNodeHover(n => {
-    for (const m of litNodes) { if (m.__mat) { m.__mat.emissiveIntensity = 0.7; m.__halo.opacity = 0.22; } }
+    for (const m of litNodes) { if (m.__mat) { m.__base = 0.7; m.__halo.opacity = 0.22; } }
     litNodes.length = 0;
     state.hovered = n || null;
     el("graph").style.cursor = n ? "pointer" : "default";
@@ -136,17 +137,48 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
       const set = [n, ...[...(nbrs.get(n.id) || [])].map(id => nodeById.get(id))];
       for (const m of set) {
         if (!m?.__mat) continue;
-        m.__mat.emissiveIntensity = 1.5; m.__halo.opacity = 0.45;
+        m.__base = 1.5; m.__halo.opacity = 0.45;
         litNodes.push(m);
       }
     }
     Graph.linkColor(Graph.linkColor());
     Graph.linkWidth(Graph.linkWidth());
   })
-  .onNodeClick(n => select(n, true))
+  .onNodeClick(n => {
+    if (n.type === "topic") {                       // topics open/close their cluster
+      state.expanded.has(n.id) ? state.expanded.delete(n.id) : state.expanded.add(n.id);
+      applyGraph();
+      select(n, false);
+    } else select(n, true);
+  })
   .onBackgroundClick(() => { closePanel(); });
 
 const nodeById = new Map(data.nodes.map(n => [n.id, n]));
+
+/* ---- progressive disclosure: cortex (topics) first, knowledge on demand ---- */
+const topicChildren = new Map();                    // topic id -> [leaf ids]
+for (const l of data.links) {
+  if (l.rel !== "CONTAINS") continue;
+  const s = linkSrc(l), t = linkTgt(l);
+  if (nodeById.get(s)?.type === "topic" && nodeById.get(t)?.type !== "topic")
+    (topicChildren.get(s) || topicChildren.set(s, []).get(s)).push(t);
+}
+
+function currentGraph() {
+  const vis = new Set();
+  for (const n of data.nodes) if (n.type === "topic" || state.showAll) vis.add(n.id);
+  if (!state.showAll)
+    for (const t of state.expanded) for (const c of topicChildren.get(t) || []) vis.add(c);
+  return {
+    nodes: data.nodes.filter(n => vis.has(n.id)),
+    links: data.links.filter(l => vis.has(linkSrc(l)) && vis.has(linkTgt(l))),
+  };
+}
+
+function applyGraph() {
+  Graph.graphData(currentGraph());
+  updateStats();
+}
 
 /* ---- cinematics: bloom + fog + starfield + idle auto-rotate ---- */
 // middle ground: enough bloom to make the emissive cores sing, threshold high
@@ -155,9 +187,33 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 Graph.postProcessingComposer().addPass(bloom);
 Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0009);   // depth cue: distance fades out
 
-/* more air between clusters — clarity over density */
-Graph.d3Force("charge").strength(-95);
-Graph.d3Force("link").distance(l => (l.rel === "CONTAINS" ? 34 : 58));
+/* hive anatomy: knowledge orbits TIGHT around its topic (ganglia), topics keep
+   distance from each other — clusters read as cells instead of soup */
+Graph.d3Force("charge").strength(-60);
+Graph.d3Force("link").distance(l => {
+  if (l.rel === "RELATES") return 55;
+  const tgt = nodeById.get(linkTgt(l));
+  return tgt?.type === "topic" ? 75 : 24;   // topic↔topic wide, topic↔leaf tight
+});
+
+/* synapse firing: a few random visible links pulse a particle every beat */
+setInterval(() => {
+  const { links } = Graph.graphData();
+  if (!links.length) return;
+  const n = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < n; i++)
+    Graph.emitParticle(links[Math.floor(Math.random() * links.length)]);
+}, 480);
+
+/* breathing: every node's emissive core oscillates gently around its base level */
+(function breathe() {
+  const t = performance.now();
+  for (const n of data.nodes)
+    if (n.__mat)
+      n.__mat.emissiveIntensity =
+        (n.__base ?? 0.7) + 0.14 * Math.sin(t * 0.0016 + (n.__phase ??= Math.random() * 6.28));
+  requestAnimationFrame(breathe);
+})();
 
 {
   const g = new THREE.BufferGeometry();
@@ -263,7 +319,13 @@ resultsEl.addEventListener("click", e => {
   if (!id) return;
   resultsEl.style.display = "none"; searchEl.value = "";
   const n = nodeById.get(id);
-  if (n) select(n, true);
+  if (!n) return;
+  const onScreen = Graph.graphData().nodes.includes(n);
+  if (!onScreen) {                       // hidden leaf: open its topic cluster first
+    for (const [t, kids] of topicChildren) if (kids.includes(n.id)) { state.expanded.add(t); break; }
+    applyGraph();
+    setTimeout(() => select(n, true), 900);   // let the cluster settle, then fly in
+  } else select(n, true);
 });
 document.addEventListener("keydown", e => {
   if (e.key === "/" && document.activeElement !== searchEl) { e.preventDefault(); searchEl.focus(); }
@@ -274,21 +336,35 @@ document.addEventListener("keydown", e => {
 function buildFilters() {
   const counts = {};
   for (const n of data.nodes) counts[n.type] = (counts[n.type] || 0) + 1;
-  el("filters").innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, c]) =>
-    `<span class="chip ${state.hiddenTypes.has(t) ? "off" : ""}" data-t="${t}">
-       <span class="dot" style="background:${COLORS[t] || "#8fa3b8"}"></span>${esc(t)} <b>${c}</b></span>`).join("");
+  el("filters").innerHTML =
+    `<span class="chip" data-mode="1" style="border-color:rgba(255,181,71,.4);color:var(--amber)">
+       ${state.showAll ? "⊖ alleen cortex" : "⊕ alles tonen"}</span>` +
+    Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, c]) =>
+      `<span class="chip ${state.hiddenTypes.has(t) ? "off" : ""}" data-t="${t}">
+         <span class="dot" style="background:${COLORS[t] || "#8fa3b8"}"></span>${esc(t)} <b>${c}</b></span>`).join("");
 }
 el("filters").addEventListener("click", e => {
-  const t = e.target.closest(".chip")?.dataset.t;
-  if (!t) return;
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  if (chip.dataset.mode) {
+    state.showAll = !state.showAll;
+    if (!state.showAll) state.expanded.clear();
+    applyGraph();
+    setTimeout(() => Graph.zoomToFit(1200, 60), 900);
+    return;
+  }
+  const t = chip.dataset.t;
   state.hiddenTypes.has(t) ? state.hiddenTypes.delete(t) : state.hiddenTypes.add(t);
   refreshVisibility();
 });
-buildFilters();
 
-el("stats").innerHTML =
-  `<div><b>${data.nodes.length}</b> nodes · <b>${data.links.length}</b> links</div>
-   <div>verbinding <span class="ok">● live</span> · druk <b>/</b> om te zoeken</div>`;
+function updateStats() {
+  const g = currentGraph();
+  buildFilters();
+  el("stats").innerHTML =
+    `<div><b>${g.nodes.length}</b>/<b>${data.nodes.length}</b> nodes zichtbaar · <b>${g.links.length}</b> links</div>
+     <div>verbinding <span class="ok">● live</span> · klik een topic om z'n cluster te openen · <b>/</b> zoekt</div>`;
+}
 
 el("refresh").onclick = async () => {
   el("refresh").textContent = "⟳ herladen…";
@@ -296,7 +372,8 @@ el("refresh").onclick = async () => {
   if (!fresh.error) location.reload();
 };
 
-/* camera intro: pull back then settle */
+/* boot: cortex first, camera pulls in and settles */
+applyGraph();
 Graph.cameraPosition({ x: 0, y: 0, z: 900 });
 setTimeout(() => Graph.zoomToFit(1600, 60), 1200);
 
