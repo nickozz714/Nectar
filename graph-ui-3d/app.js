@@ -6,18 +6,18 @@ import SpriteText from "three-spritetext";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
-/* deliberately deep tones — the bloom pass lifts them into neon; bright source
-   colors blow out to white and everything reads the same */
+/* mid-bright saturated hues: dark cores EMIT these colors and a soft additive halo
+   carries the aura — the glow lives in the material, not in an overdriven bloom pass */
 const COLORS = {
-  topic: "#c77e22",
-  memory: "#1f8fb0",
-  decision: "#c24f2a",
-  learning: "#2c9e63",
-  process: "#4a7fb5",
-  workflow: "#6f5bb5",
-  skill: "#8455c2",
-  convention: "#b08f2e",
-  glossary: "#4f6478",
+  topic: "#f0a63a",
+  memory: "#2fc4e8",
+  decision: "#ff6a45",
+  learning: "#43d98a",
+  process: "#5fa4e6",
+  workflow: "#8f76e8",
+  skill: "#a06ae8",
+  convention: "#e6c05c",
+  glossary: "#6d87a0",
 };
 const colorOf = n => COLORS[n.type] || "#8fa3b8";
 
@@ -49,39 +49,66 @@ const state = {
   hiddenTypes: new Set(),
 };
 
+const litNodes = [];
 const linkSrc = l => (typeof l.source === "object" ? l.source.id : l.source);
 const linkTgt = l => (typeof l.target === "object" ? l.target.id : l.target);
 
 const nodeVisible = n =>
   !state.hiddenTypes.has(n.type) && (!state.isolated || state.isolated.has(n.id));
 
+/* soft radial halo texture, tinted per node via sprite material color */
+const haloTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,.8)");
+  g.addColorStop(0.3, "rgba(255,255,255,.22)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+
+const sizeOf = n => n.type === "topic"
+  ? Math.min(16, 6 + (n.children || 0) * 0.4)
+  : Math.min(5, 1.2 + (n.use_count || 0) * 0.06 + (n.pagerank || 0) * 14);
+
 const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .backgroundColor("#020409")
   .graphData(data)
   .showNavInfo(false)
   .nodeId("id")
-  .nodeVal(n => n.type === "topic"
-    ? Math.min(16, 6 + (n.children || 0) * 0.4)
-    : Math.min(5, 1.2 + (n.use_count || 0) * 0.06 + (n.pagerank || 0) * 14))
-  .nodeColor(n => {
-    if (state.hovered && (n === state.hovered || nbrs.get(state.hovered.id)?.has(n.id))) return "#ffffff";
-    return colorOf(n);
-  })
-  .nodeOpacity(0.85)
-  .nodeResolution(14)
+  .nodeVal(sizeOf)
   .nodeLabel(n => n.type === "topic" ? "" :
     `<span style="color:${colorOf(n)}">◈ ${esc(n.type)}</span> &nbsp;${esc(n.title)}`)
-  .nodeThreeObjectExtend(true)
+  .nodeThreeObjectExtend(false)
   .nodeThreeObject(n => {
-    if (n.type !== "topic") return undefined;
-    const s = new SpriteText(n.title, 4.2, "#ffcf8a");
-    s.fontFace = "Menlo, monospace";
-    s.backgroundColor = false;
-    s.strokeColor = "#02040a";
-    s.strokeWidth = 1.6;
-    s.material.depthWrite = false;
-    s.center.y = -0.8;
-    return s;
+    const r = 2.4 * Math.cbrt(sizeOf(n)) * (n.type === "topic" ? 1.35 : 1);
+    const col = new THREE.Color(colorOf(n));
+    const group = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({
+      color: col.clone().multiplyScalar(0.22),          // dark body…
+      emissive: col, emissiveIntensity: 0.7,            // …that radiates its own hue
+      roughness: 0.35, metalness: 0.15,
+    });
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 24, 24), mat));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: haloTex, color: col, transparent: true, opacity: 0.22,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    halo.scale.set(r * 6.5, r * 6.5, 1);
+    group.add(halo);
+    n.__mat = mat; n.__halo = halo.material;
+    if (n.type === "topic") {
+      const s = new SpriteText(n.title, 4.2, "#ffcf8a");
+      s.fontFace = "Menlo, monospace";
+      s.backgroundColor = false;
+      s.strokeColor = "#02040a";
+      s.strokeWidth = 1.6;
+      s.material.depthWrite = false;
+      s.position.y = r + 5;
+      group.add(s);
+    }
+    return group;
   })
   .nodeVisibility(nodeVisible)
   .linkVisibility(l => {
@@ -91,19 +118,28 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   })
   .linkColor(l => {
     const active = state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id);
-    if (active) return "#ffffff";
-    return l.rel === "CONTAINS" ? "#5c421a" : "#174d5c";
+    if (active) return "#bfeaff";
+    return l.rel === "CONTAINS" ? "#6b4d1e" : "#1c5a6b";
   })
-  .linkOpacity(0.16)
+  .linkOpacity(0.2)
   .linkWidth(l => (state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id)) ? 1.2 : 0)
   .linkDirectionalParticles(l => l.rel === "CONTAINS" ? 1 : 0)
   .linkDirectionalParticleSpeed(0.0028)
   .linkDirectionalParticleWidth(1.0)
   .linkDirectionalParticleColor(l => l.rel === "CONTAINS" ? "#e8a13d" : "#2fb8d8")
   .onNodeHover(n => {
+    for (const m of litNodes) { if (m.__mat) { m.__mat.emissiveIntensity = 0.7; m.__halo.opacity = 0.22; } }
+    litNodes.length = 0;
     state.hovered = n || null;
     el("graph").style.cursor = n ? "pointer" : "default";
-    Graph.nodeColor(Graph.nodeColor());   // re-evaluate accessors
+    if (n) {
+      const set = [n, ...[...(nbrs.get(n.id) || [])].map(id => nodeById.get(id))];
+      for (const m of set) {
+        if (!m?.__mat) continue;
+        m.__mat.emissiveIntensity = 1.5; m.__halo.opacity = 0.45;
+        litNodes.push(m);
+      }
+    }
     Graph.linkColor(Graph.linkColor());
     Graph.linkWidth(Graph.linkWidth());
   })
@@ -113,10 +149,11 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
 const nodeById = new Map(data.nodes.map(n => [n.id, n]));
 
 /* ---- cinematics: bloom + fog + starfield + idle auto-rotate ---- */
-// subtle rim glow, not a lightshow: low strength, high threshold
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.35, 0.28);
+// middle ground: enough bloom to make the emissive cores sing, threshold high
+// enough that nothing blows out to white
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.45, 0.18);
 Graph.postProcessingComposer().addPass(bloom);
-Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0011);   // depth cue: distance fades out
+Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0009);   // depth cue: distance fades out
 
 /* more air between clusters — clarity over density */
 Graph.d3Force("charge").strength(-95);
