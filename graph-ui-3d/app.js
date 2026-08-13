@@ -6,16 +6,18 @@ import SpriteText from "three-spritetext";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
+/* deliberately deep tones — the bloom pass lifts them into neon; bright source
+   colors blow out to white and everything reads the same */
 const COLORS = {
-  topic: "#ffb547",
-  memory: "#3ee0ff",
-  decision: "#ff7847",
-  learning: "#55ffa1",
-  process: "#9fd0ff",
-  workflow: "#b39bff",
-  skill: "#b39bff",
-  convention: "#ffd66e",
-  glossary: "#7f96b3",
+  topic: "#c77e22",
+  memory: "#1f8fb0",
+  decision: "#c24f2a",
+  learning: "#2c9e63",
+  process: "#4a7fb5",
+  workflow: "#6f5bb5",
+  skill: "#8455c2",
+  convention: "#b08f2e",
+  glossary: "#4f6478",
 };
 const colorOf = n => COLORS[n.type] || "#8fa3b8";
 
@@ -59,24 +61,26 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .showNavInfo(false)
   .nodeId("id")
   .nodeVal(n => n.type === "topic"
-    ? Math.min(14, 5 + (n.children || 0) * 0.35)
-    : Math.min(9, 1.6 + (n.use_count || 0) * 0.12 + (n.pagerank || 0) * 26))
+    ? Math.min(16, 6 + (n.children || 0) * 0.4)
+    : Math.min(5, 1.2 + (n.use_count || 0) * 0.06 + (n.pagerank || 0) * 14))
   .nodeColor(n => {
     if (state.hovered && (n === state.hovered || nbrs.get(state.hovered.id)?.has(n.id))) return "#ffffff";
     return colorOf(n);
   })
-  .nodeOpacity(0.92)
+  .nodeOpacity(0.85)
   .nodeResolution(14)
   .nodeLabel(n => n.type === "topic" ? "" :
     `<span style="color:${colorOf(n)}">◈ ${esc(n.type)}</span> &nbsp;${esc(n.title)}`)
   .nodeThreeObjectExtend(true)
   .nodeThreeObject(n => {
     if (n.type !== "topic") return undefined;
-    const s = new SpriteText(n.title, 3.4, "#ffd9a0");
+    const s = new SpriteText(n.title, 4.2, "#ffcf8a");
     s.fontFace = "Menlo, monospace";
     s.backgroundColor = false;
+    s.strokeColor = "#02040a";
+    s.strokeWidth = 1.6;
     s.material.depthWrite = false;
-    s.center.y = -0.9;
+    s.center.y = -0.8;
     return s;
   })
   .nodeVisibility(nodeVisible)
@@ -88,14 +92,14 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .linkColor(l => {
     const active = state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id);
     if (active) return "#ffffff";
-    return l.rel === "CONTAINS" ? "#8a6220" : "#1f6f82";
+    return l.rel === "CONTAINS" ? "#5c421a" : "#174d5c";
   })
-  .linkOpacity(0.35)
+  .linkOpacity(0.16)
   .linkWidth(l => (state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id)) ? 1.2 : 0)
   .linkDirectionalParticles(l => l.rel === "CONTAINS" ? 1 : 0)
-  .linkDirectionalParticleSpeed(0.0038)
-  .linkDirectionalParticleWidth(1.5)
-  .linkDirectionalParticleColor(l => l.rel === "CONTAINS" ? "#ffb547" : "#3ee0ff")
+  .linkDirectionalParticleSpeed(0.0028)
+  .linkDirectionalParticleWidth(1.0)
+  .linkDirectionalParticleColor(l => l.rel === "CONTAINS" ? "#e8a13d" : "#2fb8d8")
   .onNodeHover(n => {
     state.hovered = n || null;
     el("graph").style.cursor = n ? "pointer" : "default";
@@ -108,9 +112,15 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
 
 const nodeById = new Map(data.nodes.map(n => [n.id, n]));
 
-/* ---- cinematics: bloom + starfield + idle auto-rotate ---- */
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.15, 0.6, 0.05);
+/* ---- cinematics: bloom + fog + starfield + idle auto-rotate ---- */
+// subtle rim glow, not a lightshow: low strength, high threshold
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.35, 0.28);
 Graph.postProcessingComposer().addPass(bloom);
+Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0011);   // depth cue: distance fades out
+
+/* more air between clusters — clarity over density */
+Graph.d3Force("charge").strength(-95);
+Graph.d3Force("link").distance(l => (l.rel === "CONTAINS" ? 34 : 58));
 
 {
   const g = new THREE.BufferGeometry();
@@ -123,7 +133,7 @@ Graph.postProcessingComposer().addPass(bloom);
   }
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   Graph.scene().add(new THREE.Points(g, new THREE.PointsMaterial({
-    color: 0x8fa8c0, size: 1.1, transparent: true, opacity: 0.45, sizeAttenuation: false })));
+    color: 0x6f8398, size: 1.0, transparent: true, opacity: 0.3, sizeAttenuation: false })));
 }
 
 const controls = Graph.controls();
