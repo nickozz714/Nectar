@@ -47,8 +47,8 @@ const state = {
   hovered: null,
   isolated: null,           // Set of visible ids when isolating
   hiddenTypes: new Set(),
-  expanded: new Set(),      // topic ids whose children are shown
-  showAll: false,           // full graph instead of cortex + expansions
+  expanded: new Set(),      // topic ids whose children are shown (cortex mode)
+  showAll: true,            // default: the whole organism; cortex mode is the option
 };
 
 const litNodes = [];
@@ -83,30 +83,32 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
     `<span style="color:${colorOf(n)}">◈ ${esc(n.type)}</span> &nbsp;${esc(n.title)}`)
   .nodeThreeObjectExtend(false)
   .nodeThreeObject(n => {
-    const r = 2.4 * Math.cbrt(sizeOf(n)) * (n.type === "topic" ? 1.35 : 1);
+    /* neural look: SMALL bright points, the network reads through its links */
+    const r = 1.3 * Math.cbrt(sizeOf(n)) * (n.type === "topic" ? 1.25 : 1.12);
     const col = new THREE.Color(colorOf(n));
     const group = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({
       color: col.clone().multiplyScalar(0.22),          // dark body…
-      emissive: col, emissiveIntensity: 0.7,            // …that radiates its own hue
+      emissive: col, emissiveIntensity: 0.85,           // …that radiates its own hue
       roughness: 0.35, metalness: 0.15,
     });
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 24, 24), mat));
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), mat));
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: haloTex, color: col, transparent: true, opacity: 0.22,
+      map: haloTex, color: col, transparent: true,
+      opacity: n.type === "topic" ? 0.16 : 0.14,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
-    halo.scale.set(r * 6.5, r * 6.5, 1);
+    halo.scale.set(r * 4.2, r * 4.2, 1);
     group.add(halo);
     n.__mat = mat; n.__halo = halo.material;
-    if (n.type === "topic") {
-      const s = new SpriteText(n.title, 4.2, "#ffcf8a");
+    if (n.type === "topic" && (n.children || 0) >= 6) {   // labels only where they earn it
+      const s = new SpriteText(n.title, 2.9, "#ffe2b8");
       s.fontFace = "Menlo, monospace";
       s.backgroundColor = false;
       s.strokeColor = "#02040a";
-      s.strokeWidth = 1.6;
+      s.strokeWidth = 1.4;
       s.material.depthWrite = false;
-      s.position.y = r + 5;
+      s.position.y = r + 4;
       group.add(s);
     }
     return group;
@@ -120,9 +122,9 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .linkColor(l => {
     const active = state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id);
     if (active) return "#bfeaff";
-    return l.rel === "CONTAINS" ? "#6b4d1e" : "#1c5a6b";
+    return l.rel === "CONTAINS" ? "#8a6a30" : "#2a7a90";
   })
-  .linkOpacity(0.2)
+  .linkOpacity(0.32)
   .linkWidth(l => (state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id)) ? 1.2 : 0)
   .linkDirectionalParticles(0)              // no constant traffic — synapses FIRE (see pulse loop)
   .linkDirectionalParticleSpeed(0.006)
@@ -187,14 +189,26 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 Graph.postProcessingComposer().addPass(bloom);
 Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0009);   // depth cue: distance fades out
 
-/* hive anatomy: knowledge orbits TIGHT around its topic (ganglia), topics keep
-   distance from each other — clusters read as cells instead of soup */
-Graph.d3Force("charge").strength(-60);
+/* hive anatomy: knowledge orbits tight around its topic, topics keep some distance,
+   and a gentle pull toward the origin keeps loose pieces part of ONE organism */
+Graph.d3Force("charge").strength(-32);
 Graph.d3Force("link").distance(l => {
-  if (l.rel === "RELATES") return 55;
+  if (l.rel === "RELATES") return 46;
   const tgt = nodeById.get(linkTgt(l));
-  return tgt?.type === "topic" ? 75 : 24;   // topic↔topic wide, topic↔leaf tight
+  return tgt?.type === "topic" ? 62 : 20;   // topic↔topic wide, topic↔leaf tight
 });
+Graph.d3Force("cohere", (() => {
+  let nodes = [];
+  const f = alpha => {
+    for (const n of nodes) {
+      n.vx -= n.x * 0.018 * alpha;
+      n.vy -= n.y * 0.018 * alpha;
+      n.vz -= (n.z || 0) * 0.018 * alpha;
+    }
+  };
+  f.initialize = ns => { nodes = ns; };
+  return f;
+})());
 
 /* synapse firing: a few random visible links pulse a particle every beat */
 setInterval(() => {
