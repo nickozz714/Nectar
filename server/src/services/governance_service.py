@@ -94,6 +94,9 @@ def admin_resolve(
 
 def _apply(session: Session, account: AuthedAccount, chore: dict, payload: dict) -> str:
     kind, node_uid = chore["type"], chore["node_uid"]
+    if kind == "cognition":
+        raise ValueError("a cognition-Pollen is research work — a swarm agent resolves it via "
+                         "hive_resolve_cognition (reject it to dismiss the task)")
     if kind == "edit":
         content = payload.get("content")
         embedding = embed(f"{payload.get('title', '')}\n{content}") if content else None
@@ -195,6 +198,7 @@ _POLLEN_VERB = {
     "op_route": "beslissen hoe een bijna-duplicaat te verwerken (samenvoegen/behouden/schrappen)",
     "relate_suggest": "twee waarschijnlijk-gerelateerde memories aan elkaar koppelen (RELATES)",
     "contradiction_check": "beoordelen of twee memories elkaar tegenspreken (en supersession voorstellen)",
+    "cognition": "onbekende begrippen in een memory onderzoeken (websearch) en als korte glossary-memories terugschrijven",
 }
 
 
@@ -321,6 +325,15 @@ def build_pollen_view(session: Session, account: AuthedAccount, chore: dict) -> 
                            "(blijft vindbaar, zakt weg). Zo nee: 'verenigbaar'.")
         view["refs"]["a"] = payload.get("a_uid")
         view["refs"]["b"] = payload.get("b_uid")
+    elif kind == "cognition":
+        view["headline"] = "Wereld-research op deze memory"
+        rnd = payload.get("round", 0)
+        question = payload.get("question")
+        view["explain"] = ("Een zwerm-agent zoekt de onbekende begrippen in deze memory op "
+                           "(eerst in de hive, dan op het web) en schrijft ze als compacte "
+                           "glossary-memories terug. Dit is onderzoekswerk voor een agent — "
+                           "afwijzen kan wel: dan vervalt de taak."
+                           + (f" Vervolgvraag (ronde {rnd}): {question}" if question else ""))
     return view
 
 
@@ -344,6 +357,10 @@ def render_pollen(pollen: dict) -> str:
     elif pollen["type"] == "op_route":
         how = (f"Beoordeel en los op met "
                f"`hive_resolve_think(\"{pollen['uid']}\", …)`.")
+    elif pollen["type"] == "cognition":
+        how = (f"Claim met `hive_claim(\"{pollen['uid']}\")`, volg de instructie in de payload "
+               f"(hive_search eerst, dan websearch, compacte glossary-memories met tag "
+               f"'world-knowledge'), en sluit af met `hive_resolve_cognition(\"{pollen['uid']}\", …)`.")
     else:
         how = (f"Beoordeel 'm op inhoud en los 'm op met `hive_chores()` → "
                f"`hive_resolve_chore(\"{pollen['uid']}\", \"apply\"|\"reject\")`.")
@@ -412,6 +429,71 @@ def resolve_think(
     audit_repo.log(session, account.org_uid, account.uid, "resolve_think", pollen_uid,
                    {"kind": "op_route", "decision": decision, "new": new_uid, "keep": keep_uid})
     return {"status": "resolved", "decision": decision, "result": result}
+
+
+def resolve_cognition(
+    session: Session, account: AuthedAccount, pollen_uid: str, summary: str,
+    created_uids: list[str] | None = None, follow_up: list[dict] | None = None, note: str = "",
+) -> dict:
+    """Close a cognition-Pollen after the research is done. `created_uids` are the glossary
+    memories the agent wrote (provenance in the audit log). `follow_up` = [{node_uid, question}]
+    files next-round cognition-Pollen on the newly created nodes — the budgeted curiosity
+    mechanism: refused beyond the budget's max_depth, when the org turned cognition off, or
+    when the rolling-24h cap is hit. 'Nothing unknown found' (empty everything) is a perfectly
+    good resolution too."""
+    import time as _time
+
+    assert_role(account, "member", "Resolving a cognition-Pollen")
+    chore = governance_repo.get_chore(session, account.org_uid, pollen_uid)
+    if chore is None or chore["type"] != "cognition":
+        raise ValueError("cognition-Pollen not found")
+    if chore["status"] not in ("open", "ready"):
+        raise ValueError(f"already handled ('{chore['status']}')")
+    payload = json.loads(chore["payload"] or "{}")
+    settings = get_settings()
+    rnd = int(payload.get("round", 0))
+    budget = payload.get("budget") or {}
+    max_depth = int(budget.get("max_depth", settings.COGNITION_MAX_DEPTH))
+
+    filed: list[str] = []
+    refused = 0
+    if follow_up:
+        enabled = tenancy_repo.get_cognition_enabled(session, account.org_uid)
+        day_ago = int(_time.time() * 1000) - 86_400_000
+        for item in follow_up:
+            target = (item.get("node_uid") or "").strip()
+            question = (item.get("question") or "").strip()
+            if not target or not question:
+                continue
+            capped = governance_repo.cognition_created_since(
+                session, account.org_uid, day_ago) >= settings.COGNITION_DAILY_CAP
+            if rnd + 1 >= max_depth or not enabled or capped:
+                refused += 1
+                continue
+            res = governance_repo.create_think_pollen(
+                session, account, target, "cognition",
+                {
+                    "instruction": payload.get("instruction", ""),
+                    "question": question,
+                    "budget": budget,
+                    "round": rnd + 1,
+                },
+                idem_key=f"cognition:{target}:{rnd + 1}",
+            )
+            if res:
+                filed.append(res["uid"])
+
+    governance_repo.close_chore(session, pollen_uid, "resolved", account.uid,
+                                note or summary or "cognition research done")
+    audit_repo.log(session, account.org_uid, account.uid, "resolve_cognition", pollen_uid,
+                   {"round": rnd, "created": created_uids or [], "follow_up": filed})
+    out = {"status": "resolved", "round": rnd, "created": created_uids or [],
+           "follow_up_filed": filed}
+    if refused:
+        out["follow_up_refused"] = refused
+        out["note"] = ("follow-up not filed: max research depth reached, cognition disabled, "
+                       "or the daily cap is hit")
+    return out
 
 
 def request_merge(session: Session, account: AuthedAccount, pollen_uid: str, note: str = "") -> dict:

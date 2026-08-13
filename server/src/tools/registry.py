@@ -173,6 +173,27 @@ def hive_resolve_contradiction(pollen_uid: str, verdict: str, current: str = "",
 
 
 @mcp.tool
+def hive_resolve_cognition(pollen_uid: str, summary: str, created_uids: list[str] | None = None,
+                           follow_up: list[dict] | None = None, note: str = "") -> dict:
+    """Close a cognition-Pollen after doing its research. The task: extract the named entities
+    from the memory the Pollen is about, hive_search each — if the hive already knows it, at
+    most hive_relate it; if unknown, look it up on the web and write ONE compact glossary
+    entry (type='glossary', 2-5 sentences, source URLs, tags=['world-knowledge'], same scope
+    as the source) via hive_remember, then hive_relate it to the source. Stay within the budget
+    (payload.budget.max_new memories).
+      • summary — one or two sentences on what was researched and found
+      • created_uids — the uids of the reference memories you wrote (provenance)
+      • follow_up — [{node_uid, question}] for at most one genuinely interesting next-round
+        question per new node (e.g. 'which other brands does Swinkels own?'); the server files
+        it as a next-round cognition-Pollen and refuses it beyond the budget's max_depth.
+    'Nothing unknown found' with empty created_uids is a perfectly good resolution."""
+    with _authed() as (session, account):
+        from src.services import governance_service
+        return governance_service.resolve_cognition(
+            session, account, pollen_uid, summary, created_uids, follow_up, note)
+
+
+@mcp.tool
 def hive_feedback(node_uid: str, helped: bool) -> dict:
     """Report whether a memory you recalled actually helped with your task (helped=true) or
     was wrong/irrelevant (helped=false). This is the causal 'Memory Worth' signal: memories
@@ -381,6 +402,17 @@ def hive_set_system(node_uid: str, on: bool = True) -> dict:
     Set on=False to unpin."""
     with _authed() as (session, account):
         return governance_service.set_system(session, account, node_uid, on)
+
+
+@mcp.tool
+def hive_set_cognition(on: bool = True) -> dict:
+    """(org_admin) Toggle cognition-Pollen for the org: optional world research on newly
+    written memories. When on, every new memory/learning/decision gets a 'research the
+    unknown concepts' Pollen that a swarm agent works via hive_resolve_cognition. Off by
+    default — it costs web searches and tokens; a budget (memories per job, follow-up
+    rounds, daily cap) bounds the curiosity."""
+    with _authed() as (session, account):
+        return org_service.set_cognition_enabled(session, account, on)
 
 
 @mcp.tool

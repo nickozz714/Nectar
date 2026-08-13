@@ -39,10 +39,18 @@ def set_role(session: Session, account: AuthedAccount, target_name: str, role: s
 
 def get_swarm_settings(session: Session, account: AuthedAccount) -> dict:
     """Swarm governance settings visible to any member: the consensus threshold = the minimum
-    number of distinct votes before a Pollen becomes actionable ('ready')."""
-    threshold = tenancy_repo.get_consensus_threshold(
-        session, account.org_uid, get_settings().CONSENSUS_THRESHOLD)
-    return {"consensus_threshold": threshold, "default": get_settings().CONSENSUS_THRESHOLD}
+    number of distinct votes before a Pollen becomes actionable ('ready'), plus whether
+    cognition-Pollen (optional world research on new memories) is on."""
+    s = get_settings()
+    threshold = tenancy_repo.get_consensus_threshold(session, account.org_uid, s.CONSENSUS_THRESHOLD)
+    return {
+        "consensus_threshold": threshold,
+        "default": s.CONSENSUS_THRESHOLD,
+        "cognition_enabled": tenancy_repo.get_cognition_enabled(session, account.org_uid),
+        "cognition_budget": {"max_new": s.COGNITION_MAX_NEW_MEMORIES,
+                             "max_depth": s.COGNITION_MAX_DEPTH,
+                             "daily_cap": s.COGNITION_DAILY_CAP},
+    }
 
 
 def set_consensus_threshold(session: Session, account: AuthedAccount, n: int) -> dict:
@@ -55,3 +63,13 @@ def set_consensus_threshold(session: Session, account: AuthedAccount, n: int) ->
     audit_repo.log(session, account.org_uid, account.uid, "set_consensus_threshold",
                    account.org_uid, {"threshold": n})
     return {"consensus_threshold": n}
+
+
+def set_cognition_enabled(session: Session, account: AuthedAccount, on: bool) -> dict:
+    """Toggle cognition-Pollen: optional world research on newly written memories
+    (docs/COGNITION.md). Off by default — it costs web searches and tokens. org_admin only."""
+    assert_role(account, "org_admin", "Toggling cognition")
+    tenancy_repo.set_cognition_enabled(session, account.org_uid, bool(on))
+    audit_repo.log(session, account.org_uid, account.uid, "set_cognition_enabled",
+                   account.org_uid, {"enabled": bool(on)})
+    return {"cognition_enabled": bool(on)}

@@ -31,6 +31,9 @@ _PURPOSE = {
     "hive-secret": "Fetch a vault secret into an env var (never prints values).",
     "hive-enable.sh": "Turn Nectar on for a project (wires .claude/settings.json + .mcp.json).",
     "hive-attach.sh": "Attach a local artifact to a node, or fetch one (add/list/get).",
+    "hive-worker.sh": ("Headless swarm worker: drains the Pollen queue once (incl. cognition "
+                       "world-research) via the shared pollinate-nectar skill; schedule it "
+                       "with cron/launchd."),
 }
 
 _APPLY = (

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nectar swarm worker — runs hive-worker.sh on a schedule so Pollen (incl. cognition
+  world-research) are drained even when no human session is active.
+
+  Install (replace YOURNAME and the project path first):
+    cp com.hivemind.worker.plist.example ~/Library/LaunchAgents/com.hivemind.worker.plist
+    launchctl load ~/Library/LaunchAgents/com.hivemind.worker.plist
+
+  launchd does not expand ~ or environment variables: use absolute paths.
+  Default schedule: every 4 hours. Logs land in ~/.hivemind/logs/worker-YYYYMMDD.log.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hivemind.worker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/YOURNAME/.hivemind/scripts/hive-worker.sh</string>
+    <string>/Users/YOURNAME/path/to/hive-enabled-project</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>14400</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/YOURNAME/.hivemind/logs/worker-launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOURNAME/.hivemind/logs/worker-launchd.log</string>
+</dict>
+</plist>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 
 from neo4j import Session
 
@@ -53,6 +54,52 @@ def assert_no_pii(text: str) -> None:
             f"Rejected by the PII filter ({', '.join(pii)}). "
             "Rephrase without personal data and try again."
         )
+
+
+# Cognition-Pollen (docs/COGNITION.md): only these knowledge types are worth researching;
+# the world-knowledge tag marks research OUTPUT and suppresses the trigger, so research can
+# never trigger research — follow-up curiosity goes through the budgeted round mechanism
+# in governance_service.resolve_cognition instead.
+COGNITION_TRIGGER_TYPES = ("memory", "learning", "decision")
+COGNITION_SUPPRESS_TAG = "world-knowledge"
+
+COGNITION_INSTRUCTION = (
+    "Research the concepts in this memory that the hive does not know yet. Extract the named "
+    "entities (organisations, products, systems, acronyms). For each: hive_search first — if "
+    "the hive already knows it, at most hive_relate it to this memory. If unknown: look it up "
+    "on the web and write ONE compact glossary entry (type='glossary', 2-5 sentences, source "
+    "URLs, tags=['world-knowledge'], same scope as this memory) via hive_remember, then "
+    "hive_relate it. Stay within the budget. Finish with hive_resolve_cognition; a genuinely "
+    "interesting follow-up question goes in its follow_up parameter, not into more research now."
+)
+
+
+def _maybe_open_cognition_pollen(
+    session: Session, account: AuthedAccount, node_uid: str, type_: str, tags: list[str] | None
+) -> dict | None:
+    """Optional curiosity: hang a 'research the unknown concepts in this memory' think-Pollen
+    on the new node. The server extracts nothing — the claiming swarm agent does the thinking.
+    Gated on the org toggle, the trigger types, the suppress tag and a rolling-24h cap."""
+    settings = get_settings()
+    if type_ not in COGNITION_TRIGGER_TYPES:
+        return None
+    if COGNITION_SUPPRESS_TAG in {t.strip().lower() for t in (tags or [])}:
+        return None
+    if not tenancy_repo.get_cognition_enabled(session, account.org_uid):
+        return None
+    day_ago = int(time.time() * 1000) - 86_400_000
+    if governance_repo.cognition_created_since(session, account.org_uid, day_ago) >= settings.COGNITION_DAILY_CAP:
+        return None
+    return governance_repo.create_think_pollen(
+        session, account, node_uid, "cognition",
+        {
+            "instruction": COGNITION_INSTRUCTION,
+            "budget": {"max_new": settings.COGNITION_MAX_NEW_MEMORIES,
+                       "max_depth": settings.COGNITION_MAX_DEPTH},
+            "round": 0,
+        },
+        idem_key=f"cognition:{node_uid}:0",
+    )
 
 
 def link_topics(
@@ -212,6 +259,11 @@ def remember(
             notes.append(f"could not link under parent node: {exc}")
     if not linked and not parent_node.strip():
         notes.append("no parent topics given — link it later with hive_relate")
+
+    cognition = _maybe_open_cognition_pollen(session, account, node["uid"], type_, tags)
+    if cognition is not None:
+        notes.append("cognition-Pollen opened — a swarm agent will research the unknown "
+                     "concepts in this memory")
 
     audit_repo.log(
         session, account.org_uid, account.uid, "remember", node["uid"],

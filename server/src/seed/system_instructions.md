@@ -95,6 +95,16 @@ so it doesn't interrupt your main work. For draining a backlog in one go, use th
   they contradict each other. If so: which is the current truth? Resolve with
   `hive_resolve_contradiction(uid, "contradiction", current=<uid of newest>, outdated=<uid of old>)` — the old one
   is superseded (stays findable, sinks away). If they are compatible: `"compatible"`.
+- **cognition Pollen** (world research; only appears when the org enabled it via
+  `hive_set_cognition`): the memory it hangs on mentions concepts the hive may not know.
+  Claim it, extract the named entities, `hive_search` each first; for the truly unknown ones,
+  look them up on the web and write ONE compact `glossary` memory each (2–5 sentences, source
+  URLs, `tags=["world-knowledge"]`, same scope as the source), then `hive_relate` the
+  discoveries (e.g. *Bavaria — is brand of → Swinkels*). Finish with
+  `hive_resolve_cognition(uid, summary, created_uids, follow_up=[{node_uid, question}])` —
+  at most one genuinely interesting follow-up question; the server files it as a next-round
+  Pollen and enforces the depth budget. "Nothing unknown found" is a fine resolution. No web
+  access? `hive_release` it for another member.
 
 **Give feedback on what you used.** Did a memory fetched from recall actually fit your task (or
 not)? Report it with `hive_feedback(node_uid, helped=true|false)`. This is the causal "Memory Worth" signal:

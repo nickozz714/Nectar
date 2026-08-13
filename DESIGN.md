@@ -228,4 +228,6 @@ Docker image needs no Node.
 **Deliberately later**: rate
 limiting, full-text index for fallback search, backup automation (volume snapshots for
 now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking
-(v1 relies on `ready` → first-resolver-wins; races are benign at current scale).
+(v1 relies on `ready` → first-resolver-wins; races are benign at current scale), and
+**Cognition-Pollen** — optional, swarm-native world research on newly written memories
+(org toggle, default off; full design in `docs/COGNITION.md`, decided 2026-08-13).

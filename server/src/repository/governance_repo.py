@@ -8,7 +8,7 @@ from neo4j import Session
 from src.authentication.deps import AuthedAccount
 from src.repository.graph_repo import VISIBLE, _acc_params
 
-POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest", "contradiction_check"}
+POLLEN_TYPES = {"edit", "invalidate", "dedup_merge", "promotion", "scope_widening", "stale_review", "op_route", "relate_suggest", "contradiction_check", "cognition"}
 
 
 def flag_pollen(session: Session, org_uid: str, pollen_uid: str, key: str, value=True) -> bool:
@@ -243,6 +243,16 @@ def release_pollen(session: Session, org_uid: str, pollen_uid: str, account_uid:
         u=pollen_uid, o=org_uid, me=account_uid,
     ).single()
     return r is not None
+
+
+def cognition_created_since(session: Session, org_uid: str, since_ms: int) -> int:
+    """How many cognition-Pollen this org opened since `since_ms` — the daily-cap counter."""
+    r = session.run(
+        "MATCH (c:Pollen {org_uid: $o, type: 'cognition'}) WHERE c.created >= $t "
+        "RETURN count(c) AS n",
+        o=org_uid, t=since_ms,
+    ).single()
+    return r["n"] if r else 0
 
 
 def create_think_pollen(

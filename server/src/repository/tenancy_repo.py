@@ -273,6 +273,18 @@ def set_consensus_threshold(session: Session, org_uid: str, n: int) -> int:
     return int(n)
 
 
+def get_cognition_enabled(session: Session, org_uid: str) -> bool:
+    """Whether cognition-Pollen (optional world research on new memories) is on for this
+    org. Off unless explicitly enabled — research costs web searches and tokens."""
+    r = session.run("MATCH (o:Org {uid: $u}) RETURN o.cognition_enabled AS on", u=org_uid).single()
+    return bool(r["on"]) if r and r["on"] is not None else False
+
+
+def set_cognition_enabled(session: Session, org_uid: str, on: bool) -> bool:
+    session.run("MATCH (o:Org {uid: $u}) SET o.cognition_enabled = $on", u=org_uid, on=bool(on))
+    return bool(on)
+
+
 def list_teams(session: Session, org_uid: str) -> list[dict]:
     rows = session.run(
         "MATCH (t:Team {org_uid: $o}) RETURN t.uid AS uid, t.name AS name ORDER BY t.name",

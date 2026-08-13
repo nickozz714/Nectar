@@ -20,6 +20,8 @@ cp "$REPO/plugin/scripts/hive-skill-install.sh" "$PKG/scripts/hive-skill-install
 cp "$REPO/plugin/scripts/hive-update.sh" "$PKG/scripts/hive-update.sh"
 cp "$REPO/plugin/scripts/hive-enable.sh" "$PKG/scripts/hive-enable.sh"
 cp "$REPO/plugin/scripts/hive-attach.sh" "$PKG/scripts/hive-attach.sh"
+cp "$REPO/plugin/scripts/hive-worker.sh" "$PKG/scripts/hive-worker.sh"
+cp "$REPO/installer/com.hivemind.worker.plist.example" "$PKG/com.hivemind.worker.plist.example"
 chmod +x "$PKG/install.sh" "$PKG/hive-install-global.sh" "$PKG/scripts/"*
 
 ( cd "$STAGE" && zip -qr hivemind-install.zip hivemind-install )

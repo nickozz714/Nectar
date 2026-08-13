@@ -27,6 +27,10 @@ class ConsensusBody(BaseModel):
     threshold: int
 
 
+class CognitionBody(BaseModel):
+    enabled: bool
+
+
 @router.get("/teams")
 def list_teams(
     account: AuthedAccount = Depends(require_role("org_admin")),
@@ -141,6 +145,12 @@ def tuning_settings(
                 {"key": "Link-predictie", "value": f"sim ≥ {s.LINKPRED_MIN_SIM} · ≥{s.LINKPRED_MIN_COMMON} gedeeld · top {s.LINKPRED_TOP}", "env": "LINKPRED_MIN_SIM / LINKPRED_MIN_COMMON / LINKPRED_TOP",
                  "what": "Wanneer link-predictie een RELATES-koppeling voorstelt: gelijkenis ≥ X én ≥ Y gedeelde buren, top N kandidaten. Altijd als voorstel (Pollen), nooit automatisch.",
                  "risk": "Losser: meer maar zwakkere koppelvoorstellen. Strenger: echte verbanden worden gemist."},
+                {"key": "Cognition (wereld-research)",
+                 "value": ("aan" if org_service.get_swarm_settings(session, account).get("cognition_enabled") else "uit")
+                          + f" · max {s.COGNITION_MAX_NEW_MEMORIES}/job · {s.COGNITION_MAX_DEPTH} rondes · {s.COGNITION_DAILY_CAP}/dag",
+                 "env": "COGNITION_MAX_NEW_MEMORIES / COGNITION_MAX_DEPTH / COGNITION_DAILY_CAP",
+                 "what": "Optioneel: bij elke nieuwe memory opent de hive een cognition-Pollen — een zwerm-agent zoekt de onbekende begrippen op (websearch) en schrijft ze als reference-memories terug. Aan/uit per org via POST /manage/swarm/cognition of de MCP-tool hive_set_cognition.",
+                 "risk": "Aanzetten kost websearches en tokens. Het budget (memories per job, rondes, dagplafond) begrenst de nieuwsgierigheid hard."},
             ]},
             {"title": "Embeddings", "icon": "🧬", "items": [
                 {"key": "Model", "value": s.EMBEDDINGS_MODEL, "env": "EMBEDDINGS_MODEL",
@@ -166,6 +176,20 @@ def set_consensus(
     """Set the minimum Swarm size for consensus (org_admin, enforced in the service)."""
     try:
         return org_service.set_consensus_threshold(session, account, body.threshold)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/swarm/cognition")
+def set_cognition(
+    body: CognitionBody,
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """Toggle cognition-Pollen — optional world research on newly written memories
+    (org_admin, enforced in the service)."""
+    try:
+        return org_service.set_cognition_enabled(session, account, body.enabled)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

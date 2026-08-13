@@ -136,6 +136,14 @@ class Settings(BaseSettings):
     # (An org_admin can also directly resolve an 'open' chore, bypassing this — audited.)
     CONSENSUS_THRESHOLD: int = 2
 
+    # Cognition-Pollen: optional world research on newly written memories (docs/COGNITION.md).
+    # Off by default per org (Org.cognition_enabled) — web search + tokens cost real money.
+    # These knobs bound one org's curiosity: memories per job, follow-up rounds
+    # (bounded by construction, not by model obedience), and jobs per rolling 24h.
+    COGNITION_MAX_NEW_MEMORIES: int = 5
+    COGNITION_MAX_DEPTH: int = 2
+    COGNITION_DAILY_CAP: int = 20
+
     @property
     def embeddings_enabled(self) -> bool:
         return bool(self.EMBEDDINGS_MODEL) and (bool(self.EMBEDDINGS_BASE_URL) or self.EMBEDDINGS_LOCAL)
