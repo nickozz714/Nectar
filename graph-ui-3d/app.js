@@ -95,12 +95,12 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
     group.add(new THREE.Mesh(new THREE.SphereGeometry(r, 20, 20), mat));
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
       map: haloTex, color: col, transparent: true,
-      opacity: n.type === "topic" ? 0.16 : 0.14,
+      opacity: n.type === "topic" ? 0.11 : 0.09,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }));
-    halo.scale.set(r * 4.2, r * 4.2, 1);
+    halo.scale.set(r * 3.6, r * 3.6, 1);
     group.add(halo);
-    n.__mat = mat; n.__halo = halo.material;
+    n.__mat = mat; n.__halo = halo.material; n.__haloBase = halo.material.opacity;
     if (n.type === "topic" && (n.children || 0) >= 6) {   // labels only where they earn it
       const s = new SpriteText(n.title, 2.9, "#ffe2b8");
       s.fontFace = "Menlo, monospace";
@@ -120,8 +120,12 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
     return sn && tn && nodeVisible(sn) && nodeVisible(tn);
   })
   .linkColor(l => {
-    const active = state.hovered && (linkSrc(l) === state.hovered.id || linkTgt(l) === state.hovered.id);
-    if (active) return "#bfeaff";
+    const s = linkSrc(l), t = linkTgt(l);
+    if (state.hovered && (s === state.hovered.id || t === state.hovered.id)) return "#bfeaff";
+    if (state.selected) {                    // focus mode: only the selection's wiring lights up
+      if (s === state.selected.id || t === state.selected.id) return "#9fd8ea";
+      return "#0d1826";
+    }
     return l.rel === "CONTAINS" ? "#8a6a30" : "#2a7a90";
   })
   .linkOpacity(0.32)
@@ -131,15 +135,15 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .linkDirectionalParticleWidth(1.6)
   .linkDirectionalParticleColor(l => l.rel === "CONTAINS" ? "#e8a13d" : "#2fb8d8")
   .onNodeHover(n => {
-    for (const m of litNodes) { if (m.__mat) { m.__base = 0.7; m.__halo.opacity = 0.22; } }
     litNodes.length = 0;
+    applyDim();                              // restore the selection-aware baseline
     state.hovered = n || null;
     el("graph").style.cursor = n ? "pointer" : "default";
     if (n) {
       const set = [n, ...[...(nbrs.get(n.id) || [])].map(id => nodeById.get(id))];
       for (const m of set) {
         if (!m?.__mat) continue;
-        m.__base = 1.5; m.__halo.opacity = 0.45;
+        m.__base = 1.4; m.__halo.opacity = 0.3;
         litNodes.push(m);
       }
     }
@@ -185,7 +189,7 @@ function applyGraph() {
 /* ---- cinematics: bloom + fog + starfield + idle auto-rotate ---- */
 // middle ground: enough bloom to make the emissive cores sing, threshold high
 // enough that nothing blows out to white
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.45, 0.18);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.4, 0.2);
 Graph.postProcessingComposer().addPass(bloom);
 Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0009);   // depth cue: distance fades out
 
@@ -229,18 +233,20 @@ setInterval(() => {
   requestAnimationFrame(breathe);
 })();
 
-{
+/* starry sky, two layers: faint dust + a sparser bright layer that twinkles past the fog */
+for (const [count, size, opacity] of [[2000, 1.0, 0.4], [350, 1.7, 0.6]]) {
   const g = new THREE.BufferGeometry();
-  const pos = new Float32Array(1400 * 3);
-  for (let i = 0; i < 1400; i++) {
-    const r = 900 + Math.random() * 1600, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const r = 900 + Math.random() * 1700, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
     pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
     pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
     pos[i * 3 + 2] = r * Math.cos(ph);
   }
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  Graph.scene().add(new THREE.Points(g, new THREE.PointsMaterial({
-    color: 0x6f8398, size: 1.0, transparent: true, opacity: 0.3, sizeAttenuation: false })));
+  const stars = new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0x8fa8c0, size, transparent: true, opacity, sizeAttenuation: false, fog: false }));
+  Graph.scene().add(stars);
 }
 
 const controls = Graph.controls();
@@ -256,6 +262,21 @@ el("graph").addEventListener("pointerdown", wake);
 el("graph").addEventListener("wheel", wake, { passive: true });
 
 /* ---- selection, fly-to & detail panel ---- */
+/* focus dimming: with a selection, everything outside it + its direct wiring recedes */
+function applyDim() {
+  const focus = state.selected
+    ? new Set([state.selected.id, ...(nbrs.get(state.selected.id) || [])])
+    : null;
+  for (const n of data.nodes) {
+    if (!n.__mat) continue;
+    if (!focus) { n.__base = 0.7; n.__halo.opacity = n.__haloBase; }
+    else if (n.id === state.selected.id) { n.__base = 1.6; n.__halo.opacity = 0.35; }
+    else if (focus.has(n.id)) { n.__base = 1.0; n.__halo.opacity = 0.2; }
+    else { n.__base = 0.1; n.__halo.opacity = 0.015; }
+  }
+  Graph.linkColor(Graph.linkColor());
+}
+
 function flyTo(n) {
   const d = 130, hyp = Math.hypot(n.x, n.y, n.z) || 1, k = 1 + d / hyp;
   Graph.cameraPosition({ x: n.x * k, y: n.y * k, z: n.z * k }, n, 1400);
@@ -263,6 +284,7 @@ function flyTo(n) {
 
 async function select(n, fly) {
   state.selected = n;
+  applyDim();
   if (fly) { wake(); flyTo(n); }
   el("pTitle").textContent = n.title;
   el("pChips").innerHTML =
@@ -292,6 +314,7 @@ async function select(n, fly) {
 function closePanel() {
   el("panel").classList.remove("open");
   state.selected = null;
+  applyDim();
   if (state.isolated) { state.isolated = null; refreshVisibility(); }
 }
 
@@ -386,7 +409,16 @@ el("refresh").onclick = async () => {
   if (!fresh.error) location.reload();
 };
 
-/* boot: cortex first, camera pulls in and settles */
+/* the rest of the hive lives in the existing GUI — deep-link the HUD into it */
+fetch("./meta.json").then(r => r.json()).then(meta => {
+  if (!meta.hive_url) return;
+  for (const a of document.querySelectorAll("#nav a")) {
+    a.href = `${meta.hive_url}/ui#${a.dataset.tab}`;
+    a.target = "_blank";
+  }
+}).catch(() => {});
+
+/* boot: full organism, camera pulls in and settles */
 applyGraph();
 Graph.cameraPosition({ x: 0, y: 0, z: 900 });
 setTimeout(() => Graph.zoomToFit(1600, 60), 1200);

@@ -540,6 +540,14 @@ async function setMyPassword() {
   } catch (e) { alert(e.message); }
 }
 
+// deep links: /ui#chores, /ui#governance, /ui#beheer, … open that tab directly
+window.addEventListener("hashchange", () => applyHashTab());
+function applyHashTab() {
+  const t = (location.hash || "").slice(1);
+  if (t && document.getElementById("tab-" + t)) showTab(t);
+}
+setTimeout(applyHashTab, 0);
+
 function showTab(name) {
   for (const m of document.querySelectorAll("main")) m.style.display = "none";
   document.getElementById("tab-" + name).style.display = "flex";

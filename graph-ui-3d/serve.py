@@ -109,6 +109,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(assemble())
             except Exception as exc:
                 return self._json({"error": str(exc)}, 502)
+        if self.path.startswith("/meta.json"):
+            try:
+                base, _ = _conn()
+                return self._json({"hive_url": base})
+            except Exception as exc:
+                return self._json({"error": str(exc)}, 502)
         if self.path.startswith("/api/node/"):
             uid = self.path.split("/api/node/", 1)[1].split("?")[0]
             try:
