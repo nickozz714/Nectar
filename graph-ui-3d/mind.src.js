@@ -3,6 +3,7 @@
    klik een ster voor z'n stelsel, en drill een kennis-node met de cockpit-overlay
    (rechtsklik of de ⌕-knop in het paneel). */
 import ForceGraph3D from "3d-force-graph";
+import { Decks } from "./decks.src.js";
 import SpriteText from "three-spritetext";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -459,6 +460,7 @@ resultsEl.addEventListener("click", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "/" && document.activeElement !== searchEl) { e.preventDefault(); searchEl.focus(); return; }
   if (e.key !== "Escape") return;
+  if (Decks.isOpen()) { Decks.close(); return; }
   if (drill.classList.contains("on")) { closeDrill(); return; }
   if (resultsEl.style.display === "block") { resultsEl.style.display = "none"; searchEl.blur(); return; }
   if (state.level === 2) backToGalaxy();
@@ -513,21 +515,24 @@ drill.addEventListener("click", e => { if (e.target === drill) closeDrill(); });
 
 /* ---- server-modus: variant-switcher wordt navigatie naar de rest van Nectar ---- */
 if (SERVER) {
+  /* elke Nectar-functie heeft hier z'n eigen deck — nooit terug naar de legacy-pagina */
   const v = el("variants");
   v.innerHTML =
-    `<a class="chip" href="/ui#focus">◎ focus</a>
-     <a class="chip" href="/ui#chores">🌼 pollen<span id="navBadge"></span></a>
-     <a class="chip" href="/ui#governance">⚖ governance</a>
-     <a class="chip" href="/ui#beheer">⚙ beheer</a>
-     <a class="chip" href="/ui#legacy" onclick="location.href='/ui#legacy'">⌂ legacy</a>`;
+    `<span class="chip" data-deck="focus">◎ focus</span>
+     <span class="chip" data-deck="chores">🌼 pollen<span id="navBadge"></span></span>
+     <span class="chip" data-deck="governance">⚖ governance</span>
+     <span class="chip" data-deck="beheer">⚙ beheer</span>
+     <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">⌂ legacy</a>`;
+  v.querySelectorAll("[data-deck]").forEach(c => c.onclick = () => Decks.open(c.dataset.deck));
   fetch("/graph/me", AUTH).then(r => r.json()).then(me => {
     if (me.ready_chores) {
       const b = document.getElementById("navBadge");
       if (b) { b.textContent = ` ${me.ready_chores}`; b.style.color = "var(--amber)"; b.style.fontWeight = "700"; }
     }
     if (me.can_review) {
-      const r = document.createElement("a");
-      r.className = "chip"; r.href = "/ui#review"; r.textContent = "☑ review";
+      const r = document.createElement("span");
+      r.className = "chip"; r.textContent = "☑ review";
+      r.onclick = () => Decks.open("review");
       v.insertBefore(r, v.children[3]);
     }
   }).catch(() => {});

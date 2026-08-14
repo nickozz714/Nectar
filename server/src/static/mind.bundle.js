@@ -1081,12 +1081,12 @@ var require_createPhysicsSimulator = __commonJS({
          *
          * @returns {ngraph.physics.primitives.Body} added body
          */
-        addBody: function(body) {
-          if (!body) {
+        addBody: function(body2) {
+          if (!body2) {
             throw new Error("Body is required");
           }
-          bodies.push(body);
-          return body;
+          bodies.push(body2);
+          return body2;
         },
         /**
          * Adds body to the system at given position
@@ -1099,9 +1099,9 @@ var require_createPhysicsSimulator = __commonJS({
           if (!pos) {
             throw new Error("Body position is required");
           }
-          var body = createBody(pos);
-          bodies.push(body);
-          return body;
+          var body2 = createBody(pos);
+          bodies.push(body2);
+          return body2;
         },
         /**
          * Removes body from the system
@@ -1110,11 +1110,11 @@ var require_createPhysicsSimulator = __commonJS({
          *
          * @returns {Boolean} true if body found and removed. falsy otherwise;
          */
-        removeBody: function(body) {
-          if (!body) {
+        removeBody: function(body2) {
+          if (!body2) {
             return;
           }
-          var idx = bodies.indexOf(body);
+          var idx = bodies.indexOf(body2);
           if (idx < 0) {
             return;
           }
@@ -1225,11 +1225,11 @@ var require_createPhysicsSimulator = __commonJS({
         quadTree.insertBodies(bodies);
         var i2 = bodies.length;
         while (i2--) {
-          var body = bodies[i2];
-          if (!body.isPinned) {
-            body.reset();
-            quadTree.updateBodyForce(body);
-            dragForce.update(body);
+          var body2 = bodies[i2];
+          if (!body2.isPinned) {
+            body2.reset();
+            quadTree.updateBodyForce(body2);
+            dragForce.update(body2);
           }
         }
       }
@@ -1297,7 +1297,7 @@ var require_ngraph3 = __commonJS({
       initPhysics();
       listenToEvents();
       var wasStable = false;
-      var api = {
+      var api2 = {
         /**
          * Performs one step of iterative layout algorithm
          *
@@ -1310,8 +1310,8 @@ var require_ngraph3 = __commonJS({
             return true;
           }
           var lastMove = physicsSimulator.step();
-          api.lastMove = lastMove;
-          api.fire("step");
+          api2.lastMove = lastMove;
+          api2.fire("step");
           var ratio = lastMove / bodiesCount;
           var isStableNow = ratio <= 0.01;
           updateStableStatus(isStableNow);
@@ -1331,8 +1331,8 @@ var require_ngraph3 = __commonJS({
          * @param {number=} z position of node (only if applicable to body)
          */
         setNodePosition: function(nodeId) {
-          var body = getInitializedBody(nodeId);
-          body.setPosition.apply(body, Array.prototype.slice.call(arguments, 1));
+          var body2 = getInitializedBody(nodeId);
+          body2.setPosition.apply(body2, Array.prototype.slice.call(arguments, 1));
         },
         /**
          * @returns {Object} Link position by link id
@@ -1366,8 +1366,8 @@ var require_ngraph3 = __commonJS({
          * remain at their position
          */
         pinNode: function(node, isPinned) {
-          var body = getInitializedBody(node.id);
-          body.isPinned = !!isPinned;
+          var body2 = getInitializedBody(node.id);
+          body2.isPinned = !!isPinned;
         },
         /**
          * Checks whether given graph's node is currently pinned
@@ -1380,7 +1380,7 @@ var require_ngraph3 = __commonJS({
          */
         dispose: function() {
           graph.off("changed", onGraphChanged);
-          api.fire("disposed");
+          api2.fire("disposed");
         },
         /**
          * Gets physical body for a given node id. If node is not found undefined
@@ -1413,8 +1413,8 @@ var require_ngraph3 = __commonJS({
          */
         lastMove: 0
       };
-      eventify2(api);
-      return api;
+      eventify2(api2);
+      return api2;
       function updateStableStatus(isStableNow) {
         if (wasStable !== isStableNow) {
           wasStable = isStableNow;
@@ -1426,9 +1426,9 @@ var require_ngraph3 = __commonJS({
       }
       function getForceVectorLength() {
         var fx = 0, fy = 0;
-        forEachBody(function(body) {
-          fx += Math.abs(body.force.x);
-          fy += Math.abs(body.force.y);
+        forEachBody(function(body2) {
+          fx += Math.abs(body2.force.x);
+          fy += Math.abs(body2.force.y);
         });
         return Math.sqrt(fx * fx + fy * fy);
       }
@@ -1454,7 +1454,7 @@ var require_ngraph3 = __commonJS({
         graph.on("changed", onGraphChanged);
       }
       function onStableChanged(isStable) {
-        api.fire("stable", isStable);
+        api2.fire("stable", isStable);
       }
       function onGraphChanged(changes) {
         for (var i2 = 0; i2 < changes.length; ++i2) {
@@ -1486,8 +1486,8 @@ var require_ngraph3 = __commonJS({
         graph.forEachLink(initLink);
       }
       function initBody(nodeId) {
-        var body = nodeBodies.get(nodeId);
-        if (!body) {
+        var body2 = nodeBodies.get(nodeId);
+        if (!body2) {
           var node = graph.getNode(nodeId);
           if (!node) {
             throw new Error("initBody() was called with unknown node id");
@@ -1497,21 +1497,21 @@ var require_ngraph3 = __commonJS({
             var neighbors = getNeighborBodies(node);
             pos = physicsSimulator.getBestNewBodyPosition(neighbors);
           }
-          body = physicsSimulator.addBodyAt(pos);
-          body.id = nodeId;
-          nodeBodies.set(nodeId, body);
+          body2 = physicsSimulator.addBodyAt(pos);
+          body2.id = nodeId;
+          nodeBodies.set(nodeId, body2);
           updateBodyMass(nodeId);
           if (isNodeOriginallyPinned(node)) {
-            body.isPinned = true;
+            body2.isPinned = true;
           }
         }
       }
       function releaseNode(node) {
         var nodeId = node.id;
-        var body = nodeBodies.get(nodeId);
-        if (body) {
+        var body2 = nodeBodies.get(nodeId);
+        if (body2) {
           nodeBodies.delete(nodeId);
-          physicsSimulator.removeBody(body);
+          physicsSimulator.removeBody(body2);
         }
       }
       function initLink(link) {
@@ -1547,9 +1547,9 @@ var require_ngraph3 = __commonJS({
         return neighbors;
       }
       function updateBodyMass(nodeId) {
-        var body = nodeBodies.get(nodeId);
-        body.mass = nodeMass(nodeId);
-        if (Number.isNaN(body.mass)) {
+        var body2 = nodeBodies.get(nodeId);
+        body2.mass = nodeMass(nodeId);
+        if (Number.isNaN(body2.mass)) {
           throw new Error("Node mass should be a number");
         }
       }
@@ -1557,12 +1557,12 @@ var require_ngraph3 = __commonJS({
         return node && (node.isPinned || node.data && node.data.isPinned);
       }
       function getInitializedBody(nodeId) {
-        var body = nodeBodies.get(nodeId);
-        if (!body) {
+        var body2 = nodeBodies.get(nodeId);
+        if (!body2) {
           initBody(nodeId);
-          body = nodeBodies.get(nodeId);
+          body2 = nodeBodies.get(nodeId);
         }
-        return body;
+        return body2;
       }
       function defaultArrayNodeMass(nodeId) {
         var links = graph.getLinks(nodeId);
@@ -6438,10 +6438,10 @@ var RenderTarget = class extends EventDispatcher {
   set texture(value) {
     this.textures[0] = value;
   }
-  set depthTexture(current) {
+  set depthTexture(current2) {
     if (this._depthTexture !== null) this._depthTexture.renderTarget = null;
-    if (current !== null) current.renderTarget = this;
-    this._depthTexture = current;
+    if (current2 !== null) current2.renderTarget = this;
+    this._depthTexture = current2;
   }
   /**
    * Instead of saving the depth in a renderbuffer, a texture
@@ -16110,14 +16110,14 @@ var Curve = class {
     }
     this.needsUpdate = false;
     const cache2 = [];
-    let current, last = this.getPoint(0);
+    let current2, last = this.getPoint(0);
     let sum = 0;
     cache2.push(0);
     for (let p2 = 1; p2 <= divisions; p2++) {
-      current = this.getPoint(p2 / divisions);
-      sum += current.distanceTo(last);
+      current2 = this.getPoint(p2 / divisions);
+      sum += current2.distanceTo(last);
       cache2.push(sum);
-      last = current;
+      last = current2;
     }
     this.cacheArcLengths = cache2;
     return cache2;
@@ -85612,6 +85612,470 @@ function getGraphObj(object) {
   return obj;
 }
 
+// decks.src.js
+var TOKEN = () => localStorage.getItem("hive_token") || "";
+var esc = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c3) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c3]);
+async function api(path, opts = {}) {
+  const r2 = await fetch(path, { ...opts, headers: {
+    Authorization: "Bearer " + TOKEN(),
+    "Content-Type": "application/json",
+    ...opts.headers || {}
+  } });
+  if (!r2.ok) {
+    let d2 = "";
+    try {
+      d2 = (await r2.json()).detail || "";
+    } catch {
+    }
+    throw new Error(d2 || `HTTP ${r2.status}`);
+  }
+  try {
+    return await r2.json();
+  } catch {
+    return null;
+  }
+}
+var ME = null;
+var current = null;
+var host;
+var body;
+var tabsEl;
+var titleEl;
+var DECKS = [
+  ["focus", "\u25CE focus"],
+  ["chores", "\u{1F33C} pollen"],
+  ["review", "\u2611 review"],
+  ["governance", "\u2696 governance"],
+  ["beheer", "\u2699 beheer"]
+];
+var CSS = `
+#deck { position: fixed; inset: 0; z-index: 18; background: rgba(2,4,9,.6);
+        opacity: 0; pointer-events: none; transition: opacity .25s ease; display: flex;
+        align-items: center; justify-content: center; }
+#deck.on { opacity: 1; pointer-events: auto; }
+#deck .dpanel { width: min(1080px, 94vw); height: 88vh; display: flex; flex-direction: column;
+  background: rgba(4,8,15,.92); border: 1px solid var(--line); border-radius: 8px;
+  backdrop-filter: blur(12px); box-shadow: 0 0 60px rgba(62,224,255,.12); overflow: hidden; }
+#deck .dhead { display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+#deck .dtitle { font-size: 12px; letter-spacing: .28em; color: var(--amber); text-transform: uppercase; font-weight: 700; }
+#deck .dtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 8px; }
+#deck .dclose { margin-left: auto; }
+#deck .dbody { flex: 1; overflow-y: auto; padding: 18px; font-size: 12.5px; line-height: 1.7; }
+#deck .chip.on { color: var(--amber); border-color: rgba(255,181,71,.4); }
+#deck h3 { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan);
+  margin: 22px 0 10px; } #deck h3:first-child { margin-top: 0; }
+#deck .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 13px 15px; margin-bottom: 12px; }
+#deck .card .ct { font-weight: 600; font-size: 13px; line-height: 1.5; }
+#deck .crow { display: flex; gap: 5px; flex-wrap: wrap; margin: 7px 0; }
+#deck .cex { color: var(--dim); white-space: pre-wrap; max-height: 130px; overflow-y: auto;
+  margin: 6px 0; border-left: 2px solid var(--line); padding-left: 10px; }
+#deck .abtn { display: inline-flex; border: 1px solid var(--line); border-radius: 3px;
+  padding: 5px 11px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  cursor: pointer; color: var(--cyan); user-select: none; }
+#deck .abtn:hover { background: rgba(62,224,255,.08); }
+#deck .abtn.amber { color: var(--amber); border-color: rgba(255,181,71,.4); }
+#deck .abtn.red { color: #ff7847; border-color: rgba(255,120,71,.4); }
+#deck .abtn.green { color: #55ffa1; border-color: rgba(85,255,161,.35); }
+#deck .stat { display: inline-flex; flex-direction: column; gap: 2px; border: 1px solid var(--line);
+  border-radius: 6px; padding: 10px 16px; margin: 0 8px 8px 0; min-width: 110px; }
+#deck .stat b { font-size: 18px; } #deck .stat span { font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim); }
+#deck table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+#deck th { text-align: left; color: var(--dim); font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); }
+#deck td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgba(62,224,255,.08); }
+#deck input[type=text], #deck input[type=number], #deck textarea, #deck select {
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
+  font: 12px var(--mono); padding: 7px 10px; outline: none; }
+#deck input:focus, #deck textarea:focus { border-color: var(--cyan); }
+#deck .ok { color: #55ffa1; font-size: 11px; margin-left: 8px; }
+#deck .empty { color: var(--dim); padding: 20px 0; }
+`;
+function pill(txt, cls = "") {
+  return `<span class="pchip ${cls}">${esc(txt)}</span>`;
+}
+function fmt(ms) {
+  return ms ? new Date(ms).toLocaleString("nl-NL") : "";
+}
+async function renderFocus() {
+  const foci = await api("/focus");
+  const list = Array.isArray(foci) ? foci : foci ? [foci] : [];
+  const stepTxt = (s2) => typeof s2 === "string" ? s2 : s2.text ?? s2.step ?? JSON.stringify(s2);
+  const stepDone = (s2) => typeof s2 === "object" && !!s2.done;
+  body.innerHTML = (list.length ? list.map((f2) => `
+    <div class="card">
+      <div class="ct">\u{1F3AF} ${esc(f2.goal || "(zonder doel)")}</div>
+      <div class="crow">${f2.project ? pill("project: " + f2.project) : ""}${f2.done_when ? pill("klaar: " + f2.done_when, "amber") : ""}</div>
+      ${(f2.steps || []).map((s2) => `
+        <div style="display:flex;gap:9px;align-items:center;margin:3px 0;${stepDone(s2) ? "opacity:.45" : ""}">
+          <span>${stepDone(s2) ? "\u2713" : "\u25CB"}</span><span style="flex:1">${esc(stepTxt(s2))}</span>
+          ${stepDone(s2) ? "" : `<span class="abtn green" data-adv="${esc(stepTxt(s2))}" data-proj="${esc(f2.project || "")}">\u2713 afronden</span>`}
+        </div>`).join("")}
+      ${f2.guardrails ? `<div class="cex">guardrails: ${esc(Array.isArray(f2.guardrails) ? f2.guardrails.join(" \xB7 ") : f2.guardrails)}</div>` : ""}
+      <div class="crow" style="margin-top:8px"><span class="abtn red" data-clear="${esc(f2.project || "")}">\u2715 focus wissen</span></div>
+    </div>`).join("") : `<div class="empty">Geen actieve focus \u2014 hieronder zet je er \xE9\xE9n.</div>`) + `
+    <h3>nieuwe focus</h3>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="text" id="fGoal" placeholder="doel\u2026">
+        <textarea id="fSteps" rows="4" placeholder="stappen \u2014 \xE9\xE9n per regel"></textarea>
+        <input type="text" id="fGuard" placeholder="guardrails (optioneel)">
+        <input type="text" id="fDone" placeholder="klaar wanneer\u2026 (optioneel)">
+        <div><span class="abtn amber" id="fSet">focus zetten</span><span class="ok" id="fOut"></span></div>
+      </div></div>`;
+  body.querySelectorAll("[data-adv]").forEach((b2) => b2.onclick = async () => {
+    try {
+      await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b2.dataset.adv, project: b2.dataset.proj }) });
+      renderFocus();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  });
+  body.querySelectorAll("[data-clear]").forEach((b2) => b2.onclick = async () => {
+    try {
+      await api(`/focus?project=${encodeURIComponent(b2.dataset.clear)}`, { method: "DELETE" });
+      renderFocus();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  });
+  body.querySelector("#fSet").onclick = async () => {
+    const goal = body.querySelector("#fGoal").value.trim();
+    if (!goal) return;
+    try {
+      await api("/focus", { method: "POST", body: JSON.stringify({
+        goal,
+        steps: body.querySelector("#fSteps").value.split("\n").map((s2) => s2.trim()).filter(Boolean),
+        guardrails: body.querySelector("#fGuard").value.trim(),
+        done_when: body.querySelector("#fDone").value.trim()
+      }) });
+      renderFocus();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  };
+}
+async function renderChores() {
+  const data2 = await api("/graph/chores");
+  const act = async (fn) => {
+    try {
+      await fn();
+      renderChores();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  };
+  const nodeBlock = (n2, label2) => n2 && n2.title ? `<div style="margin:6px 0"><div class="crow">${label2 ? pill(label2, "amber") : ""}<b>${esc(n2.title)}</b></div><div class="cex">${esc(n2.content || "")}</div></div>` : "";
+  const cards = (data2.chores || []).map((c3) => {
+    const v2 = c3.view || {};
+    const chips = [
+      pill(c3.type),
+      pill(c3.status, c3.status === "ready" ? "amber" : ""),
+      v2.similarity != null ? pill("gelijkenis " + Number(v2.similarity).toFixed(2)) : "",
+      c3.votes ? pill(c3.votes + " stem(men)") : "",
+      c3.claimed_by_name ? pill(`\u{1F41D} ${c3.claim_active ? "geclaimd" : "eerder geclaimd"} door ${c3.claimed_by_name}`) : ""
+    ].join("");
+    let buttons = "";
+    if (v2.route === "op_route") {
+      buttons = ["ADD", "REPLACE", "DELETE", "NOOP"].map((d2) => `<span class="abtn" data-think="${d2}" data-uid="${c3.uid}">${d2.toLowerCase()}</span>`).join("") + `<span class="abtn amber" data-merge="${c3.uid}">\u21C4 samenvoegen aanvragen</span>`;
+    } else if (v2.route === "contradiction") {
+      buttons = `<span class="abtn green" data-contra="compatible" data-uid="${c3.uid}">verenigbaar</span>
+        <span class="abtn" data-contra="a" data-uid="${c3.uid}">A is actueel</span>
+        <span class="abtn" data-contra="b" data-uid="${c3.uid}">B is actueel</span>`;
+    } else if (v2.route === "human") {
+      buttons = `<span class="pchip">wacht op menselijke review \u2014 zie de Review-deck</span>`;
+    } else if (c3.type === "cognition") {
+      buttons = `<span class="pchip">onderzoekswerk voor een agent (websearch)</span>
+        <span class="abtn red" data-res="reject" data-uid="${c3.uid}">\u2715 taak laten vervallen</span>`;
+    } else {
+      buttons = `<span class="abtn green" data-res="apply" data-uid="${c3.uid}">\u2713 toepassen</span>
+        <span class="abtn red" data-res="reject" data-uid="${c3.uid}">\u2715 afwijzen</span>`;
+    }
+    return `<div class="card"><div class="ct">${esc(v2.headline || c3.type)}</div>
+      <div class="crow">${chips}</div>
+      ${v2.explain ? `<div style="color:var(--dim)">${esc(v2.explain)}</div>` : ""}
+      ${nodeBlock(v2.primary, v2.primary?.label)}${nodeBlock(v2.compare, v2.compare?.label)}
+      <div class="crow" style="margin-top:9px" data-refs='${esc(JSON.stringify(v2.refs || {}))}'>${buttons}</div></div>`;
+  }).join("") || `<div class="empty">Geen open Pollen \u2014 de hive is bij. \u{1F41D}</div>`;
+  const done = (data2.resolved || []).slice(0, 12).map((c3) => {
+    const ok = c3.status === "resolved";
+    return `<div style="opacity:.65;margin:4px 0">${ok ? "\u2713" : "\u2717"} ${esc(c3.view?.headline || c3.type)}
+      <span style="color:var(--dim)"> \u2014 ${ok ? "toegepast" : "afgewezen"}${c3.resolved_by_name ? " door " + esc(c3.resolved_by_name) : ""}${c3.resolved ? " \xB7 " + fmt(c3.resolved) : ""}</span></div>`;
+  }).join("");
+  body.innerHTML = `<div class="crow"><span class="stat"><b>${data2.ready ?? 0}</b><span>ready</span></span>
+    <span class="stat"><b>${(data2.chores || []).length}</b><span>open</span></span></div>
+    <h3>open / actief</h3>${cards}<h3>afgehandeld</h3>${done || `<div class="empty">nog niets</div>`}`;
+  body.querySelectorAll("[data-res]").forEach((b2) => b2.onclick = () => act(() => api(
+    `/graph/chores/${b2.dataset.uid}/resolve?action=${b2.dataset.res}${ME?.can_review ? "&direct=true" : ""}`,
+    { method: "POST", body: JSON.stringify({ note: "via mind" }) }
+  )));
+  body.querySelectorAll("[data-think]").forEach((b2) => b2.onclick = () => act(() => api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: b2.dataset.uid, decision: b2.dataset.think, note: "via mind" }) })));
+  body.querySelectorAll("[data-merge]").forEach((b2) => b2.onclick = () => act(() => api("/graph/think/request-merge", { method: "POST", body: JSON.stringify({ pollen_uid: b2.dataset.merge }) })));
+  body.querySelectorAll("[data-contra]").forEach((b2) => b2.onclick = () => {
+    const refs = JSON.parse(b2.closest("[data-refs]").dataset.refs || "{}");
+    const verdict = b2.dataset.contra;
+    const payload = verdict === "compatible" ? { pollen_uid: b2.dataset.uid, verdict: "compatible" } : {
+      pollen_uid: b2.dataset.uid,
+      verdict: "contradiction",
+      current: verdict === "a" ? refs.a : refs.b,
+      outdated: verdict === "a" ? refs.b : refs.a
+    };
+    act(() => api("/graph/contradiction/resolve", { method: "POST", body: JSON.stringify(payload) }));
+  });
+}
+async function renderReview() {
+  const items = await api("/review/chores");
+  body.innerHTML = (items || []).map((c3) => `<div class="card">
+      <div class="ct">${esc(c3.node_title || c3.type)}</div>
+      <div class="crow">${pill(c3.type, "amber")}${c3.node_scope ? pill(c3.node_scope) : ""}</div>
+      <div class="cex">${esc(typeof c3.payload === "string" ? c3.payload : JSON.stringify(c3.payload || {}, null, 1))}</div>
+      <div class="crow"><span class="abtn green" data-rv="approve" data-uid="${c3.uid}">\u2713 goedkeuren</span>
+        <span class="abtn red" data-rv="reject" data-uid="${c3.uid}">\u2715 afwijzen</span></div></div>`).join("") || `<div class="empty">Geen scope-verbredingen die op een mens wachten.</div>`;
+  body.querySelectorAll("[data-rv]").forEach((b2) => b2.onclick = async () => {
+    try {
+      await api(`/review/chores/${b2.dataset.uid}/${b2.dataset.rv}`, { method: "POST", body: JSON.stringify({ note: "via mind" }) });
+      renderReview();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  });
+}
+async function renderGovernance() {
+  const g2 = await api("/graph/governance");
+  const dist = (title, obj) => `<h3>${title}</h3><div class="crow">` + Object.entries(obj || {}).sort((a3, b2) => b2[1] - a3[1]).map(([k2, v2]) => `<span class="stat"><b>${v2}</b><span>${esc(k2)}</span></span>`).join("") + `</div>`;
+  body.innerHTML = `
+    <div class="crow"><span class="stat"><b>${g2.nodes_total}</b><span>nodes totaal</span></span></div>
+    ${dist("per scope", g2.by_scope)}${dist("per type", g2.by_type)}
+    ${dist("gevoeligheid", g2.by_sensitivity)}${dist("pollen-pijplijn", g2.chores)}
+    <h3>herkomst (model \xB7 account \xB7 persoon)</h3>
+    <table><tr><th>model</th><th>account</th><th>persoon</th><th>nodes</th></tr>
+      ${(g2.by_origin || []).map((o2) => `<tr><td>${esc(o2.model)}</td><td>${esc(o2.account)}</td><td>${esc(o2.person)}</td><td>${o2.count}</td></tr>`).join("")}</table>
+    <h3>gevoelig gemarkeerd (${(g2.sensitive_nodes || []).length})</h3>
+    ${(g2.sensitive_nodes || []).map((n2) => `<div style="margin:3px 0">\u{1F512} ${esc(n2.title)} ${pill(n2.type)}</div>`).join("") || `<div class="empty">niets gemarkeerd</div>`}`;
+}
+var BEHEER_SEC = "inzicht";
+async function renderBeheer() {
+  const admin = ME?.can_review;
+  const secs = admin ? [["inzicht", "\u{1F4CA} inzicht"], ["onderhoud", "\u{1F9F9} onderhoud"], ["instellingen", "\u{1F39B}\uFE0F instellingen"], ["toegang", "\u{1F511} toegang"], ["data", "\u{1F4BE} data"], ["pakket", "\u{1F4E6} pakket"]] : [["inzicht", "\u{1F4CA} inzicht"], ["pakket", "\u{1F4E6} pakket"]];
+  if (!secs.find((s2) => s2[0] === BEHEER_SEC)) BEHEER_SEC = "inzicht";
+  const nav = `<div class="crow" style="margin-bottom:14px">${secs.map(([k2, l2]) => `<span class="abtn ${k2 === BEHEER_SEC ? "amber" : ""}" data-sec="${k2}">${l2}</span>`).join("")}</div>`;
+  body.innerHTML = nav + `<div id="secBody"><div class="empty">laden\u2026</div></div>`;
+  body.querySelectorAll("[data-sec]").forEach((b2) => b2.onclick = () => {
+    BEHEER_SEC = b2.dataset.sec;
+    renderBeheer();
+  });
+  const sec = body.querySelector("#secBody");
+  try {
+    await BEHEER_RENDER[BEHEER_SEC](sec, admin);
+  } catch (e2) {
+    sec.innerHTML = `<div class="empty">fout: ${esc(e2.message)}</div>`;
+  }
+}
+var BEHEER_RENDER = {
+  async inzicht(sec) {
+    const a3 = await api("/graph/analytics");
+    const scalars = Object.entries(a3).filter(([, v2]) => typeof v2 === "number");
+    const objs = Object.entries(a3).filter(([, v2]) => v2 && typeof v2 === "object" && !Array.isArray(v2));
+    const arrs = Object.entries(a3).filter(([, v2]) => Array.isArray(v2));
+    sec.innerHTML = `<div class="crow">${scalars.map(([k2, v2]) => `<span class="stat"><b>${v2}</b><span>${esc(k2)}</span></span>`).join("")}</div>` + objs.map(([k2, v2]) => `<h3>${esc(k2)}</h3><div class="crow">${Object.entries(v2).map(([kk, vv]) => `<span class="stat"><b>${typeof vv === "number" ? vv : esc(String(vv))}</b><span>${esc(kk)}</span></span>`).join("")}</div>`).join("") + arrs.map(([k2, v2]) => v2.length && typeof v2[0] === "object" ? `<h3>${esc(k2)}</h3><table><tr>${Object.keys(v2[0]).map((h2) => `<th>${esc(h2)}</th>`).join("")}</tr>
+           ${v2.slice(0, 10).map((r2) => `<tr>${Object.values(r2).map((c3) => `<td>${esc(String(c3))}</td>`).join("")}</tr>`).join("")}</table>` : "").join("");
+  },
+  async onderhoud(sec) {
+    const scans = [
+      ["tidy-scan", "\u{1F5C2}\uFE0F opruimen", "losse kennis krijgt een topic-voorstel (Pollen)"],
+      ["staleness-scan", "\u23F3 staleness", "oude veelgebruikte kennis \u2192 review-Pollen"],
+      ["topic-summaries", "\u{1F4DD} topic-samenvattingen", "werk per topic de samenvatting bij"],
+      ["contradiction-scan", "\u2694\uFE0F tegenspraak", "sterk gelijkende paren \u2192 think-Pollen"],
+      ["linkpred-scan", "\u{1F517} link-predictie", "waarschijnlijke verbanden voorstellen"],
+      ["pagerank-scan", "\u{1F3DB}\uFE0F pagerank", "structureel belang herberekenen"],
+      ["train-ranker", "\u{1F9E0} ranker trainen", "learning-to-rank op feedback"],
+      ["reindex", "\u{1F9EC} her-embedden", "alle embeddings opnieuw (kan even duren)"],
+      ["reclassify-sensitivity", "\u{1F50D} herclassificeren", "gevoeligheids-labels verversen"]
+    ];
+    sec.innerHTML = scans.map(([ep, name, d2]) => `<div class="card"><div class="ct">${name}</div>
+      <div style="color:var(--dim)">${d2}</div>
+      <div class="crow"><span class="abtn" data-scan="${ep}">draaien</span><span class="ok" id="out-${ep}"></span></div></div>`).join("");
+    sec.querySelectorAll("[data-scan]").forEach((b2) => b2.onclick = async () => {
+      const out = sec.querySelector(`#out-${b2.dataset.scan}`);
+      out.textContent = " bezig\u2026";
+      try {
+        const r2 = await api(`/graph/${b2.dataset.scan}`, { method: "POST" });
+        out.textContent = " \u2713 " + Object.entries(r2 || {}).filter(([, v2]) => typeof v2 !== "object").map(([k2, v2]) => `${k2}: ${v2}`).join(" \xB7 ");
+      } catch (e2) {
+        out.textContent = " \u2717 " + e2.message;
+      }
+    });
+  },
+  async instellingen(sec) {
+    const s2 = await api("/manage/swarm");
+    sec.innerHTML = `
+      <div class="card"><div class="ct">\u{1F5A5}\uFE0F standaardinterface</div>
+        <div style="color:var(--dim)">waar leden na inloggen landen \u2014 beide blijven bereikbaar</div>
+        <div class="crow"><span class="abtn ${ME.default_ui !== "mind" ? "amber" : ""}" data-ui="legacy">legacy</span>
+          <span class="abtn ${ME.default_ui === "mind" ? "amber" : ""}" data-ui="mind">mind 3d</span><span class="ok" id="uiOut"></span></div></div>
+      <div class="card"><div class="ct">\u{1F41D} consensus-drempel</div>
+        <div style="color:var(--dim)">stemmen (per account) voordat een Pollen 'ready' wordt</div>
+        <div class="crow"><input type="number" id="consN" min="1" style="width:80px" value="${s2.consensus_threshold}">
+          <span class="abtn" id="consSave">opslaan</span><span class="ok" id="consOut"></span></div></div>
+      <div class="card"><div class="ct">\u{1F30D} cognition (wereld-research)</div>
+        <div style="color:var(--dim)">nieuwe memories krijgen een research-Pollen; budget: max ${s2.cognition_budget?.max_new}/job \xB7 ${s2.cognition_budget?.max_depth} rondes \xB7 ${s2.cognition_budget?.daily_cap}/dag</div>
+        <div class="crow"><span class="abtn ${s2.cognition_enabled ? "green" : ""}" data-cog="true">aan</span>
+          <span class="abtn ${!s2.cognition_enabled ? "red" : ""}" data-cog="false">uit</span><span class="ok" id="cogOut"></span></div></div>`;
+    sec.querySelectorAll("[data-ui]").forEach((b2) => b2.onclick = async () => {
+      try {
+        await api("/manage/ui-default", { method: "POST", body: JSON.stringify({ ui: b2.dataset.ui }) });
+        ME.default_ui = b2.dataset.ui;
+        BEHEER_RENDER.instellingen(sec);
+      } catch (e2) {
+        alert(e2.message);
+      }
+    });
+    sec.querySelector("#consSave").onclick = async () => {
+      try {
+        await api("/manage/swarm/consensus", { method: "POST", body: JSON.stringify({ threshold: +sec.querySelector("#consN").value }) });
+        sec.querySelector("#consOut").textContent = " \u2713";
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
+    sec.querySelectorAll("[data-cog]").forEach((b2) => b2.onclick = async () => {
+      try {
+        await api("/manage/swarm/cognition", { method: "POST", body: JSON.stringify({ enabled: b2.dataset.cog === "true" }) });
+        BEHEER_RENDER.instellingen(sec);
+      } catch (e2) {
+        alert(e2.message);
+      }
+    });
+  },
+  async toegang(sec) {
+    const [accounts, invites] = await Promise.all([api("/manage/accounts"), api("/manage/invites")]);
+    sec.innerHTML = `<h3>accounts</h3>
+      <table><tr><th>account</th><th>persoon</th><th>rol</th><th>tokens</th></tr>
+      ${(accounts || []).map((a3) => `<tr><td>${esc(a3.name)}</td><td>${esc(a3.person || "\u2014")}</td>
+        <td>${esc(a3.role)}</td><td>${a3.active ?? a3.active_tokens ?? "\u2014"}</td></tr>`).join("")}</table>
+      <h3>invites</h3>
+      <div class="crow"><select id="invRole"><option>member</option><option>maintainer</option><option>org_admin</option></select>
+        <input type="number" id="invUses" value="1" min="1" style="width:70px" title="aantal keer bruikbaar">
+        <span class="abtn amber" id="invMake">nieuwe invite</span><span class="ok" id="invOut" style="user-select:all"></span></div>
+      ${(invites || []).map((i2) => `<div style="margin:4px 0;color:var(--dim)">\u{1F511} ${esc(i2.role)} \xB7 ${i2.uses_left ?? i2.uses ?? "?"}\xD7 over ${i2.code_hash ? `<span class="abtn red" data-rvk="${esc(i2.code_hash)}">intrekken</span>` : ""}</div>`).join("")}`;
+    sec.querySelector("#invMake").onclick = async () => {
+      try {
+        const r2 = await api("/manage/invites", { method: "POST", body: JSON.stringify({
+          role: sec.querySelector("#invRole").value,
+          uses: +sec.querySelector("#invUses").value,
+          expires_days: 14
+        }) });
+        sec.querySelector("#invOut").textContent = " code: " + (r2.code || JSON.stringify(r2));
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
+    sec.querySelectorAll("[data-rvk]").forEach((b2) => b2.onclick = async () => {
+      try {
+        await api(`/manage/invites/${b2.dataset.rvk}/revoke`, { method: "POST" });
+        BEHEER_RENDER.toegang(sec);
+      } catch (e2) {
+        alert(e2.message);
+      }
+    });
+  },
+  async data(sec) {
+    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4BE} export</div>
+      <div style="color:var(--dim)">volledige JSON-export van de zichtbare hive</div>
+      <div class="crow"><span class="abtn amber" id="expBtn">download export</span><span class="ok" id="expOut"></span></div></div>
+      <div class="card"><div class="ct">\u{1F6DF} back-ups</div>
+      <div style="color:var(--dim)">volume-snapshots draaien op de server (zie OPERATIONS.md); import kan via de API (/import)</div></div>`;
+    sec.querySelector("#expBtn").onclick = async () => {
+      const out = sec.querySelector("#expOut");
+      out.textContent = " bezig\u2026";
+      try {
+        const r2 = await fetch("/export", { headers: { Authorization: "Bearer " + TOKEN() } });
+        const blob = await r2.blob();
+        const a3 = document.createElement("a");
+        a3.href = URL.createObjectURL(blob);
+        a3.download = "nectar-export.json";
+        a3.click();
+        out.textContent = " \u2713";
+      } catch (e2) {
+        out.textContent = " \u2717 " + e2.message;
+      }
+    };
+  },
+  async pakket(sec) {
+    let skills = [];
+    try {
+      skills = await api("/skills");
+    } catch {
+    }
+    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4E6} install-pakket</div>
+      <div style="color:var(--dim)">hivemind-install.zip \u2014 de client-kit voor een nieuwe machine</div>
+      <div class="crow"><a class="abtn amber" href="/install.zip" download>download kit</a></div></div>
+      <h3>gedeelde skills (${(skills || []).length})</h3>
+      ${(skills || []).map((s2) => `<div style="margin:5px 0"><b>${esc(s2.title || s2.name)}</b>
+        <div style="color:var(--dim)">${esc((s2.description || s2.content || "").slice(0, 160))}</div></div>`).join("") || `<div class="empty">geen skills gevonden</div>`}`;
+  }
+};
+var RENDER = {
+  focus: renderFocus,
+  chores: renderChores,
+  review: renderReview,
+  governance: renderGovernance,
+  beheer: renderBeheer
+};
+var TITLES = { focus: "focus", chores: "pollen", review: "review", governance: "governance", beheer: "beheer" };
+function build() {
+  const style = document.createElement("style");
+  style.textContent = CSS;
+  document.head.appendChild(style);
+  host = document.createElement("div");
+  host.id = "deck";
+  host.innerHTML = `<div class="dpanel">
+    <div class="dhead"><span class="dtitle">NECTAR // <span id="deckName"></span></span>
+      <div class="dtabs"></div><span class="chip dclose" id="deckClose">\u2715 sluit (esc)</span></div>
+    <div class="dbody"></div></div>`;
+  document.body.appendChild(host);
+  body = host.querySelector(".dbody");
+  tabsEl = host.querySelector(".dtabs");
+  titleEl = host.querySelector("#deckName");
+  host.querySelector("#deckClose").onclick = close;
+  host.addEventListener("click", (e2) => {
+    if (e2.target === host) close();
+  });
+}
+async function open(name) {
+  if (!host) build();
+  if (!ME) {
+    try {
+      ME = await api("/graph/me");
+    } catch {
+      location.replace("/ui");
+      return;
+    }
+  }
+  if (name === "review" && !ME.can_review) name = "chores";
+  current = name;
+  titleEl.textContent = TITLES[name] || name;
+  tabsEl.innerHTML = DECKS.filter(([k2]) => k2 !== "review" || ME.can_review).map(([k2, l2]) => `<span class="chip ${k2 === current ? "on" : ""}" data-deck="${k2}">${l2}${k2 === "chores" && ME.ready_chores ? ` <b style="color:var(--amber)">${ME.ready_chores}</b>` : ""}</span>`).join("");
+  tabsEl.querySelectorAll("[data-deck]").forEach((c3) => c3.onclick = () => open(c3.dataset.deck));
+  host.classList.add("on");
+  body.innerHTML = `<div class="empty">laden\u2026</div>`;
+  try {
+    await RENDER[name]();
+  } catch (e2) {
+    body.innerHTML = `<div class="empty">fout: ${esc(e2.message)}</div>`;
+  }
+}
+function close() {
+  host?.classList.remove("on");
+  current = null;
+}
+function isOpen() {
+  return !!host?.classList.contains("on");
+}
+var Decks = { open, close, isOpen };
+
 // node_modules/three-spritetext/dist/three-spritetext.mjs
 function _arrayLikeToArray7(r2, a3) {
   (null == a3 || a3 > r2.length) && (a3 = r2.length);
@@ -86450,20 +86914,20 @@ var COLORS = {
 };
 var colorOf = (n2) => COLORS[n2.type] || "#8fa3b8";
 var el = (id) => document.getElementById(id);
-var esc = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c3) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c3]);
+var esc2 = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c3) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c3]);
 var UID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var titleOf = (n2) => UID_RE.test(n2.title) ? "(naamloos topic)" : n2.title;
 var trunc2 = (s2, max2) => s2.length > max2 ? s2.slice(0, max2 - 1).trimEnd() + "\u2026" : s2;
 var SERVER = location.pathname.startsWith("/ui/");
-var TOKEN = SERVER ? localStorage.getItem("hive_token") || "" : "";
-if (SERVER && !TOKEN) location.replace("/ui");
-var AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : void 0;
+var TOKEN2 = SERVER ? localStorage.getItem("hive_token") || "" : "";
+if (SERVER && !TOKEN2) location.replace("/ui");
+var AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN2 } } : void 0;
 var NODE_URL = (id) => SERVER ? `/graph/node/${id}` : `/api/node/${id}`;
 var res = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
 if (SERVER && (res.status === 401 || res.status === 403)) location.replace("/ui");
 var data = await res.json();
 if (data.error) {
-  el("splash").innerHTML = `<div class="t" style="color:#ff7847">hive onbereikbaar: ${esc(data.error)}</div>`;
+  el("splash").innerHTML = `<div class="t" style="color:#ff7847">hive onbereikbaar: ${esc2(data.error)}</div>`;
   throw new Error(data.error);
 }
 var nodeById = new Map(data.nodes.map((n2) => [n2.id, n2]));
@@ -86597,7 +87061,7 @@ function makeNode(n2) {
   return group;
 }
 var LINK_COLORS = { tt: "#8a6a30", sun: "#8a6a30", rel: "#2a7a90", portal: "#3a4a5c" };
-var Graph = new _3dForceGraph(el("graph"), { controlType: "orbit" }).backgroundColor("#020409").showNavInfo(false).nodeId("id").nodeLabel((n2) => n2.__role === "portal" ? `<span style="color:${colorOf(n2)}">\u25C8 ${esc(n2.type)}</span> &nbsp;spring naar dit stelsel` : n2.__role === "star" ? `<b>${esc(titleOf(n2))}</b> \xB7 ${n2.children || 0} kenniszaden` : `<span style="color:${colorOf(n2)}">\u25C8 ${esc(n2.type)}</span> &nbsp;${esc(titleOf(n2))}`).onNodeRightClick((n2) => {
+var Graph = new _3dForceGraph(el("graph"), { controlType: "orbit" }).backgroundColor("#020409").showNavInfo(false).nodeId("id").nodeLabel((n2) => n2.__role === "portal" ? `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;spring naar dit stelsel` : n2.__role === "star" ? `<b>${esc2(titleOf(n2))}</b> \xB7 ${n2.children || 0} kenniszaden` : `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;${esc2(titleOf(n2))}`).onNodeRightClick((n2) => {
   if (n2 && n2.__role !== "portal" && n2.type !== "topic") openDrill(n2.id);
 }).nodeThreeObjectExtend(false).nodeThreeObject(makeNode).linkColor((l2) => LINK_COLORS[l2.__kind] || "#2a7a90").linkOpacity(0.35).linkWidth(0).linkDirectionalParticles(0).linkDirectionalParticleSpeed(6e-3).linkDirectionalParticleWidth(1.6).linkDirectionalParticleColor((l2) => l2.__kind === "rel" ? "#2fb8d8" : "#e8a13d").onNodeHover((n2) => {
   el("graph").style.cursor = n2 ? "pointer" : "default";
@@ -86764,7 +87228,7 @@ function updateHud() {
     const g2 = Graph.graphData();
     const kids = g2.nodes.filter((n2) => n2.__role === "kid").length;
     const ports = g2.nodes.filter((n2) => n2.__role === "portal").length;
-    el("crumbPath").innerHTML = `${state.overview === "organism" ? "NETWERK" : "GALAXY"} <span class="sep">\u25B8</span> <span class="here">${esc(titleOf(topic))}</span>`;
+    el("crumbPath").innerHTML = `${state.overview === "organism" ? "NETWERK" : "GALAXY"} <span class="sep">\u25B8</span> <span class="here">${esc2(titleOf(topic))}</span>`;
     el("btnBack").style.display = "inline-flex";
     el("stats").innerHTML = `<div><b>${kids}</b> kenniszaden in dit stelsel \xB7 <b>${ports}</b> portalen naar buiten</div>
        <div>verbinding <span class="ok">\u25CF live</span> \xB7 klik een node voor detail \xB7 \u21E2 portaal springt door</div>`;
@@ -86781,21 +87245,21 @@ async function select2(n2, fly) {
     flyTo(n2);
   }
   el("pTitle").textContent = titleOf(n2);
-  el("pChips").innerHTML = `<span class="pchip amber">${esc(n2.type)}</span>` + (n2.scope ? `<span class="pchip">${esc(n2.scope)}</span>` : "") + (n2.lifecycle ? `<span class="pchip">${esc(n2.lifecycle)}</span>` : "") + `<span class="pchip">${degree.get(n2.id) || 0} links</span>` + (n2.use_count ? `<span class="pchip">${n2.use_count}\xD7 gebruikt</span>` : "");
+  el("pChips").innerHTML = `<span class="pchip amber">${esc2(n2.type)}</span>` + (n2.scope ? `<span class="pchip">${esc2(n2.scope)}</span>` : "") + (n2.lifecycle ? `<span class="pchip">${esc2(n2.lifecycle)}</span>` : "") + `<span class="pchip">${degree.get(n2.id) || 0} links</span>` + (n2.use_count ? `<span class="pchip">${n2.use_count}\xD7 gebruikt</span>` : "");
   el("pBody").textContent = "\u2026";
   el("panel").classList.add("open");
   el("btnDrill").style.display = n2.type === "topic" ? "none" : "block";
   if (n2.type === "topic") {
     const kids = (topicChildren.get(n2.id) || []).map((id) => nodeById.get(id)).filter(Boolean);
-    el("pBody").innerHTML = kids.map((k2) => `<div style="margin:2px 0"><span style="color:${colorOf(k2)}">\u25C8</span> ${esc(titleOf(k2))}</div>`).join("") || "leeg topic";
+    el("pBody").innerHTML = kids.map((k2) => `<div style="margin:2px 0"><span style="color:${colorOf(k2)}">\u25C8</span> ${esc2(titleOf(k2))}</div>`).join("") || "leeg topic";
     return;
   }
   try {
     const full = await (await fetch(NODE_URL(n2.id), AUTH)).json();
-    let html = esc(full.content || "");
+    let html = esc2(full.content || "");
     if (full.tags?.length) html += `
 
-<span style="color:var(--dim)">tags: ${esc(full.tags.join(", "))}</span>`;
+<span style="color:var(--dim)">tags: ${esc2(full.tags.join(", "))}</span>`;
     el("pBody").innerHTML = html || "(geen inhoud)";
   } catch {
     el("pBody").textContent = "(inhoud niet op te halen)";
@@ -86818,7 +87282,7 @@ searchEl.addEventListener("input", () => {
   const hits = searchable.filter((n2) => n2.title.toLowerCase().includes(q2)).slice(0, 12);
   resultsEl.innerHTML = hits.map((n2) => {
     const t2 = n2.type === "topic" ? null : nodeById.get(parentTopic.get(n2.id));
-    return `<div data-id="${n2.id}"><span class="dot" style="background:${colorOf(n2)}"></span>${esc(n2.title)}` + (t2 ? `<span class="topicTag">${esc(titleOf(t2))}</span>` : "") + `</div>`;
+    return `<div data-id="${n2.id}"><span class="dot" style="background:${colorOf(n2)}"></span>${esc2(n2.title)}` + (t2 ? `<span class="topicTag">${esc2(titleOf(t2))}</span>` : "") + `</div>`;
   }).join("") || `<div style="color:var(--dim)">geen hits</div>`;
   resultsEl.style.display = "block";
 });
@@ -86850,6 +87314,10 @@ document.addEventListener("keydown", (e2) => {
     return;
   }
   if (e2.key !== "Escape") return;
+  if (Decks.isOpen()) {
+    Decks.close();
+    return;
+  }
   if (drill.classList.contains("on")) {
     closeDrill();
     return;
@@ -86913,11 +87381,12 @@ drill.addEventListener("click", (e2) => {
 });
 if (SERVER) {
   const v2 = el("variants");
-  v2.innerHTML = `<a class="chip" href="/ui#focus">\u25CE focus</a>
-     <a class="chip" href="/ui#chores">\u{1F33C} pollen<span id="navBadge"></span></a>
-     <a class="chip" href="/ui#governance">\u2696 governance</a>
-     <a class="chip" href="/ui#beheer">\u2699 beheer</a>
-     <a class="chip" href="/ui#legacy" onclick="location.href='/ui#legacy'">\u2302 legacy</a>`;
+  v2.innerHTML = `<span class="chip" data-deck="focus">\u25CE focus</span>
+     <span class="chip" data-deck="chores">\u{1F33C} pollen<span id="navBadge"></span></span>
+     <span class="chip" data-deck="governance">\u2696 governance</span>
+     <span class="chip" data-deck="beheer">\u2699 beheer</span>
+     <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">\u2302 legacy</a>`;
+  v2.querySelectorAll("[data-deck]").forEach((c3) => c3.onclick = () => Decks.open(c3.dataset.deck));
   fetch("/graph/me", AUTH).then((r2) => r2.json()).then((me) => {
     if (me.ready_chores) {
       const b2 = document.getElementById("navBadge");
@@ -86928,10 +87397,10 @@ if (SERVER) {
       }
     }
     if (me.can_review) {
-      const r2 = document.createElement("a");
+      const r2 = document.createElement("span");
       r2.className = "chip";
-      r2.href = "/ui#review";
       r2.textContent = "\u2611 review";
+      r2.onclick = () => Decks.open("review");
       v2.insertBefore(r2, v2.children[3]);
     }
   }).catch(() => {
