@@ -87307,7 +87307,16 @@ function makeNode(n2) {
   return group;
 }
 var LINK_COLORS = { tt: "#8a6a30", sun: "#8a6a30", rel: "#2a7a90", portal: "#3a4a5c" };
-var Graph = new _3dForceGraph(el("graph"), { controlType: "orbit" }).backgroundColor("#020409").showNavInfo(false).nodeId("id").nodeLabel((n2) => n2.__role === "portal" ? `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;spring naar dit stelsel` : n2.__role === "star" ? `<b>${esc2(titleOf(n2))}</b> \xB7 ${n2.children || 0} kenniszaden` : `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;${esc2(titleOf(n2))}`).onNodeRightClick((n2) => {
+var Graph = new _3dForceGraph(el("graph"), { controlType: "orbit" }).backgroundColor("#020409").showNavInfo(false).nodeId("id").nodeLabel((n2) => {
+  if (n2.__role === "portal")
+    return `<div class="tt-t">\u21E2 ${esc2(titleOf(n2))}</div><div class="tt-m">${esc2(n2.type)} \xB7 klik om naar dit stelsel te springen</div>`;
+  if (n2.type === "topic")
+    return `<div class="tt-t">${esc2(titleOf(n2))}</div><div class="tt-m">topic \xB7 ${n2.children || 0} kenniszaden \xB7 klik om binnen te vliegen</div>`;
+  const t2 = nodeById.get(parentTopic.get(n2.id));
+  return `<div class="tt-t">${esc2(titleOf(n2))}</div>
+      <div class="tt-m" style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}${n2.lifecycle ? " \xB7 " + esc2(n2.lifecycle) : ""}</div>
+      <div class="tt-m">${t2 ? esc2(titleOf(t2)) + " \xB7 " : ""}${n2.use_count || 0}\xD7 gebruikt${(n2.tags || []).length ? " \xB7 #" + n2.tags.slice(0, 3).join(" #") : ""}</div>`;
+}).onNodeRightClick((n2) => {
   if (n2 && n2.__role !== "portal" && n2.type !== "topic") openDrill(n2.id);
 }).nodeThreeObjectExtend(false).nodeThreeObject(makeNode).linkColor((l2) => {
   if (focusSet && state.selected) {
@@ -87752,18 +87761,48 @@ el("btnClose").onclick = closePanel;
 var searchEl = el("search");
 var resultsEl = el("results");
 var searchable = data.nodes.filter((n2) => !UID_RE.test(n2.title));
+function renderResults(list) {
+  resultsEl.innerHTML = list.map((n2) => {
+    const t2 = n2.type === "topic" ? null : nodeById.get(parentTopic.get(n2.id));
+    const tag = n2.__sem ? `<span class="topicTag" title="semantische hit \u2014 matcht op inhoud, niet (alleen) op titel">\u2248 inhoud</span>` : t2 ? `<span class="topicTag">${esc2(titleOf(t2))}</span>` : "";
+    return `<div data-id="${n2.id}"><span class="dot" style="background:${colorOf(n2)}"></span>${esc2(titleOf(n2))}${tag}</div>`;
+  }).join("") || `<div style="color:var(--dim)">geen hits</div>`;
+  resultsEl.style.display = "block";
+}
+var searchSeq = 0;
+var searchTimer;
 searchEl.addEventListener("input", () => {
   const q2 = searchEl.value.trim().toLowerCase();
   if (q2.length < 2) {
     resultsEl.style.display = "none";
     return;
   }
-  const hits = searchable.filter((n2) => n2.title.toLowerCase().includes(q2)).slice(0, 12);
-  resultsEl.innerHTML = hits.map((n2) => {
-    const t2 = n2.type === "topic" ? null : nodeById.get(parentTopic.get(n2.id));
-    return `<div data-id="${n2.id}"><span class="dot" style="background:${colorOf(n2)}"></span>${esc2(n2.title)}` + (t2 ? `<span class="topicTag">${esc2(titleOf(t2))}</span>` : "") + `</div>`;
-  }).join("") || `<div style="color:var(--dim)">geen hits</div>`;
-  resultsEl.style.display = "block";
+  const local = searchable.filter((n2) => n2.title.toLowerCase().includes(q2)).slice(0, 12);
+  renderResults(local);
+  if (!SERVER) return;
+  resultsEl.insertAdjacentHTML(
+    "beforeend",
+    `<div id="semBusy" style="color:var(--dim);letter-spacing:.1em">\u2248 de hive zoekt op inhoud\u2026</div>`
+  );
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const mySeq = ++searchSeq;
+    try {
+      const sem = await apiJ(`/graph/search?q=${encodeURIComponent(searchEl.value.trim())}`);
+      if (mySeq !== searchSeq || searchEl.value.trim().toLowerCase() !== q2) return;
+      const seen = new Set(local.map((n2) => n2.id));
+      const extra = (sem || []).map((r2) => {
+        const live = nodeById.get(r2.uid);
+        return live && !seen.has(live.id) ? { ...live, __sem: true } : null;
+      }).filter(Boolean);
+      renderResults([...local, ...extra].slice(0, 14));
+    } catch (err) {
+      if (mySeq === searchSeq) {
+        resultsEl.innerHTML = `<div style="color:#ff7847">zoekfout: ${esc2(String(err))}</div>`;
+        resultsEl.style.display = "block";
+      }
+    }
+  }, 320);
 });
 resultsEl.addEventListener("click", (e2) => {
   const id = e2.target.closest("[data-id]")?.dataset.id;

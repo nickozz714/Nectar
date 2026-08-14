@@ -428,12 +428,29 @@ var require_cockpit_src = __commonJS({
         box.style.display = "block";
         [...box.children].forEach((el) => el.addEventListener("click", () => pick(hits[+el.dataset.i].id)));
       };
+      let semTmr;
       input.addEventListener("input", () => {
         const q = input.value.trim().toLowerCase();
         if (q.length < 2) return close();
         hits = [...nodes.values()].filter((n) => n.title.toLowerCase().includes(q)).sort((a, b) => (b.pagerank ?? 0) - (a.pagerank ?? 0)).slice(0, 14);
         sel = hits.length ? 0 : -1;
         show();
+        if (!SERVER) return;
+        clearTimeout(semTmr);
+        semTmr = setTimeout(async () => {
+          try {
+            const r = await fetch(`/graph/search?q=${encodeURIComponent(input.value.trim())}`, AUTH);
+            if (!r.ok) return;
+            const sem = await r.json();
+            if (input.value.trim().toLowerCase() !== q) return;
+            const seen = new Set(hits.map((h) => h.id));
+            const extra = sem.map((x) => nodes.get(x.uid)).filter((x) => x && !seen.has(x.id));
+            hits = [...hits, ...extra].slice(0, 14);
+            if (sel < 0 && hits.length) sel = 0;
+            show();
+          } catch {
+          }
+        }, 220);
       });
       input.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {

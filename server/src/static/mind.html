@@ -127,8 +127,13 @@
                   box-shadow: 0 0 60px rgba(62,224,255,.12); }
 
   .scene-tooltip { font: 11px var(--mono) !important; color: var(--ink) !important;
-                   background: var(--panel); border: 1px solid var(--line); border-radius: 0;
-                   padding: 5px 9px !important; letter-spacing: .04em; }
+                   background: rgba(4,8,15,.94); border: 1px solid var(--line); border-radius: 0;
+                   border-left: 2px solid var(--amber);
+                   padding: 10px 13px !important; letter-spacing: .04em;
+                   max-width: 330px; white-space: normal !important; line-height: 1.55;
+                   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+  .scene-tooltip .tt-t { font-weight: 600; font-size: 12.5px; margin-bottom: 5px; }
+  .scene-tooltip .tt-m { color: var(--dim); font-size: 9.5px; text-transform: uppercase; letter-spacing: .12em; margin-top: 2px; }
 
   /* ── JARVIS-laag: hoekig (niets rond) + invliegende panelen ─────────────── */
   .chip, .btn, #search, #results, #panel, .pchip, #veil, #splash .t { border-radius: 0 !important; }

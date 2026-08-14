@@ -188,10 +188,16 @@ const Graph = new ForceGraph3D(el("graph"), { controlType: "orbit" })
   .backgroundColor("#020409")
   .showNavInfo(false)
   .nodeId("id")
-  .nodeLabel(n => n.__role === "portal"
-    ? `<span style="color:${colorOf(n)}">◈ ${esc(n.type)}</span> &nbsp;spring naar dit stelsel`
-    : n.__role === "star" ? `<b>${esc(titleOf(n))}</b> · ${n.children || 0} kenniszaden`
-    : `<span style="color:${colorOf(n)}">◈ ${esc(n.type)}</span> &nbsp;${esc(titleOf(n))}`)
+  .nodeLabel(n => {
+    if (n.__role === "portal")
+      return `<div class="tt-t">⇢ ${esc(titleOf(n))}</div><div class="tt-m">${esc(n.type)} · klik om naar dit stelsel te springen</div>`;
+    if (n.type === "topic")
+      return `<div class="tt-t">${esc(titleOf(n))}</div><div class="tt-m">topic · ${n.children || 0} kenniszaden · klik om binnen te vliegen</div>`;
+    const t = nodeById.get(parentTopic.get(n.id));
+    return `<div class="tt-t">${esc(titleOf(n))}</div>
+      <div class="tt-m" style="color:${colorOf(n)}">◈ ${esc(n.type)}${n.lifecycle ? " · " + esc(n.lifecycle) : ""}</div>
+      <div class="tt-m">${t ? esc(titleOf(t)) + " · " : ""}${n.use_count || 0}× gebruikt${(n.tags || []).length ? " · #" + n.tags.slice(0, 3).join(" #") : ""}</div>`;
+  })
   .onNodeRightClick(n => {
     if (n && n.__role !== "portal" && n.type !== "topic") openDrill(n.id);
   })
@@ -612,16 +618,45 @@ el("btnClose").onclick = closePanel;
 /* ---- zoeken: typeahead over alle titels ---- */
 const searchEl = el("search"), resultsEl = el("results");
 const searchable = data.nodes.filter(n => !UID_RE.test(n.title));
+function renderResults(list) {
+  resultsEl.innerHTML = list.map(n => {
+    const t = n.type === "topic" ? null : nodeById.get(parentTopic.get(n.id));
+    const tag = n.__sem
+      ? `<span class="topicTag" title="semantische hit — matcht op inhoud, niet (alleen) op titel">≈ inhoud</span>`
+      : (t ? `<span class="topicTag">${esc(titleOf(t))}</span>` : "");
+    return `<div data-id="${n.id}"><span class="dot" style="background:${colorOf(n)}"></span>${esc(titleOf(n))}${tag}</div>`;
+  }).join("") || `<div style="color:var(--dim)">geen hits</div>`;
+  resultsEl.style.display = "block";
+}
+let searchSeq = 0, searchTimer;
 searchEl.addEventListener("input", () => {
   const q = searchEl.value.trim().toLowerCase();
   if (q.length < 2) { resultsEl.style.display = "none"; return; }
-  const hits = searchable.filter(n => n.title.toLowerCase().includes(q)).slice(0, 12);
-  resultsEl.innerHTML = hits.map(n => {
-    const t = n.type === "topic" ? null : nodeById.get(parentTopic.get(n.id));
-    return `<div data-id="${n.id}"><span class="dot" style="background:${colorOf(n)}"></span>${esc(n.title)}` +
-      (t ? `<span class="topicTag">${esc(titleOf(t))}</span>` : "") + `</div>`;
-  }).join("") || `<div style="color:var(--dim)">geen hits</div>`;
-  resultsEl.style.display = "block";
+  const local = searchable.filter(n => n.title.toLowerCase().includes(q)).slice(0, 12);
+  renderResults(local);
+  if (!SERVER) return;
+  /* de semantische hive-zoek denkt even na (embeddings + reranker) — toon dat */
+  resultsEl.insertAdjacentHTML("beforeend",
+    `<div id="semBusy" style="color:var(--dim);letter-spacing:.1em">≈ de hive zoekt op inhoud…</div>`);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const mySeq = ++searchSeq;
+    try {
+      const sem = await apiJ(`/graph/search?q=${encodeURIComponent(searchEl.value.trim())}`);
+      if (mySeq !== searchSeq || searchEl.value.trim().toLowerCase() !== q) return;
+      const seen = new Set(local.map(n => n.id));
+      const extra = (sem || []).map(r => {
+        const live = nodeById.get(r.uid);
+        return live && !seen.has(live.id) ? { ...live, __sem: true } : null;
+      }).filter(Boolean);
+      renderResults([...local, ...extra].slice(0, 14));
+    } catch (err) {
+      if (mySeq === searchSeq) {
+        resultsEl.innerHTML = `<div style="color:#ff7847">zoekfout: ${esc(String(err))}</div>`;
+        resultsEl.style.display = "block";
+      }
+    }
+  }, 320);
 });
 resultsEl.addEventListener("click", e => {
   const id = e.target.closest("[data-id]")?.dataset.id;
