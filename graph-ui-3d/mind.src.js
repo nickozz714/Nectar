@@ -261,6 +261,21 @@ function tuneForces(mode) {
 /* ---- cinematics: bloom + fog + sterrenhemel in twee lagen ---- */
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.4, 0.2);
 Graph.postProcessingComposer().addPass(bloom);
+
+/* Grote schermen (49" ultrawide = 5120px × retina): een backing-canvas van 10k px
+   overschrijdt GPU-limieten voor de bloom-targets en bevriest de boel. Begrens de
+   pixelratio zodat het canvas ≤ ~4096 px breed blijft, en volg venster-resizes. */
+function fitRender() {
+  const w = innerWidth, h = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, Math.max(0.75, 4096 / w), 1.75);
+  Graph.width(w).height(h);
+  Graph.renderer().setPixelRatio(dpr);
+  const comp = Graph.postProcessingComposer();
+  comp.setPixelRatio?.(dpr);
+  comp.setSize?.(w, h);
+}
+fitRender();
+window.addEventListener("resize", fitRender);
 Graph.scene().fog = new THREE.FogExp2(0x020409, 0.0009);
 
 for (const [count, size, opacity] of [[2000, 1.0, 0.4], [350, 1.7, 0.6]]) {

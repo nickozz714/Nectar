@@ -87368,6 +87368,17 @@ function tuneForces(mode) {
 }
 var bloom = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.55, 0.4, 0.2);
 Graph.postProcessingComposer().addPass(bloom);
+function fitRender() {
+  const w4 = innerWidth, h2 = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, Math.max(0.75, 4096 / w4), 1.75);
+  Graph.width(w4).height(h2);
+  Graph.renderer().setPixelRatio(dpr);
+  const comp = Graph.postProcessingComposer();
+  comp.setPixelRatio?.(dpr);
+  comp.setSize?.(w4, h2);
+}
+fitRender();
+window.addEventListener("resize", fitRender);
 Graph.scene().fog = new FogExp2(132105, 9e-4);
 for (const [count, size, opacity] of [[2e3, 1, 0.4], [350, 1.7, 0.6]]) {
   const g2 = new BufferGeometry();
