@@ -569,7 +569,7 @@ if (SERVER) {
   const v = el("variants");
   v.innerHTML =
     `<span class="chip" data-deck="focus">◎ focus</span>
-     <span class="chip" data-deck="chores">🌼 pollen<span id="navBadge"></span></span>
+     <span class="chip" data-deck="chores">🌼 pollinate<span id="navBadge"></span></span>
      <span class="chip" data-deck="governance">⚖ governance</span>
      <span class="chip" data-deck="beheer">⚙ beheer</span>
      <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">⌂ legacy</a>`;

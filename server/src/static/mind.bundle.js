@@ -85643,7 +85643,7 @@ var tabsEl;
 var titleEl;
 var DECKS = [
   ["focus", "\u25CE focus"],
-  ["chores", "\u{1F33C} pollen"],
+  ["chores", "\u{1F33C} pollinate"],
   ["review", "\u2611 review"],
   ["governance", "\u2696 governance"],
   ["beheer", "\u2699 beheer"]
@@ -85707,7 +85707,42 @@ var CSS = `
 #deck input:focus, #deck textarea:focus { border-color: var(--cyan); }
 #deck .ok { color: #55ffa1; font-size: 11px; margin-left: 8px; }
 #deck .empty { color: var(--dim); padding: 20px 0; }
+#deck .bar-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; }
+#deck .bar-lbl { width: 108px; text-align: right; color: var(--dim); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; flex: none; }
+#deck .bar-track { flex: 1; height: 10px; background: rgba(62,224,255,.06); }
+#deck .bar-fill { display: block; height: 100%; }
+#deck .bar-val { width: 44px; font-weight: 600; flex: none; }
+#deck .seg-track { display: flex; height: 12px; gap: 2px; margin: 8px 0 10px; }
+#deck .seg { display: block; height: 100%; }
+#deck .ddot { display: inline-block; width: 6px; height: 6px; transform: rotate(45deg); margin-right: 6px; }
+#deck pre { background: rgba(62,224,255,.05); border: 1px solid var(--line); padding: 10px 12px;
+  white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+#deck .fl { display: block; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 8px 0 3px; }
+#deck details { margin-top: 6px; } #deck summary { cursor: pointer; color: var(--dim); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+#deck .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 `;
+var TYPE_COLORS = {
+  topic: "#f0a63a",
+  memory: "#2fc4e8",
+  decision: "#ff6a45",
+  learning: "#43d98a",
+  process: "#5fa4e6",
+  workflow: "#8f76e8",
+  skill: "#a06ae8",
+  convention: "#e6c05c",
+  glossary: "#6d87a0"
+};
+var SCOPE_COLORS = { org: "#f0a63a", team: "#2fc4e8", account: "#a06ae8" };
+var SENS_COLORS = (k2) => k2 === "gevoelig" ? "#ff6a45" : k2 === "intern" ? "#e6c05c" : "#55ffa1";
+var UIDISH = (v2) => typeof v2 === "string" && (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(v2) || /^[0-9a-f]{16,}$/i.test(v2));
+function distBars(obj, colorFn) {
+  const entries = Object.entries(obj || {}).sort((a3, b2) => b2[1] - a3[1]);
+  const max2 = Math.max(...entries.map((e2) => e2[1]), 1);
+  return entries.map(([k2, v2]) => `<div class="bar-row">
+    <span class="bar-lbl">${esc(k2)}</span>
+    <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, v2 / max2 * 100)}%;background:${colorFn ? colorFn(k2) : "var(--amber)"}"></span></span>
+    <span class="bar-val">${v2}</span></div>`).join("") || `<div class="empty">geen data</div>`;
+}
 function pill(txt, cls = "") {
   return `<span class="pchip ${cls}">${esc(txt)}</span>`;
 }
@@ -85859,16 +85894,55 @@ async function renderReview() {
 }
 async function renderGovernance() {
   const g2 = await api("/graph/governance");
-  const dist = (title, obj) => `<h3>${title}</h3><div class="crow">` + Object.entries(obj || {}).sort((a3, b2) => b2[1] - a3[1]).map(([k2, v2]) => `<span class="stat"><b>${v2}</b><span>${esc(k2)}</span></span>`).join("") + `</div>`;
+  const ch = g2.chores || {};
+  const sens = (g2.sensitive_nodes || []).length;
+  const tile = (v2, lbl, color2, sub2) => `<span class="stat" style="border-color:${color2}55"><b style="color:${color2}">${v2}</b><span>${lbl}</span>${sub2 ? `<span>${sub2}</span>` : ""}</span>`;
+  let audit = "";
+  if (ME?.can_review) {
+    try {
+      const rows = await api("/graph/audit?limit=50");
+      const detTxt = (d2) => {
+        let o2 = {};
+        try {
+          o2 = JSON.parse(d2 || "{}");
+        } catch {
+          return "";
+        }
+        return Object.entries(o2).filter(([, v2]) => v2 != null && v2 !== "" && typeof v2 !== "object" && !UIDISH(String(v2))).map(([k2, v2]) => `${esc(k2.replace(/_/g, " "))}: ${esc(String(v2))}`).join(" \xB7 ");
+      };
+      audit = `<h3>\u{1F4DC} audit-trail (laatste ${rows.length})</h3>` + rows.map((e2) => `
+        <div style="margin:7px 0;border-left:2px solid var(--line);padding-left:10px">
+          <div style="color:var(--dim);font-size:10px">${fmt(e2.at)}</div>
+          <div><b>${esc(e2.action)}</b> \xB7 ${esc(e2.account || "systeem")}${e2.target_title ? ` \u2014 ${esc(e2.target_title)}` : ""}</div>
+          ${detTxt(e2.detail) ? `<div style="color:var(--dim)">${detTxt(e2.detail)}</div>` : ""}
+        </div>`).join("");
+    } catch {
+    }
+  }
   body.innerHTML = `
-    <div class="crow"><span class="stat"><b>${g2.nodes_total}</b><span>nodes totaal</span></span></div>
-    ${dist("per scope", g2.by_scope)}${dist("per type", g2.by_type)}
-    ${dist("gevoeligheid", g2.by_sensitivity)}${dist("pollen-pijplijn", g2.chores)}
-    <h3>herkomst (model \xB7 account \xB7 persoon)</h3>
-    <table><tr><th>model</th><th>account</th><th>persoon</th><th>nodes</th></tr>
-      ${(g2.by_origin || []).map((o2) => `<tr><td>${esc(o2.model)}</td><td>${esc(o2.account)}</td><td>${esc(o2.person)}</td><td>${o2.count}</td></tr>`).join("")}</table>
-    <h3>gevoelig gemarkeerd (${(g2.sensitive_nodes || []).length})</h3>
-    ${(g2.sensitive_nodes || []).map((n2) => `<div style="margin:3px 0">\u{1F512} ${esc(n2.title)} ${pill(n2.type)}</div>`).join("") || `<div class="empty">niets gemarkeerd</div>`}`;
+    <div class="crow">
+      ${tile(g2.nodes_total || 0, "memories totaal", "#f0a63a")}
+      ${tile(sens, "gevoelig", "#ff6a45")}
+      ${tile((ch.open || 0) + (ch.ready || 0), "open pollinate", "#2fc4e8", `${ch.ready || 0} ready`)}
+      ${tile(ch.awaiting_human || 0, "wacht op mens", "#a06ae8")}
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="ct">\u{1F52D} zichtbaarheid</div>${distBars(g2.by_scope, (k2) => SCOPE_COLORS[k2] || "#8fa3b8")}</div>
+      <div class="card"><div class="ct">\u{1F510} gevoeligheid</div>${distBars(g2.by_sensitivity, SENS_COLORS)}</div>
+      <div class="card"><div class="ct">\u{1F9E9} kennistype</div>${distBars(g2.by_type, (k2) => TYPE_COLORS[k2] || "#8fa3b8")}</div>
+      <div class="card"><div class="ct">\u{1F33C} pollinate-pijplijn</div>${distBars(
+    Object.fromEntries([["open", ch.open || 0], ["ready", ch.ready || 0], ["wacht op mens", ch.awaiting_human || 0], ["toegepast", ch.resolved || 0], ["afgewezen", ch.rejected || 0]]),
+    (k2) => ({ open: "#5fa4e6", ready: "#f0a63a", "wacht op mens": "#a06ae8", toegepast: "#55ffa1", afgewezen: "#6d87a0" })[k2]
+  )}</div>
+    </div>
+    <h3>\u{1F9EC} herkomst \u2014 model \xB7 account \xB7 persoon</h3>
+    ${(g2.by_origin || []).map((o2) => `<div style="display:flex;gap:10px;align-items:center;margin:4px 0">
+      <span class="ddot" style="background:#2fc4e8"></span>
+      <span style="flex:1">${esc(o2.person)} <span style="color:var(--dim)">\xB7 via ${esc(o2.account)} \xB7 \u{1F916} ${esc(o2.model)}</span></span>
+      <b>${o2.count}</b></div>`).join("") || `<div class="empty">geen herkomst-gegevens</div>`}
+    <h3>\u26A0\uFE0F als gevoelig geclassificeerd (${sens})</h3>
+    ${(g2.sensitive_nodes || []).map((n2) => `<div style="margin:3px 0"><span class="ddot" style="background:#ff6a45"></span>${esc(n2.title)} ${pill(n2.type)}</div>`).join("") || `<div class="empty">niets gemarkeerd \u2014 schoon</div>`}
+    ${audit}`;
 }
 var BEHEER_SEC = "inzicht";
 async function renderBeheer() {
@@ -85891,28 +85965,47 @@ async function renderBeheer() {
 var BEHEER_RENDER = {
   async inzicht(sec) {
     const a3 = await api("/graph/analytics");
-    const scalars = Object.entries(a3).filter(([, v2]) => typeof v2 === "number");
-    const objs = Object.entries(a3).filter(([, v2]) => v2 && typeof v2 === "object" && !Array.isArray(v2));
-    const arrs = Object.entries(a3).filter(([, v2]) => Array.isArray(v2));
-    sec.innerHTML = `<div class="crow">${scalars.map(([k2, v2]) => `<span class="stat"><b>${v2}</b><span>${esc(k2)}</span></span>`).join("")}</div>` + objs.map(([k2, v2]) => `<h3>${esc(k2)}</h3><div class="crow">${Object.entries(v2).map(([kk, vv]) => `<span class="stat"><b>${typeof vv === "number" ? vv : esc(String(vv))}</b><span>${esc(kk)}</span></span>`).join("")}</div>`).join("") + arrs.map(([k2, v2]) => v2.length && typeof v2[0] === "object" ? `<h3>${esc(k2)}</h3><table><tr>${Object.keys(v2[0]).map((h2) => `<th>${esc(h2)}</th>`).join("")}</tr>
-           ${v2.slice(0, 10).map((r2) => `<tr>${Object.values(r2).map((c3) => `<td>${esc(String(c3))}</td>`).join("")}</tr>`).join("")}</table>` : "").join("");
+    const trained = a3.ranker && a3.ranker.trained;
+    const life = [
+      ["mature", a3.mature || 0, "#55ffa1"],
+      ["validated", a3.validated || 0, "#2fc4e8"],
+      ["captured", a3.captured || 0, "#5fa4e6"],
+      ["deprecated", a3.deprecated || 0, "#6d87a0"]
+    ];
+    const lifeTotal = life.reduce((t2, x3) => t2 + x3[1], 0) || 1;
+    sec.innerHTML = `
+      <div class="crow">
+        <span class="stat" style="border-color:#f0a63a55"><b style="color:#f0a63a">${a3.total || 0}</b><span>memories totaal</span></span>
+        <span class="stat"><b>${a3.never_used || 0}</b><span>nooit opgehaald</span><span>archiveer-kandidaten</span></span>
+        <span class="stat" style="border-color:${trained ? "#55ffa155" : "#e6c05c55"}"><b style="color:${trained ? "#55ffa1" : "#e6c05c"}">${trained ? "getraind" : "handmatig"}</b><span>ranker</span><span>${a3.ranker ? a3.ranker.examples : 0} feedback-voorbeelden</span></span>
+      </div>
+      <h3>\u{1F338} bloom-levenscyclus</h3>
+      <div style="color:var(--dim)">kennis rijpt: captured \u2192 validated \u2192 mature; deprecated zakt weg</div>
+      <div class="seg-track">${life.map(([k2, v2, c3]) => v2 ? `<span class="seg" title="${k2}: ${v2}" style="width:${v2 / lifeTotal * 100}%;background:${c3}"></span>` : "").join("")}</div>
+      <div class="crow">${life.map(([k2, v2, c3]) => `<span><span class="ddot" style="background:${c3}"></span>${k2} <b>${v2}</b></span>`).join("&nbsp;&nbsp;")}</div>
+      <h3>\u{1F525} meest gebruikt</h3>
+      ${(a3.most_used || []).map((m3, i2) => `<div style="display:flex;gap:10px;align-items:center;margin:4px 0">
+        <span class="pchip" style="min-width:24px;text-align:center">${i2 + 1}</span>
+        <span style="flex:1">${esc(m3.title)}</span><b>${m3.use_count}\xD7</b></div>`).join("") || `<div class="empty">nog niets opgehaald</div>`}
+      ${(a3.gaps || []).length ? `<h3>\u{1F573}\uFE0F kennis-gaten \u2014 zoekopdrachten die niks opleverden</h3>` + a3.gaps.map((g2) => `<div style="display:flex;gap:10px;margin:3px 0"><span style="flex:1">${esc(g2.query)}</span><b>${g2.count}\xD7 leeg</b></div>`).join("") : ""}`;
   },
   async onderhoud(sec) {
     const scans = [
-      ["tidy-scan", "\u{1F5C2}\uFE0F opruimen", "losse kennis krijgt een topic-voorstel (Pollen)"],
-      ["staleness-scan", "\u23F3 staleness", "oude veelgebruikte kennis \u2192 review-Pollen"],
-      ["topic-summaries", "\u{1F4DD} topic-samenvattingen", "werk per topic de samenvatting bij"],
-      ["contradiction-scan", "\u2694\uFE0F tegenspraak", "sterk gelijkende paren \u2192 think-Pollen"],
-      ["linkpred-scan", "\u{1F517} link-predictie", "waarschijnlijke verbanden voorstellen"],
-      ["pagerank-scan", "\u{1F3DB}\uFE0F pagerank", "structureel belang herberekenen"],
-      ["train-ranker", "\u{1F9E0} ranker trainen", "learning-to-rank op feedback"],
-      ["reindex", "\u{1F9EC} her-embedden", "alle embeddings opnieuw (kan even duren)"],
-      ["reclassify-sensitivity", "\u{1F50D} herclassificeren", "gevoeligheids-labels verversen"]
+      ["tidy-scan", "\u{1F5C2}\uFE0F opruimen", "losse kennis zonder topic krijgt het dichtstbijzijnde topic voorgesteld (Pollinate)"],
+      ["staleness-scan", "\u23F3 staleness", "oude maar veelgebruikte kennis krijgt een 'klopt dit nog?'-review"],
+      ["topic-summaries", "\u{1F4DD} topic-samenvattingen", "werk per topic de samenvatting bij zodat elk topic toont wat het bevat"],
+      ["pagerank-scan", "\u{1F578}\uFE0F pagerank", "herbereken structureel belang: goed-verbonden kennis komt hoger in recall"],
+      ["linkpred-scan", "\u{1F517} link-predictie", "stel RELATES-koppelingen voor tussen waarschijnlijk-gerelateerde memories"],
+      ["contradiction-scan", "\u2696\uFE0F tegenspraak", "vind sterk-gelijkende memories die elkaar tegenspreken; de swarm oordeelt"],
+      ["reclassify-sensitivity", "\u{1F510} herclassificeer gevoeligheid", "beoordeel alle memories opnieuw met de huidige classifier"],
+      ["train-ranker", "\u{1F39A}\uFE0F ranker trainen", "leer van de 'heeft het geholpen?'-feedback en vervang de handmatige weegfactoren"],
+      ["reindex", "\u{1F9EC} her-embedden", "herbereken alle embeddings \u2014 draai dit na het wisselen van embeddingmodel"]
     ];
-    sec.innerHTML = scans.map(([ep, name, d2]) => `<div class="card"><div class="ct">${name}</div>
+    sec.innerHTML = `<div style="color:var(--dim);margin-bottom:10px">deterministische scans die de hive gezond houden \u2014 de meeste openen <b>Pollinate</b> (voorstellen) i.p.v. direct te wijzigen; niets wordt ooit hard verwijderd</div><div class="grid2">` + scans.map(([ep, name, d2]) => `<div class="card"><div class="ct">${name}</div>
       <div style="color:var(--dim)">${d2}</div>
-      <div class="crow"><span class="abtn" data-scan="${ep}">draaien</span><span class="ok" id="out-${ep}"></span></div></div>`).join("");
+      <div class="crow"><span class="abtn" data-scan="${ep}">draaien</span><span class="ok" id="out-${ep}"></span></div></div>`).join("") + `</div>`;
     sec.querySelectorAll("[data-scan]").forEach((b2) => b2.onclick = async () => {
+      if (b2.dataset.scan === "reindex" && !confirm("Alle embeddings opnieuw berekenen? Kan even duren.")) return;
       const out = sec.querySelector(`#out-${b2.dataset.scan}`);
       out.textContent = " bezig\u2026";
       try {
@@ -85924,20 +86017,28 @@ var BEHEER_RENDER = {
     });
   },
   async instellingen(sec) {
-    const s2 = await api("/manage/swarm");
+    const [s2, knobs] = await Promise.all([api("/manage/swarm"), api("/manage/settings").catch(() => null)]);
+    const knobHtml = (knobs?.groups || []).map((g2) => `<div class="card"><div class="ct">${g2.icon || "\u2699\uFE0F"} ${esc(g2.title)}</div>
+      ${g2.items.map((it) => `<div style="margin:9px 0">
+        <div style="display:flex;gap:8px;align-items:baseline"><b>${esc(it.key)}</b>
+          <span class="pchip">${esc(String(it.value))}</span>${it.editable ? `<span class="pchip amber">live hierboven</span>` : ""}</div>
+        ${it.what ? `<div style="color:var(--dim)">${esc(it.what)}</div>` : ""}
+        ${it.risk ? `<details><summary>risico</summary><div style="color:var(--dim)">\u26A0\uFE0F ${esc(it.risk)}${it.env ? ` \u2014 aanpasbaar via ${esc(it.env)} in .env + rebuild` : ""}</div></details>` : ""}
+      </div>`).join("")}</div>`).join("");
     sec.innerHTML = `
       <div class="card"><div class="ct">\u{1F5A5}\uFE0F standaardinterface</div>
         <div style="color:var(--dim)">waar leden na inloggen landen \u2014 beide blijven bereikbaar</div>
         <div class="crow"><span class="abtn ${ME.default_ui !== "mind" ? "amber" : ""}" data-ui="legacy">legacy</span>
           <span class="abtn ${ME.default_ui === "mind" ? "amber" : ""}" data-ui="mind">mind 3d</span><span class="ok" id="uiOut"></span></div></div>
-      <div class="card"><div class="ct">\u{1F41D} consensus-drempel</div>
-        <div style="color:var(--dim)">stemmen (per account) voordat een Pollen 'ready' wordt</div>
+      <div class="card"><div class="ct">\u{1F41D} consensus-drempel <span class="pchip amber">live</span></div>
+        <div style="color:var(--dim)">stemmen (per account) voordat een Pollinate 'ready' wordt</div>
         <div class="crow"><input type="number" id="consN" min="1" style="width:80px" value="${s2.consensus_threshold}">
           <span class="abtn" id="consSave">opslaan</span><span class="ok" id="consOut"></span></div></div>
-      <div class="card"><div class="ct">\u{1F30D} cognition (wereld-research)</div>
-        <div style="color:var(--dim)">nieuwe memories krijgen een research-Pollen; budget: max ${s2.cognition_budget?.max_new}/job \xB7 ${s2.cognition_budget?.max_depth} rondes \xB7 ${s2.cognition_budget?.daily_cap}/dag</div>
+      <div class="card"><div class="ct">\u{1F30D} cognition (wereld-research) <span class="pchip amber">live</span></div>
+        <div style="color:var(--dim)">nieuwe memories krijgen een research-taak; budget: max ${s2.cognition_budget?.max_new}/job \xB7 ${s2.cognition_budget?.max_depth} rondes \xB7 ${s2.cognition_budget?.daily_cap}/dag</div>
         <div class="crow"><span class="abtn ${s2.cognition_enabled ? "green" : ""}" data-cog="true">aan</span>
-          <span class="abtn ${!s2.cognition_enabled ? "red" : ""}" data-cog="false">uit</span><span class="ok" id="cogOut"></span></div></div>`;
+          <span class="abtn ${!s2.cognition_enabled ? "red" : ""}" data-cog="false">uit</span><span class="ok" id="cogOut"></span></div></div>
+      <h3>zo staat het brein afgesteld (via .env, actief na herstart)</h3>${knobHtml}`;
     sec.querySelectorAll("[data-ui]").forEach((b2) => b2.onclick = async () => {
       try {
         await api("/manage/ui-default", { method: "POST", body: JSON.stringify({ ui: b2.dataset.ui }) });
@@ -85965,24 +86066,83 @@ var BEHEER_RENDER = {
     });
   },
   async toegang(sec) {
-    const [accounts, invites] = await Promise.all([api("/manage/accounts"), api("/manage/invites")]);
-    sec.innerHTML = `<h3>accounts</h3>
-      <table><tr><th>account</th><th>persoon</th><th>rol</th><th>tokens</th></tr>
-      ${(accounts || []).map((a3) => `<tr><td>${esc(a3.name)}</td><td>${esc(a3.person || "\u2014")}</td>
-        <td>${esc(a3.role)}</td><td>${a3.active ?? a3.active_tokens ?? "\u2014"}</td></tr>`).join("")}</table>
-      <h3>invites</h3>
-      <div class="crow"><select id="invRole"><option>member</option><option>maintainer</option><option>org_admin</option></select>
-        <input type="number" id="invUses" value="1" min="1" style="width:70px" title="aantal keer bruikbaar">
-        <span class="abtn amber" id="invMake">nieuwe invite</span><span class="ok" id="invOut" style="user-select:all"></span></div>
-      ${(invites || []).map((i2) => `<div style="margin:4px 0;color:var(--dim)">\u{1F511} ${esc(i2.role)} \xB7 ${i2.uses_left ?? i2.uses ?? "?"}\xD7 over ${i2.code_hash ? `<span class="abtn red" data-rvk="${esc(i2.code_hash)}">intrekken</span>` : ""}</div>`).join("")}`;
+    const [accounts, invites, teams] = await Promise.all([
+      api("/manage/accounts"),
+      api("/manage/invites"),
+      api("/manage/teams").catch(() => [])
+    ]);
+    const accOpts = accounts.map((a3) => `<option value="${a3.uid}">${esc(a3.name)}${a3.person ? " (" + esc(a3.person) + ")" : ""}</option>`).join("");
+    sec.innerHTML = `<div class="grid2">
+      <div class="card"><div class="ct">\u{1F464} nieuw account</div>
+        <label class="fl">naam</label><input type="text" id="accName" placeholder="accountnaam">
+        <label class="fl">persoon (de mens erachter)</label><input type="text" id="accPerson">
+        <label class="fl">team</label><select id="accTeam"><option value="">\u2014 geen team \u2014</option>${teams.map((t2) => `<option value="${t2.uid}">${esc(t2.name)}</option>`).join("")}</select>
+        <label class="fl">rol</label><select id="accRole"><option value="member">member \u2014 lezen & schrijven</option>
+          <option value="maintainer">maintainer \u2014 + onderhoud</option><option value="org_admin">org_admin \u2014 + reviewen</option></select>
+        <div class="crow" style="margin-top:10px"><span class="abtn amber" id="accMake">aanmaken</span><span class="ok" id="accOut"></span></div></div>
+      <div class="card"><div class="ct">\u{1F39F}\uFE0F token voor account</div>
+        <div style="color:var(--dim)">geeft een machine/persoon toegang namens een account \u2014 eenmalig zichtbaar</div>
+        <label class="fl">account</label><select id="tokAcc"><option value="">\u2014 kies account \u2014</option>${accOpts}</select>
+        <label class="fl">label</label><input type="text" id="tokLabel" placeholder="bv. werk-laptop">
+        <label class="fl">rol van dit token (leeg = accountrol)</label>
+        <select id="tokRole"><option value="">\u2014 accountrol \u2014</option><option>member</option><option>maintainer</option><option>org_admin</option></select>
+        <div class="crow" style="margin-top:10px"><span class="abtn amber" id="tokMake">token maken</span></div>
+        <pre id="tokOut" style="display:none"></pre></div>
+      <div class="card"><div class="ct">\u2709\uFE0F uitnodigingen</div>
+        <div style="color:var(--dim)">een invite-code laat iemand zichzelf registreren met een vaste rol</div>
+        <label class="fl">rol</label><select id="invRole"><option>member</option><option>maintainer</option><option>org_admin</option></select>
+        <div style="display:flex;gap:8px"><div style="flex:1"><label class="fl">keer bruikbaar</label><input type="number" id="invUses" min="1" value="1"></div>
+          <div style="flex:1"><label class="fl">verloopt na (dagen)</label><input type="number" id="invExp" min="1" value="14"></div></div>
+        <div class="crow" style="margin-top:8px"><span class="abtn amber" id="invMake">uitnodiging maken</span></div>
+        <pre id="invOut" style="display:none"></pre>
+        <div id="invList" style="margin-top:8px">${invites.map((i2) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0;color:var(--dim)">
+          \u{1F511} ${esc(i2.role)} \xB7 ${i2.uses_left}\xD7 over ${i2.uses_left ? `<span class="abtn red" data-rvk="${esc(i2.code_hash)}">intrekken</span>` : `<span class="pchip">op</span>`}</div>`).join("")}</div></div>
+    </div>
+    <h3>\u{1F5DD}\uFE0F accounts & tokens <span class="abtn" id="tokClean" style="margin-left:8px">verlopen opruimen</span></h3>
+    <div id="accList">${accounts.map((a3) => `<div style="margin:6px 0">
+      <div style="display:flex;gap:10px;align-items:center">
+        <span style="flex:1"><b>${esc(a3.name)}</b>${a3.person ? ` <span style="color:var(--dim)">\xB7 ${esc(a3.person)}</span>` : ""}
+          <span style="color:var(--dim)"> \u2014 ${a3.active}/${a3.tokens} tokens actief</span></span>
+        ${pill(a3.role, "amber")}<span class="abtn" data-toks="${a3.uid}">tokens</span></div>
+      <div id="tk-${a3.uid}"></div></div>`).join("")}</div>`;
+    const A2 = { headers: {} };
+    sec.querySelector("#accMake").onclick = async () => {
+      try {
+        const r2 = await api("/manage/accounts", { method: "POST", body: JSON.stringify({
+          name: sec.querySelector("#accName").value.trim(),
+          person: sec.querySelector("#accPerson").value.trim() || null,
+          team_uid: sec.querySelector("#accTeam").value || null,
+          role: sec.querySelector("#accRole").value
+        }) });
+        sec.querySelector("#accOut").textContent = " \u2713 aangemaakt";
+        setTimeout(() => BEHEER_RENDER.toegang(sec), 800);
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
+    sec.querySelector("#tokMake").onclick = async () => {
+      try {
+        const bdy = { account_uid: sec.querySelector("#tokAcc").value, label: sec.querySelector("#tokLabel").value.trim() || null };
+        const role = sec.querySelector("#tokRole").value;
+        if (role) bdy.role = role;
+        const r2 = await api("/manage/tokens", { method: "POST", body: JSON.stringify(bdy) });
+        const o2 = sec.querySelector("#tokOut");
+        o2.style.display = "block";
+        o2.textContent = "token (eenmalig zichtbaar!):\n" + r2.token;
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
     sec.querySelector("#invMake").onclick = async () => {
       try {
         const r2 = await api("/manage/invites", { method: "POST", body: JSON.stringify({
           role: sec.querySelector("#invRole").value,
           uses: +sec.querySelector("#invUses").value,
-          expires_days: 14
+          expires_days: +sec.querySelector("#invExp").value || null
         }) });
-        sec.querySelector("#invOut").textContent = " code: " + (r2.code || JSON.stringify(r2));
+        const o2 = sec.querySelector("#invOut");
+        o2.style.display = "block";
+        o2.textContent = "invite-code (eenmalig zichtbaar!):\n" + (r2.code || JSON.stringify(r2));
       } catch (e2) {
         alert(e2.message);
       }
@@ -85995,13 +86155,51 @@ var BEHEER_RENDER = {
         alert(e2.message);
       }
     });
+    sec.querySelector("#tokClean").onclick = async () => {
+      try {
+        const r2 = await api("/manage/tokens/cleanup", { method: "POST" });
+        alert(`${r2.removed} token(s) opgeruimd`);
+        BEHEER_RENDER.toegang(sec);
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
+    sec.querySelectorAll("[data-toks]").forEach((b2) => b2.onclick = async () => {
+      const box = sec.querySelector(`#tk-${b2.dataset.toks}`);
+      const tks = await api(`/manage/accounts/${b2.dataset.toks}/tokens`);
+      const fmtD = (ms) => ms ? new Date(ms).toLocaleDateString("nl-NL") : "\u2014";
+      box.innerHTML = tks.map((t2) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0 3px 20px;color:var(--dim)">
+        <span style="flex:1">${esc(t2.label || "(zonder label)")} \xB7 rol ${esc(t2.role || "accountrol")} \xB7 verloopt ${fmtD(t2.expires_at)}${t2.revoked ? " \xB7 <b>ingetrokken</b>" : ""}</span>
+        ${t2.revoked ? "" : `<span class="abtn" data-rot="${esc(t2.token_hash)}">rotate</span><span class="abtn red" data-rev="${esc(t2.token_hash)}">intrekken</span>`}</div>`).join("") || `<div class="empty" style="margin-left:20px">geen tokens</div>`;
+      box.querySelectorAll("[data-rot]").forEach((x3) => x3.onclick = async () => {
+        try {
+          const r2 = await api(`/manage/tokens/${x3.dataset.rot}/rotate`, { method: "POST" });
+          alert("nieuw token (eenmalig!):\n\n" + r2.token);
+          b2.onclick();
+        } catch (e2) {
+          alert(e2.message);
+        }
+      });
+      box.querySelectorAll("[data-rev]").forEach((x3) => x3.onclick = async () => {
+        if (!confirm("Dit token intrekken? De client verliest direct toegang.")) return;
+        try {
+          await api(`/manage/tokens/${x3.dataset.rev}/revoke`, { method: "POST" });
+          b2.onclick();
+        } catch (e2) {
+          alert(e2.message);
+        }
+      });
+    });
   },
   async data(sec) {
-    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4BE} export</div>
-      <div style="color:var(--dim)">volledige JSON-export van de zichtbare hive</div>
-      <div class="crow"><span class="abtn amber" id="expBtn">download export</span><span class="ok" id="expOut"></span></div></div>
-      <div class="card"><div class="ct">\u{1F6DF} back-ups</div>
-      <div style="color:var(--dim)">volume-snapshots draaien op de server (zie OPERATIONS.md); import kan via de API (/import)</div></div>`;
+    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4BE} back-up & restore</div>
+      <div style="color:var(--dim)">volledige export van de hele hive (nodes, relaties, tags \xE9n bijlagen) als \xE9\xE9n JSON-bestand;
+        terugzetten kan <b>samenvoegen</b> (upsert) of <b>vervangen</b> (hive eerst leegmaken = echte restore)</div>
+      <div class="crow" style="margin-top:8px"><span class="abtn amber" id="expBtn">exporteren (download)</span><span class="ok" id="expOut"></span></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <label class="fl">back-up-bestand</label><input type="file" id="impFile" accept="application/json,.json">
+        <label class="fl">modus</label><select id="impMode"><option value="merge">samenvoegen (upsert)</option><option value="replace">vervangen (wipe + restore)</option></select>
+        <div class="crow" style="margin-top:8px"><span class="abtn red" id="impBtn">importeren</span><span class="ok" id="impOut"></span></div></div></div>`;
     sec.querySelector("#expBtn").onclick = async () => {
       const out = sec.querySelector("#expOut");
       out.textContent = " bezig\u2026";
@@ -86017,6 +86215,29 @@ var BEHEER_RENDER = {
         out.textContent = " \u2717 " + e2.message;
       }
     };
+    sec.querySelector("#impBtn").onclick = async () => {
+      const f2 = sec.querySelector("#impFile").files[0], mode = sec.querySelector("#impMode").value, out = sec.querySelector("#impOut");
+      if (!f2) {
+        alert("Kies eerst een back-up-bestand.");
+        return;
+      }
+      if (mode === "replace" && !confirm("VERVANGEN maakt de hele hive eerst leeg en zet daarna de back-up terug. Doorgaan?")) return;
+      out.textContent = " bezig\u2026";
+      try {
+        const bodyTxt = await f2.text();
+        const r2 = await fetch("/import?mode=" + mode, {
+          method: "POST",
+          headers: { Authorization: "Bearer " + TOKEN(), "Content-Type": "application/json" },
+          body: bodyTxt
+        });
+        const j2 = await r2.json();
+        if (!r2.ok) throw new Error(j2.detail || r2.status);
+        out.textContent = ` \u2713 ${j2.imported.nodes} nodes, ${j2.imported.relationships} relaties, ${j2.imported.attachments} bijlagen`;
+      } catch (e2) {
+        out.textContent = "";
+        alert(e2.message);
+      }
+    };
   },
   async pakket(sec) {
     let skills = [];
@@ -86024,12 +86245,22 @@ var BEHEER_RENDER = {
       skills = await api("/skills");
     } catch {
     }
-    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4E6} install-pakket</div>
-      <div style="color:var(--dim)">hivemind-install.zip \u2014 de client-kit voor een nieuwe machine</div>
-      <div class="crow"><a class="abtn amber" href="/install.zip" download>download kit</a></div></div>
-      <h3>gedeelde skills (${(skills || []).length})</h3>
-      ${(skills || []).map((s2) => `<div style="margin:5px 0"><b>${esc(s2.title || s2.name)}</b>
-        <div style="color:var(--dim)">${esc((s2.description || s2.content || "").slice(0, 160))}</div></div>`).join("") || `<div class="empty">geen skills gevonden</div>`}`;
+    sec.innerHTML = `<div class="card"><div class="ct">\u{1F4E6} install-pakket voor claude</div>
+      <div style="color:var(--dim)">download de zip, geef 'm samen met een token aan iemand; claude installeert nectar zelf (recall-hook + mcp)</div>
+      <div class="crow" style="margin-top:8px"><a class="abtn amber" href="/install.zip" download>download install-zip</a></div></div>
+      <h3>\u2728 skills in de hive (${skills.length})</h3>
+      <div style="color:var(--dim);margin-bottom:8px">in een hive-verbonden claude: vraag "laad skill X", of kopieer het commando</div>
+      ${skills.map((sk) => {
+      const cmd = `~/.hivemind/scripts/hive-skill-install.sh "${sk.title}"`;
+      return `<div style="margin:8px 0"><b>\u2728 ${esc(sk.title)}</b>
+          <div style="display:flex;gap:8px;align-items:center"><code style="flex:1;color:var(--dim);font-size:10.5px">${esc(cmd)}</code>
+          <span class="abtn" data-copy="${esc(cmd)}">kopieer</span></div></div>`;
+    }).join("") || `<div class="empty">nog geen skills in de hive</div>`}`;
+    sec.querySelectorAll("[data-copy]").forEach((b2) => b2.onclick = () => {
+      navigator.clipboard?.writeText(b2.dataset.copy);
+      b2.textContent = "\u2713";
+      setTimeout(() => b2.textContent = "kopieer", 1200);
+    });
   }
 };
 var RENDER = {
@@ -86039,7 +86270,7 @@ var RENDER = {
   governance: renderGovernance,
   beheer: renderBeheer
 };
-var TITLES = { focus: "focus", chores: "pollen", review: "review", governance: "governance", beheer: "beheer" };
+var TITLES = { focus: "focus", chores: "pollinate", review: "review", governance: "governance", beheer: "beheer" };
 function build() {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -87452,7 +87683,7 @@ drill.addEventListener("click", (e2) => {
 if (SERVER) {
   const v2 = el("variants");
   v2.innerHTML = `<span class="chip" data-deck="focus">\u25CE focus</span>
-     <span class="chip" data-deck="chores">\u{1F33C} pollen<span id="navBadge"></span></span>
+     <span class="chip" data-deck="chores">\u{1F33C} pollinate<span id="navBadge"></span></span>
      <span class="chip" data-deck="governance">\u2696 governance</span>
      <span class="chip" data-deck="beheer">\u2699 beheer</span>
      <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">\u2302 legacy</a>`;
