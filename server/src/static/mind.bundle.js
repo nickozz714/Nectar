@@ -87545,6 +87545,13 @@ async function apiJ(p2, opts = {}) {
     return null;
   }
 }
+function mdLite(t2) {
+  let h2 = esc2(t2 || "");
+  h2 = h2.replace(/^#{1,3} (.+)$/gm, '<span class="mdh">$1</span>');
+  h2 = h2.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+  h2 = h2.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  return h2;
+}
 var BLOOM_C = { captured: "#8d99ae", validated: "#5aa9e6", mature: "#6cc551", deprecated: "#e4572e" };
 async function select2(n2, fly) {
   state.selected = n2;
@@ -87593,19 +87600,7 @@ function renderNodePanel(n2, f2) {
   el("pChips").innerHTML = `<span class="pchip amber" title="kennistype">${esc2(n2.type)}</span>` + (f2.scope ? `<span class="pchip" title="zichtbaarheid: org / team / account">${esc2(f2.scope)}</span>` : "") + (!isTopic ? `<span class="pchip" title="bloom-status: captured \u2192 validated \u2192 mature; deprecated zakt weg" style="color:${BLOOM_C[bloom2]};border-color:${BLOOM_C[bloom2]}55">${esc2(bloom2)}</span>` : "") + (f2.sensitivity === "gevoelig" ? `<span class="pchip" style="color:#ff6a45;border-color:#ff6a4555" title="door de classifier als gevoelig gemarkeerd">\u{1F512} gevoelig</span>` : "") + `<span class="pchip" title="hoe vaak deze kennis is opgehaald">${f2.use_count ?? 0}\xD7 gebruikt</span>` + (f2.pos || f2.neg ? `<span class="pchip" title="memory worth: hielp het echt? (feedback van agents)">\u{1F44D}${f2.pos || 0} \u{1F44E}${f2.neg || 0}</span>` : "");
   const relChips = (arr, label2, tip) => (arr || []).length ? `<div class="sec"><h4 title="${tip}">${label2}</h4>${arr.map((x3) => `<span class="pchip navchip" data-jump="${esc2(x3.uid)}" title="spring naar deze node">${esc2(x3.title)}</span>`).join(" ")}</div>` : "";
   const html = `
-    <style>
-      #panel .sec { margin: 13px 0; padding-top: 11px; border-top: 1px solid var(--line); }
-      #panel .sec h4 { margin: 0 0 6px; font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
-      #panel .navchip { cursor: pointer; display: inline-block; margin: 2px 2px 2px 0; }
-      #panel .navchip:hover { color: var(--amber); border-color: rgba(255,181,71,.4); }
-      #panel .mini { display: inline-flex; border: 1px solid var(--line); padding: 3px 9px; font-size: 9.5px;
-        letter-spacing: .12em; text-transform: uppercase; cursor: pointer; color: var(--cyan); }
-      #panel .mini:hover { background: rgba(62,224,255,.08); }
-      #panel select, #panel input[type=text], #panel input[type=number] {
-        background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: 11px var(--mono); padding: 4px 8px; }
-      #panel .picker div { padding: 4px 8px; cursor: pointer; } #panel .picker div:hover { background: rgba(62,224,255,.08); }
-    </style>
-    <div style="white-space:pre-wrap">${esc2(f2.content || "")}</div>
+    <div class="md">${mdLite(f2.content)}</div>
     ${isTopic && f2.summary ? `<div class="sec"><h4>samenvatting</h4><div style="color:var(--dim)">${esc2(f2.summary)}</div></div>` : ""}
     ${f2.superseded_by ? `<div class="sec"><span class="pchip navchip" style="color:#ff6a45;border-color:#ff6a4555" data-jump="${esc2(f2.superseded_by)}">\u2933 vervangen \u2014 toon nieuwste</span></div>` : ""}
     ${relChips(f2.parents, "valt onder", "de topics/nodes waar dit onder hangt")}

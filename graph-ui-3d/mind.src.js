@@ -444,6 +444,14 @@ async function apiJ(p, opts = {}) {
   if (!r.ok) { let d = ""; try { d = (await r.json()).detail || ""; } catch {} throw new Error(d || `HTTP ${r.status}`); }
   try { return await r.json(); } catch { return null; }
 }
+/* mini-markdown voor memory-inhoud: vet, koppen, code — meer niet */
+function mdLite(t) {
+  let h = esc(t || "");
+  h = h.replace(/^#{1,3} (.+)$/gm, '<span class="mdh">$1</span>');
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+  h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  return h;
+}
 const BLOOM_C = { captured: "#8d99ae", validated: "#5aa9e6", mature: "#6cc551", deprecated: "#e4572e" };
 
 async function select(n, fly) {
@@ -495,19 +503,7 @@ function renderNodePanel(n, f) {
         `<span class="pchip navchip" data-jump="${esc(x.uid)}" title="spring naar deze node">${esc(x.title)}</span>`).join(" ")}</div>` : "";
 
   const html = `
-    <style>
-      #panel .sec { margin: 13px 0; padding-top: 11px; border-top: 1px solid var(--line); }
-      #panel .sec h4 { margin: 0 0 6px; font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
-      #panel .navchip { cursor: pointer; display: inline-block; margin: 2px 2px 2px 0; }
-      #panel .navchip:hover { color: var(--amber); border-color: rgba(255,181,71,.4); }
-      #panel .mini { display: inline-flex; border: 1px solid var(--line); padding: 3px 9px; font-size: 9.5px;
-        letter-spacing: .12em; text-transform: uppercase; cursor: pointer; color: var(--cyan); }
-      #panel .mini:hover { background: rgba(62,224,255,.08); }
-      #panel select, #panel input[type=text], #panel input[type=number] {
-        background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: 11px var(--mono); padding: 4px 8px; }
-      #panel .picker div { padding: 4px 8px; cursor: pointer; } #panel .picker div:hover { background: rgba(62,224,255,.08); }
-    </style>
-    <div style="white-space:pre-wrap">${esc(f.content || "")}</div>
+    <div class="md">${mdLite(f.content)}</div>
     ${isTopic && f.summary ? `<div class="sec"><h4>samenvatting</h4><div style="color:var(--dim)">${esc(f.summary)}</div></div>` : ""}
     ${f.superseded_by ? `<div class="sec"><span class="pchip navchip" style="color:#ff6a45;border-color:#ff6a4555" data-jump="${esc(f.superseded_by)}">⤳ vervangen — toon nieuwste</span></div>` : ""}
     ${relChips(f.parents, "valt onder", "de topics/nodes waar dit onder hangt")}
