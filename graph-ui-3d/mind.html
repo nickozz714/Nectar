@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NECTAR // MIND — GALAXY</title>
+<title>NECTAR // MIND — MIX</title>
 <style>
   :root {
     --bg: #020409;
@@ -118,6 +118,14 @@
   #splash .t { font-size: 11px; letter-spacing: .3em; color: var(--dim); text-transform: uppercase; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* cockpit drilldown overlay */
+  #drill { position: fixed; inset: 0; z-index: 18; background: rgba(2,4,9,.55);
+           opacity: 0; pointer-events: none; transition: opacity .28s ease; }
+  #drill.on { opacity: 1; pointer-events: auto; }
+  #drill iframe { position: absolute; inset: 3vh 3vw; width: 94vw; height: 94vh;
+                  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+                  box-shadow: 0 0 60px rgba(62,224,255,.12); }
+
   .scene-tooltip { font: 11px var(--mono) !important; color: var(--ink) !important;
                    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
                    padding: 5px 9px !important; letter-spacing: .04em; }
@@ -132,11 +140,12 @@
 
 <div class="hud" id="brand">
   <h1>NECTAR <span>//</span> MIND</h1>
-  <div class="sub">swarm hud · galaxy</div>
+  <div class="sub">swarm hud · mix</div>
   <div id="stats"></div>
   <div id="crumb">
     <span id="crumbPath">GALAXY</span>
-    <span class="chip" id="btnBack">◂ terug naar galaxy</span>
+    <span class="chip" id="btnBack">◂ terug naar overzicht</span>
+    <span class="chip" id="btnMode">⊚ modus: netwerk</span>
   </div>
 </div>
 
@@ -152,6 +161,7 @@
   </div>
   <div class="pbody" id="pBody"></div>
   <div class="pfoot">
+    <div class="btn" id="btnDrill" style="color:var(--amber);border-color:rgba(255,181,71,.4)">⌕ drilldown</div>
     <div class="btn" id="btnClose">sluit</div>
   </div>
 </div>
@@ -159,16 +169,18 @@
 <div class="hud" id="variants" style="bottom:64px;right:26px;display:flex;gap:6px">
   <a class="chip" href="./index.html">netwerk</a>
   <a class="chip" href="./cockpit.html">cockpit</a>
-  <a class="chip" style="color:var(--amber);border-color:rgba(255,181,71,.4)" href="./galaxy.html">galaxy</a>
-  <a class="chip" href="./mind.html">mix</a>
+  <a class="chip" href="./galaxy.html">galaxy</a>
+  <a class="chip" style="color:var(--amber);border-color:rgba(255,181,71,.4)" href="./mind.html">mix</a>
 </div>
 
 <div class="hud" id="hints">
-  <div><span class="key">klik ster</span> vlieg naar stelsel · <span class="key">esc</span> terug</div>
+  <div><span class="key">klik ster</span> stelsel in · <span class="key">rechtsklik</span> drilldown · <span class="key">esc</span> terug</div>
   <div><span class="key">sleep</span> draai · <span class="key">scroll</span> zoom · <span class="key">/</span> zoekt</div>
 </div>
 
-<div id="splash"><div class="ring"></div><div class="t">galaxy wordt geladen…</div></div>
+<div id="drill"><iframe id="drillFrame" title="drilldown"></iframe></div>
+
+<div id="splash"><div class="ring"></div><div class="t">mind wordt geladen…</div></div>
 
 <script>
   // never hang silently on the splash — surface any startup error on the page
@@ -177,8 +189,8 @@
   window.addEventListener("error", e => showErr(e.message || e.type));
   window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
 </script>
-<!-- galaxy.bundle.js = galaxy.src.js + deps; rebuild after editing:
-     npx esbuild galaxy.src.js --bundle --format=esm --target=es2022 --outfile=galaxy.bundle.js -->
-<script type="module" src="./galaxy.bundle.js"></script>
+<!-- mind.bundle.js = mind.src.js + deps; rebuild after editing:
+     npx esbuild mind.src.js --bundle --format=esm --target=es2022 --outfile=mind.bundle.js -->
+<script type="module" src="./mind.bundle.js"></script>
 </body>
 </html>

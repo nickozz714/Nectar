@@ -402,9 +402,37 @@ function initSearch() {
   document.addEventListener("click", e => { if (!$("searchBox").contains(e.target)) close(); });
 }
 
+/* ── embed-modus: de cockpit als drilldown-overlay binnen de mix-pagina ────── */
+const PARAMS = new URLSearchParams(location.search);
+const EMBED = PARAMS.get("embed") === "1";
+const post = msg => { if (EMBED && window.parent !== window) window.parent.postMessage(msg, "*"); };
+
+function initEmbed() {
+  if (!EMBED) return;
+  document.getElementById("variants")?.remove();
+  for (const c of document.querySelectorAll(".corner")) c.remove();
+  const bar = document.createElement("div");
+  bar.style.cssText = "position:fixed;top:18px;right:24px;z-index:30;display:flex;gap:8px";
+  const mk = (txt, fn, amber) => {
+    const c = document.createElement("span");
+    c.className = "chip";
+    if (amber) { c.style.color = "var(--amber)"; c.style.borderColor = "rgba(255,181,71,.4)"; }
+    c.textContent = txt;
+    c.addEventListener("click", fn);
+    bar.appendChild(c);
+  };
+  mk("⊚ toon in stelsel", () => post({ type: "showInSystem", id: focusId }), true);
+  mk("✕ sluit drilldown", () => post({ type: "close" }));
+  document.body.appendChild(bar);
+  // zoekbalk iets naar links zodat de embed-chips niet overlappen
+  const sb = document.getElementById("searchBox");
+  if (sb) sb.style.right = "300px";
+}
+
 /* ── start ────────────────────────────────────────── */
 async function main() {
   await loadData();
+  initEmbed();
   // startfocus: topic met de meeste (directe) kinderen
   let best = null, bestN = -1;
   for (const n of nodes.values()) {
@@ -414,15 +442,20 @@ async function main() {
   }
   if (!best) throw new Error("geen topics gevonden in data.json");
   // ?start=<titeldeel> — handig om op een specifieke node te openen
-  const params = new URLSearchParams(location.search);
+  const params = PARAMS;
   const q = params.get("start");
   if (q) {
     const hit = [...nodes.values()].find(n => n.title.toLowerCase().includes(q.toLowerCase()));
     if (hit) best = hit.id;
   }
+  // ?focus=<id> — exacte node (gebruikt door de mix-drilldown)
+  const fid = params.get("focus");
+  if (fid && nodes.has(fid)) best = fid;
   initSearch();
   window.addEventListener("keydown", e => {
-    if (e.key === "Escape" && document.activeElement !== $("search")) goBack();
+    if (e.key !== "Escape" || document.activeElement === $("search")) return;
+    if (trail.length < 2 && EMBED) { post({ type: "close" }); return; }
+    goBack();
   });
   window.addEventListener("resize", () => render(false));
   setFocus(best);
