@@ -409,7 +409,255 @@ var require_cockpit_src = __commonJS({
       $("pTags").innerHTML = (n.tags ?? []).map((t) => `<span class="pchip">#${t}</span>`).join("");
       const d = await getDetail(id);
       if (focusId !== id) return;
-      $("pBody").textContent = (d?.content || d?.summary || n.title).trim();
+      $("pBody").innerHTML = `<div class="pmd"></div><div id="pExtra"></div>`;
+      $("pBody").querySelector(".pmd").textContent = (d?.content || d?.summary || n.title).trim();
+      if (SERVER) buildExtras(id, d || {});
+    }
+    function buildExtras(id, f) {
+      const box = document.getElementById("pExtra");
+      if (!box) return;
+      const n = nodes.get(id);
+      const isTopic = n.type === "topic";
+      const maintain = !!MEg?.can_maintain;
+      const esc2 = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c2]);
+      const refreshAll = async () => {
+        detailCache.delete(id);
+        await loadData();
+        render(false);
+        renderCrumbs();
+        renderPanel();
+      };
+      box.innerHTML = `
+    ${!isTopic ? `<div class="sec"><h4 title="tags tellen mee in zoeken en ranking">tags bewerken</h4>
+      <input type="text" id="xTags" style="width:100%" value="${esc2((f.tags || []).join(", "))}" placeholder="komma-gescheiden">
+      <div style="margin-top:5px"><span class="mini" id="xTagSave">tags opslaan</span></div></div>` : ""}
+    <div class="sec"><h4 title="artefacten centraal in de hive \u2014 klik een naam voor preview">\u{1F4CE} bijlagen</h4>
+      <div id="xAtts" style="color:var(--dim)">laden\u2026</div>
+      <input type="file" id="xAttFile" style="margin-top:6px;font-size:10px">
+      <div style="margin-top:4px"><span class="mini" id="xAttUp">bijlage toevoegen</span></div></div>
+    ${maintain && !isTopic ? `<div class="sec"><h4 title="alleen maintainers">beheer</h4>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <select id="xLife" title="bloom-status">${["captured", "validated", "mature", "deprecated"].map((x) => `<option${x === (f.lifecycle || "captured") ? " selected" : ""}>${x}</option>`).join("")}</select>
+        <span class="mini" id="xLifeSave">status</span>
+        <select id="xImp" title="belang schuift de recall-ranking">${[["0.2", "belang: laag"], ["0.5", "belang: normaal"], ["0.9", "belang: hoog"]].map(([v, l]) => `<option value="${v}"${((f.importance ?? 0.5) >= 0.75 ? "0.9" : (f.importance ?? 0.5) <= 0.35 ? "0.2" : "0.5") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+        <span class="mini" id="xImpSave">belang</span>
+        <input type="number" id="xDecay" min="1" style="width:84px" placeholder="decay (dgn)" value="${f.half_life_days || ""}" title="eigen half-life; leeg = standaard">
+        <span class="mini" id="xDecaySave">decay</span></div>
+      <input type="text" id="xSup" style="width:100%" placeholder="vervangen door\u2026 zoek de nieuwere node" title="oud blijft vindbaar maar zakt; nieuw wint">
+      <div id="xSupPick" class="picker" style="border:1px solid var(--line);display:none;max-height:110px;overflow-y:auto"></div>
+      <div style="margin-top:4px"><span class="mini" id="xSupSave">markeer als vervangen</span><span id="xSupSel" style="color:#55ffa1;font-size:10px;margin-left:6px"></span></div>
+      <div style="display:flex;gap:5px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <select id="xMove" title="hang deze node onder een ander topic">${TOPICS.map((t) => `<option>${esc2(t)}</option>`).join("")}</select>
+        <label style="font-size:10px;color:var(--dim)" title="multi-parent: huidige topics ook behouden"><input type="checkbox" id="xMoveKeep"> behoud huidige</label>
+        <span class="mini" id="xMoveSave">verplaats</span></div></div>` : ""}
+    ${maintain && isTopic ? `<div class="sec"><h4>samenvoegen in ander topic</h4>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><select id="xMerge">${TOPICS.filter((t) => t !== f.title).map((t) => `<option>${esc2(t)}</option>`).join("")}</select>
+      <span class="mini" id="xMergeSave" style="color:#ff6a45" title="alle inhoud verhuist; dit topic verdwijnt daarna">samenvoegen</span></div></div>` : ""}
+    <div class="sec"><h4>acties</h4>
+      <span class="mini" id="xLineage" title="herkomst + governance-events">\u{1F9EC} lineage</span>
+      ${!isTopic ? `<span class="mini" id="xSuggest" title="wijziging voorstellen \u2014 consensus beslist">\u270E voorstel</span>
+      <span class="mini" id="xArchive" title="archiveren voorstellen">\u{1F5D1} archiveer</span>` : ""}
+      ${MEg?.can_review ? `<span class="mini" id="xDelete" style="color:#ff7847" title="permanent verwijderen \u2014 kan niet ongedaan">\u2715 verwijder</span>` : ""}
+      <div id="xLineageOut"></div></div>
+    <div class="sec" style="color:var(--dim);font-size:10.5px">door ${esc2(f.created_by_model || "onbekend model")}${f.sensitivity === "gevoelig" ? " \xB7 \u{1F512} gevoelig" : ""}</div>`;
+      const $$ = (i2) => box.querySelector("#" + i2);
+      const on = (i2, fn) => {
+        const x = $$(i2);
+        if (x) x.onclick = () => fn().then(refreshAll).catch((e) => alert(e.message));
+      };
+      on("xTagSave", () => capi(`/graph/node/${id}/tags`, { method: "POST", body: JSON.stringify({ replace: $$("xTags").value.split(",").map((x) => x.trim()).filter(Boolean) }) }));
+      on("xLifeSave", () => capi("/graph/lifecycle", { method: "POST", body: JSON.stringify({ uid: id, state: $$("xLife").value }) }));
+      on("xImpSave", () => capi("/graph/importance", { method: "POST", body: JSON.stringify({ uid: id, value: +$$("xImp").value }) }));
+      on("xDecaySave", () => capi("/graph/decay", { method: "POST", body: JSON.stringify({ uid: id, half_life_days: $$("xDecay").value ? +$$("xDecay").value : null }) }));
+      on("xMoveSave", () => capi(`/graph/node/${id}/move`, { method: "POST", body: JSON.stringify({ to_topic: $$("xMove").value, keep_others: $$("xMoveKeep").checked }) }));
+      const mrg = $$("xMergeSave");
+      if (mrg) mrg.onclick = async () => {
+        const into = $$("xMerge").value;
+        if (!confirm(`"${f.title}" samenvoegen in "${into}"? Dit topic wordt daarna verwijderd.`)) return;
+        try {
+          await capi("/graph/topics/merge", { method: "POST", body: JSON.stringify({ from_topic: f.title, into_topic: into }) });
+          refreshAll();
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      const sup = $$("xSup");
+      if (sup) {
+        let chosen = null, tmr2;
+        sup.oninput = () => {
+          clearTimeout(tmr2);
+          tmr2 = setTimeout(async () => {
+            const q2 = sup.value.trim();
+            const pick = $$("xSupPick");
+            if (q2.length < 2) {
+              pick.style.display = "none";
+              return;
+            }
+            const rs = (await capi(`/graph/search?q=${encodeURIComponent(q2)}`)).slice(0, 8);
+            pick.innerHTML = rs.map((r2, i3) => `<div data-i="${i3}">${esc2(r2.title)} <span style="color:var(--dim)">\xB7 ${esc2(r2.type)}</span></div>`).join("");
+            pick.style.display = "block";
+            pick.querySelectorAll("[data-i]").forEach((dv) => dv.onclick = () => {
+              chosen = rs[+dv.dataset.i];
+              sup.value = chosen.title;
+              pick.style.display = "none";
+              $$("xSupSel").textContent = "\u2713 " + chosen.title;
+            });
+          }, 260);
+        };
+        $$("xSupSave").onclick = async () => {
+          if (!chosen) {
+            alert("Zoek en kies eerst de nieuwere node");
+            return;
+          }
+          try {
+            await capi("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: id, new_uid: chosen.uid }) });
+            refreshAll();
+          } catch (e) {
+            alert(e.message);
+          }
+        };
+      }
+      const lin = $$("xLineage");
+      if (lin) lin.onclick = async () => {
+        const o = $$("xLineageOut");
+        if (o.innerHTML) {
+          o.innerHTML = "";
+          return;
+        }
+        o.innerHTML = `<div style="color:var(--dim)">laden\u2026</div>`;
+        try {
+          const L = await capi(`/graph/lineage/${id}`);
+          o.innerHTML = [
+            ["persoon", L.created_by_person],
+            ["account", L.created_by_account],
+            ["model", L.created_by_model],
+            ["gevoeligheid", L.sensitivity],
+            ["aangemaakt", L.created_at ? new Date(L.created_at).toLocaleString("nl-NL") : null]
+          ].filter(([, v]) => v).map(([k, v]) => `<div style="margin-top:3px"><span style="color:var(--dim)">${k}:</span> ${esc2(String(v))}</div>`).join("") + (L.events || L.audit || []).slice(0, 15).map((ev) => `<div style="color:var(--dim);margin-top:2px">\u25B8 ${esc2(ev.action || "?")} \xB7 ${esc2(ev.account || "")}</div>`).join("");
+        } catch {
+          o.innerHTML = `<div style="color:#ff7847">lineage niet op te halen</div>`;
+        }
+      };
+      const sug = $$("xSuggest");
+      if (sug) sug.onclick = async () => {
+        const content = prompt("Voorgestelde nieuwe inhoud (consensus beslist):");
+        if (!content) return;
+        try {
+          await capi("/graph/suggest", { method: "POST", body: JSON.stringify({ kind: "edit", node_uid: id, payload: { content }, rationale: prompt("Waarom?") || "via cockpit", model_name: "mens-via-cockpit" }) });
+          alert("\u2713 voorstel ingediend \u2014 zie de Pollinate-deck");
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      const arch = $$("xArchive");
+      if (arch) arch.onclick = async () => {
+        const reason = prompt("Archiveren voorstellen \u2014 reden:");
+        if (!reason) return;
+        try {
+          await capi("/graph/suggest", { method: "POST", body: JSON.stringify({ kind: "invalidate", node_uid: id, payload: { reason }, rationale: reason, model_name: "mens-via-cockpit" }) });
+          alert("\u2713 archiveer-voorstel ingediend");
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      const del = $$("xDelete");
+      if (del) del.onclick = async () => {
+        if (!confirm(`Permanent verwijderen?
+
+"${n.title}"
+
+Dit kan niet ongedaan worden gemaakt.`)) return;
+        try {
+          await capi(`/graph/node/${id}`, { method: "DELETE" });
+          goBack();
+          refreshAll();
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+      capi(`/graph/node/${id}/attachments`).then((list) => {
+        const ab = $$("xAtts");
+        if (!ab) return;
+        ab.innerHTML = (list || []).map((a) => `<div style="margin:5px 0">
+        <div style="display:flex;gap:8px;align-items:center">
+          <a href="#" class="attname" data-prev="${esc2(a.uid)}" data-fn="${esc2(a.filename)}">\u{1F4CE} ${esc2(a.filename)}</a>
+          <span style="color:var(--dim);font-size:10px;flex:1">${(a.size / 1024).toFixed(1)} kB</span>
+          <span class="mini" data-dl="${esc2(a.uid)}" data-fn="${esc2(a.filename)}" title="download">\u2B07</span>
+          ${maintain ? `<span class="mini" data-del2="${esc2(a.uid)}" style="color:#ff7847" title="verwijderen">\xD7</span>` : ""}
+        </div><div id="xprev-${esc2(a.uid)}"></div></div>`).join("") || "geen bijlagen";
+        const getBlob = async (uid2) => {
+          const r2 = await fetch(`/attachments/${uid2}`, AUTH);
+          if (!r2.ok) throw new Error("niet op te halen");
+          return r2;
+        };
+        ab.querySelectorAll("[data-dl]").forEach((b2) => b2.onclick = async () => {
+          try {
+            const r2 = await getBlob(b2.dataset.dl);
+            const a3 = document.createElement("a");
+            a3.href = URL.createObjectURL(await r2.blob());
+            a3.download = b2.dataset.fn;
+            a3.click();
+          } catch (e) {
+            alert(e.message);
+          }
+        });
+        ab.querySelectorAll("[data-del2]").forEach((b2) => b2.onclick = async () => {
+          if (!confirm("Bijlage verwijderen?")) return;
+          try {
+            await capi(`/attachments/${b2.dataset.del2}`, { method: "DELETE" });
+            detailCache.delete(id);
+            renderPanel();
+          } catch (e) {
+            alert(e.message);
+          }
+        });
+        ab.querySelectorAll("[data-prev]").forEach((b2) => b2.onclick = async (ev) => {
+          ev.preventDefault();
+          const pv = ab.querySelector(`[id="xprev-${b2.dataset.prev}"]`);
+          if (pv.innerHTML) {
+            pv.innerHTML = "";
+            return;
+          }
+          pv.innerHTML = `<div style="color:var(--dim)">laden\u2026</div>`;
+          try {
+            const r2 = await getBlob(b2.dataset.prev);
+            const ct = (r2.headers.get("content-type") || "").toLowerCase();
+            const blob = await r2.blob();
+            const fn = b2.dataset.fn;
+            const textish = ct.startsWith("text/") || /json|sql|xml|csv|javascript|x-python|yaml|markdown|x-sh|plain/.test(ct) || /\.(txt|md|json|sql|xml|csv|ya?ml|py|js|ts|sh|log|conf|ini|ipynb)$/i.test(fn);
+            const meta = `<div style="color:var(--dim);font-size:10px;margin:4px 0">${esc2(ct || "onbekend")} \xB7 ${(blob.size / 1024).toFixed(1)} kB</div>`;
+            if (ct.startsWith("image/")) pv.innerHTML = meta + `<img src="${URL.createObjectURL(blob)}" style="max-width:100%">`;
+            else if (textish) {
+              const t2 = await blob.text();
+              pv.innerHTML = meta + `<pre style="max-height:240px;overflow:auto;background:rgba(62,224,255,.05);border:1px solid var(--line);padding:8px;font-size:10.5px;white-space:pre-wrap;margin:0">${esc2(t2.slice(0, 2e4))}</pre>`;
+            } else pv.innerHTML = meta + `<div style="color:var(--dim)">binair \u2014 gebruik \u2B07</div>`;
+          } catch {
+            pv.innerHTML = `<div style="color:#ff7847">kon bijlage niet laden</div>`;
+          }
+        });
+      }).catch(() => {
+        const ab = $$("xAtts");
+        if (ab) ab.textContent = "";
+      });
+      const up = $$("xAttUp");
+      if (up) up.onclick = async () => {
+        const file = $$("xAttFile").files[0];
+        if (!file) {
+          alert("Kies eerst een bestand");
+          return;
+        }
+        const r2 = await fetch(`/graph/node/${id}/attachments?filename=${encodeURIComponent(file.name)}`, {
+          method: "POST",
+          body: file,
+          headers: { ...AUTH?.headers || {}, "Content-Type": file.type || "application/octet-stream" }
+        });
+        if (!r2.ok) {
+          alert("upload mislukt");
+          return;
+        }
+        detailCache.delete(id);
+        renderPanel();
+      };
     }
     function initSearch() {
       const input = $("search"), box = $("results");
@@ -510,9 +758,37 @@ var require_cockpit_src = __commonJS({
       const sb = document.getElementById("searchBox");
       if (sb) sb.style.right = "300px";
     }
+    var MEg = null;
+    var TOPICS = [];
+    async function capi(p, opts = {}) {
+      const r = await fetch(p, { ...opts, headers: { ...AUTH?.headers || {}, "Content-Type": "application/json", ...opts.headers || {} } });
+      if (!r.ok) {
+        let d = "";
+        try {
+          d = (await r.json()).detail || "";
+        } catch {
+        }
+        throw new Error(d || `HTTP ${r.status}`);
+      }
+      try {
+        return await r.json();
+      } catch {
+        return null;
+      }
+    }
     async function main() {
       await loadData();
       initEmbed();
+      if (SERVER) {
+        capi("/graph/me").then((m) => {
+          MEg = m;
+        }).catch(() => {
+        });
+        capi("/graph/topics").then((t) => {
+          TOPICS = (t.topics || []).map((x) => x.title).filter((x) => !/^[0-9a-f]{8}-/.test(x)).sort((a, b) => a.localeCompare(b, "nl"));
+        }).catch(() => {
+        });
+      }
       let best = null, bestN = -1;
       for (const n of nodes.values()) {
         if (n.type !== "topic") continue;
