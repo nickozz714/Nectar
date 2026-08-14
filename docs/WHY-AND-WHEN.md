@@ -24,6 +24,41 @@ the whole thing healthy — with no human curation.
 - **Fully self-hosted & private.** Runs in one container on your own hardware/cloud. No data leaves
   your network; no per-token cloud bill for the memory layer.
 - **Client-agnostic.** Any MCP-capable client (Claude Code, Cursor, Cline, your own agent) plugs in.
+- **It grows a world model around your knowledge.** With Cognition enabled, the hive researches the
+  unfamiliar entities your memories mention and weaves the findings back into the graph (see below).
+
+## Seeing the mind — the 3D interface
+
+Since 2026-08-14 Nectar has a second front door, and it is the default: **`/ui/mind`** renders the
+mind as a *place* instead of a page. Topics are named stars in a galaxy (a "netwerk" mode shows the
+whole organism at once); click a star and you fly into its system, where the knowledge orbits its
+topic and a **cockpit** opens — the focused node centre-stage with its parents, children and related
+knowledge as clickable cards, so you read and *navigate* at the same time. Every other function
+lives inside the same HUD as a deck: the Pollinate queue (with who-claimed/who-resolved), human
+review, the governance dashboard with its distributions and audit trail, and the full admin surface
+(insight, maintenance scans, settings, access, backup, packages). Search is hybrid: title hits are
+instant, semantic content hits merge in a beat later. Selecting anything dims the rest of the brain
+to its direct wiring; Esc peels back layer by layer. The classic tabbed GUI remains fully supported
+— `Org.default_ui` decides where members land, and each interface links to the other.
+
+## A world model around your knowledge — Cognition
+
+Organisational knowledge never exists in a vacuum: a migration memory mentions a vendor, a data
+model references a product, an engineering note names a library. **Cognition** (opt-in per org,
+default off) makes the hive *curious about exactly those gaps*. When a new memory passes the
+write-gate, the server files a research task — a Pollen like any other. A swarm agent picks it up,
+checks what the hive already knows, looks the rest up on the web, and writes compact, source-linked
+**glossary entries** tagged `world-knowledge`, connected to the memory that raised them. Curiosity
+is bounded by construction (a per-job memory budget, a two-round depth limit enforced server-side,
+a daily cap) and everything passes the same write-gate and provenance rules as human knowledge.
+
+The effect is a **world model that grows around the org's own knowledge** — built from what the
+organisation actually works on, not from a generic encyclopedia. In our own hive, memories about a
+municipal data platform quietly gained researched context on *Centric* and *PinkRoccade's
+iSamenleving* (the vendors behind the source systems), a client memory grew a profile of *Beeminds*
+and its Intelligenthive platform, and engineering notes sprouted entries for *httpx*, *Plex* and
+*Spotify* — so recall on any of those names now also surfaces the org memories that mention them.
+Design and mechanics: `docs/COGNITION.md`.
 
 ## When to use it
 
