@@ -87309,7 +87309,14 @@ function makeNode(n2) {
 var LINK_COLORS = { tt: "#8a6a30", sun: "#8a6a30", rel: "#2a7a90", portal: "#3a4a5c" };
 var Graph = new _3dForceGraph(el("graph"), { controlType: "orbit" }).backgroundColor("#020409").showNavInfo(false).nodeId("id").nodeLabel((n2) => n2.__role === "portal" ? `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;spring naar dit stelsel` : n2.__role === "star" ? `<b>${esc2(titleOf(n2))}</b> \xB7 ${n2.children || 0} kenniszaden` : `<span style="color:${colorOf(n2)}">\u25C8 ${esc2(n2.type)}</span> &nbsp;${esc2(titleOf(n2))}`).onNodeRightClick((n2) => {
   if (n2 && n2.__role !== "portal" && n2.type !== "topic") openDrill(n2.id);
-}).nodeThreeObjectExtend(false).nodeThreeObject(makeNode).linkColor((l2) => LINK_COLORS[l2.__kind] || "#2a7a90").linkOpacity(0.35).linkWidth(0).linkDirectionalParticles(0).linkDirectionalParticleSpeed(6e-3).linkDirectionalParticleWidth(1.6).linkDirectionalParticleColor((l2) => l2.__kind === "rel" ? "#2fb8d8" : "#e8a13d").onNodeHover((n2) => {
+}).nodeThreeObjectExtend(false).nodeThreeObject(makeNode).linkColor((l2) => {
+  if (focusSet && state.selected) {
+    const a3 = linkSrc(l2), b2 = linkTgt(l2), id = state.selected.id;
+    if (a3 !== id && b2 !== id) return "#0d1826";
+    return "#9fd8ea";
+  }
+  return LINK_COLORS[l2.__kind] || "#2a7a90";
+}).linkOpacity(0.35).linkWidth(0).linkDirectionalParticles(0).linkDirectionalParticleSpeed(6e-3).linkDirectionalParticleWidth(1.6).linkDirectionalParticleColor((l2) => l2.__kind === "rel" ? "#2fb8d8" : "#e8a13d").onNodeHover((n2) => {
   el("graph").style.cursor = n2 ? "pointer" : "default";
 }).onNodeClick((n2) => {
   if (state.traveling) return;
@@ -87376,7 +87383,7 @@ for (const [count, size, opacity] of [[2e3, 1, 0.4], [350, 1.7, 0.6]]) {
   const t2 = performance.now();
   for (const n2 of Graph.graphData().nodes)
     if (n2.__mat && n2.__role !== "portal")
-      n2.__mat.emissiveIntensity = (n2.__role === "sun" ? 1.15 : 0.85) + 0.14 * Math.sin(t2 * 16e-4 + (n2.__phase ??= Math.random() * 6.28));
+      n2.__mat.emissiveIntensity = (n2.__base ?? (n2.__role === "sun" ? 1.15 : 0.85)) + 0.14 * Math.sin(t2 * 16e-4 + (n2.__phase ??= Math.random() * 6.28));
   requestAnimationFrame(frameLoop);
 })();
 setInterval(() => {
@@ -87480,42 +87487,266 @@ function updateHud() {
        <div>verbinding <span class="ok">\u25CF live</span> \xB7 klik een node voor detail \xB7 \u21E2 portaal springt door</div>`;
   }
 }
+var focusSet = null;
+function applyDim() {
+  const g2 = Graph.graphData();
+  if (!state.selected) {
+    focusSet = null;
+    for (const n2 of g2.nodes) n2.__base = void 0;
+  } else {
+    const id = state.selected.id;
+    focusSet = /* @__PURE__ */ new Set([id]);
+    for (const l2 of g2.links) {
+      const a3 = linkSrc(l2), b2 = linkTgt(l2);
+      if (a3 === id) focusSet.add(b2);
+      if (b2 === id) focusSet.add(a3);
+    }
+    for (const n2 of g2.nodes)
+      n2.__base = focusSet.has(n2.id) ? n2.id === id ? 1.6 : n2.__role === "sun" ? 1.15 : 0.95 : 0.12;
+  }
+  Graph.linkColor(Graph.linkColor());
+}
 function flyTo(n2) {
   const d2 = 60, hyp = Math.hypot(n2.x, n2.y, n2.z) || 1, k2 = 1 + d2 / hyp;
   Graph.cameraPosition({ x: n2.x * k2, y: n2.y * k2, z: n2.z * k2 }, n2, 1200);
 }
+var MEg = null;
+var TOPICS = [];
+async function loadTopicTitles() {
+  if (!SERVER || TOPICS.length) return;
+  try {
+    const t2 = await (await fetch("/graph/topics", AUTH)).json();
+    TOPICS = (t2.topics || []).map((x3) => x3.title).filter((x3) => !UID_RE.test(x3)).sort((a3, b2) => a3.localeCompare(b2, "nl"));
+  } catch {
+  }
+}
+async function apiJ(p2, opts = {}) {
+  const r2 = await fetch(p2, { ...opts, headers: { ...AUTH?.headers || {}, "Content-Type": "application/json", ...opts.headers || {} } });
+  if (!r2.ok) {
+    let d2 = "";
+    try {
+      d2 = (await r2.json()).detail || "";
+    } catch {
+    }
+    throw new Error(d2 || `HTTP ${r2.status}`);
+  }
+  try {
+    return await r2.json();
+  } catch {
+    return null;
+  }
+}
+var BLOOM_C = { captured: "#8d99ae", validated: "#5aa9e6", mature: "#6cc551", deprecated: "#e4572e" };
 async function select2(n2, fly) {
   state.selected = n2;
+  applyDim();
   if (fly && n2.x !== void 0) {
     wake2();
     flyTo(n2);
   }
   el("pTitle").textContent = titleOf(n2);
-  el("pChips").innerHTML = `<span class="pchip amber">${esc2(n2.type)}</span>` + (n2.scope ? `<span class="pchip">${esc2(n2.scope)}</span>` : "") + (n2.lifecycle ? `<span class="pchip">${esc2(n2.lifecycle)}</span>` : "") + `<span class="pchip">${degree.get(n2.id) || 0} links</span>` + (n2.use_count ? `<span class="pchip">${n2.use_count}\xD7 gebruikt</span>` : "");
   el("pBody").textContent = "\u2026";
   el("panel").classList.add("open");
   el("btnDrill").style.display = n2.type === "topic" ? "none" : "block";
   for (const b2 of ["btnLineage", "btnSuggest", "btnArchive"])
     el(b2).style.display = SERVER && n2.type !== "topic" ? "block" : "none";
-  if (n2.type === "topic") {
-    const kids = (topicChildren.get(n2.id) || []).map((id) => nodeById.get(id)).filter(Boolean);
-    el("pBody").innerHTML = kids.map((k2) => `<div style="margin:2px 0"><span style="color:${colorOf(k2)}">\u25C8</span> ${esc2(titleOf(k2))}</div>`).join("") || "leeg topic";
+  el("btnDelete").style.display = SERVER && MEg?.can_review ? "block" : "none";
+  if (!SERVER) {
+    el("pChips").innerHTML = `<span class="pchip amber">${esc2(n2.type)}</span>`;
+    if (n2.type === "topic") {
+      const kids = (topicChildren.get(n2.id) || []).map((id) => nodeById.get(id)).filter(Boolean);
+      el("pBody").innerHTML = kids.map((k2) => `<div>\u25C8 ${esc2(titleOf(k2))}</div>`).join("") || "leeg topic";
+    } else {
+      try {
+        const f2 = await (await fetch(NODE_URL(n2.id))).json();
+        el("pBody").innerHTML = esc2(f2.content || "");
+      } catch {
+        el("pBody").textContent = "(inhoud niet op te halen)";
+      }
+    }
     return;
   }
+  await loadTopicTitles();
+  let full;
   try {
-    const full = await (await fetch(NODE_URL(n2.id), AUTH)).json();
-    let html = esc2(full.content || "");
-    if (full.tags?.length) html += `
-
-<span style="color:var(--dim)">tags: ${esc2(full.tags.join(", "))}</span>`;
-    el("pBody").innerHTML = html || "(geen inhoud)";
+    full = await apiJ(`/graph/node/${n2.id}`);
   } catch {
-    el("pBody").textContent = "(inhoud niet op te halen)";
+    el("pBody").textContent = "(niet op te halen)";
+    return;
   }
+  if (state.selected?.id !== n2.id) return;
+  renderNodePanel(n2, full);
+}
+function renderNodePanel(n2, f2) {
+  const isTopic = n2.type === "topic";
+  const maintain = !!MEg?.can_maintain;
+  const bloom2 = f2.lifecycle || "captured";
+  el("pChips").innerHTML = `<span class="pchip amber" title="kennistype">${esc2(n2.type)}</span>` + (f2.scope ? `<span class="pchip" title="zichtbaarheid: org / team / account">${esc2(f2.scope)}</span>` : "") + (!isTopic ? `<span class="pchip" title="bloom-status: captured \u2192 validated \u2192 mature; deprecated zakt weg" style="color:${BLOOM_C[bloom2]};border-color:${BLOOM_C[bloom2]}55">${esc2(bloom2)}</span>` : "") + (f2.sensitivity === "gevoelig" ? `<span class="pchip" style="color:#ff6a45;border-color:#ff6a4555" title="door de classifier als gevoelig gemarkeerd">\u{1F512} gevoelig</span>` : "") + `<span class="pchip" title="hoe vaak deze kennis is opgehaald">${f2.use_count ?? 0}\xD7 gebruikt</span>` + (f2.pos || f2.neg ? `<span class="pchip" title="memory worth: hielp het echt? (feedback van agents)">\u{1F44D}${f2.pos || 0} \u{1F44E}${f2.neg || 0}</span>` : "");
+  const relChips = (arr, label2, tip) => (arr || []).length ? `<div class="sec"><h4 title="${tip}">${label2}</h4>${arr.map((x3) => `<span class="pchip navchip" data-jump="${esc2(x3.uid)}" title="spring naar deze node">${esc2(x3.title)}</span>`).join(" ")}</div>` : "";
+  const html = `
+    <style>
+      #panel .sec { margin: 13px 0; padding-top: 11px; border-top: 1px solid var(--line); }
+      #panel .sec h4 { margin: 0 0 6px; font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--cyan); }
+      #panel .navchip { cursor: pointer; display: inline-block; margin: 2px 2px 2px 0; }
+      #panel .navchip:hover { color: var(--amber); border-color: rgba(255,181,71,.4); }
+      #panel .mini { display: inline-flex; border: 1px solid var(--line); padding: 3px 9px; font-size: 9.5px;
+        letter-spacing: .12em; text-transform: uppercase; cursor: pointer; color: var(--cyan); }
+      #panel .mini:hover { background: rgba(62,224,255,.08); }
+      #panel select, #panel input[type=text], #panel input[type=number] {
+        background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: 11px var(--mono); padding: 4px 8px; }
+      #panel .picker div { padding: 4px 8px; cursor: pointer; } #panel .picker div:hover { background: rgba(62,224,255,.08); }
+    </style>
+    <div style="white-space:pre-wrap">${esc2(f2.content || "")}</div>
+    ${isTopic && f2.summary ? `<div class="sec"><h4>samenvatting</h4><div style="color:var(--dim)">${esc2(f2.summary)}</div></div>` : ""}
+    ${f2.superseded_by ? `<div class="sec"><span class="pchip navchip" style="color:#ff6a45;border-color:#ff6a4555" data-jump="${esc2(f2.superseded_by)}">\u2933 vervangen \u2014 toon nieuwste</span></div>` : ""}
+    ${relChips(f2.parents, "valt onder", "de topics/nodes waar dit onder hangt")}
+    ${relChips(f2.children, "bevat", "wat hieronder hangt")}
+    ${relChips(f2.related, "gerelateerd", "vrije kruisverbanden (RELATES)")}
+    ${(f2.files || []).map((x3) => `<div class="sec"><h4>\u{1F4C4} ${esc2(x3.path)}</h4><div style="white-space:pre-wrap;color:var(--dim);max-height:140px;overflow-y:auto">${esc2(x3.content)}</div></div>`).join("")}
+    ${!isTopic ? `<div class="sec"><h4 title="tags tellen mee in zoeken en ranking">tags</h4>
+      <input type="text" id="pTags" style="width:100%" value="${esc2((f2.tags || []).join(", "))}" placeholder="komma-gescheiden">
+      <div style="margin-top:6px"><span class="mini" id="pTagSave" title="vervangt de volledige tagset">tags opslaan</span><span class="ok" id="pTagOut" style="color:#55ffa1;font-size:10px"></span></div></div>` : ""}
+    <div class="sec"><h4 title="artefacten (exports, scripts, screenshots) centraal in de hive">\u{1F4CE} bijlagen</h4>
+      <div id="pAtts" style="color:var(--dim)">laden\u2026</div>
+      <input type="file" id="pAttFile" style="margin-top:6px;font-size:10px">
+      <div style="margin-top:4px"><span class="mini" id="pAttUp">bijlage toevoegen</span></div></div>
+    ${maintain && !isTopic ? `<div class="sec"><h4 title="alleen maintainers">beheer</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+        <select id="pLife" title="bloom-status handmatig zetten">${["captured", "validated", "mature", "deprecated"].map((x3) => `<option${x3 === bloom2 ? " selected" : ""}>${x3}</option>`).join("")}</select>
+        <span class="mini" id="pLifeSave">status</span>
+        <select id="pImp" title="belang: schuift de recall-ranking">${[["0.2", "belang: laag"], ["0.5", "belang: normaal"], ["0.9", "belang: hoog"]].map(([v2, l2]) => `<option value="${v2}"${((f2.importance ?? 0.5) >= 0.75 ? "0.9" : (f2.importance ?? 0.5) <= 0.35 ? "0.2" : "0.5") === v2 ? " selected" : ""}>${l2}</option>`).join("")}</select>
+        <span class="mini" id="pImpSave">belang</span>
+        <input type="number" id="pDecay" min="1" style="width:86px" placeholder="decay (dgn)" value="${f2.half_life_days || ""}" title="eigen half-life in dagen (leeg = standaard)">
+        <span class="mini" id="pDecaySave">decay</span></div>
+      <input type="text" id="pSup" style="width:100%" placeholder="vervangen door\u2026 zoek de nieuwere node" title="het oude feit blijft vindbaar maar zakt; het nieuwste wint">
+      <div id="pSupPick" class="picker" style="border:1px solid var(--line);display:none;max-height:120px;overflow-y:auto"></div>
+      <div style="margin-top:4px"><span class="mini" id="pSupSave">markeer als vervangen</span><span id="pSupSel" style="color:#55ffa1;font-size:10px;margin-left:6px"></span></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <select id="pMove" title="verplaats naar een ander topic">${TOPICS.map((t2) => `<option>${esc2(t2)}</option>`).join("")}</select>
+        <label style="font-size:10px;color:var(--dim)" title="multi-parent: huidige topics ook behouden"><input type="checkbox" id="pMoveKeep"> behoud huidige</label>
+        <span class="mini" id="pMoveSave">verplaats</span></div></div>` : ""}
+    ${maintain && isTopic ? `<div class="sec"><h4>samenvoegen in ander topic</h4>
+      <div style="display:flex;gap:6px;align-items:center"><select id="pMerge">${TOPICS.filter((t2) => t2 !== f2.title).map((t2) => `<option>${esc2(t2)}</option>`).join("")}</select>
+      <span class="mini" id="pMergeSave" style="color:#ff6a45" title="alle inhoud verhuist; dit topic wordt daarna verwijderd">samenvoegen</span></div></div>` : ""}
+    <div class="sec" style="color:var(--dim);font-size:10.5px">door ${esc2(f2.created_by_model || "onbekend model")}</div>`;
+  el("pBody").innerHTML = html;
+  const $2 = (id) => el("pBody").querySelector("#" + id) || document.getElementById(id);
+  const refresh2 = () => select2(n2, false);
+  el("pBody").querySelectorAll("[data-jump]").forEach((c3) => c3.onclick = () => {
+    const m3 = nodeById.get(c3.dataset.jump);
+    if (!m3) return;
+    if (m3.type === "topic") {
+      enterSystem(m3.id, { fromSystem: state.level === 2, drill: false });
+      return;
+    }
+    const tid = parentTopic.get(m3.id);
+    if (state.level === 2 && state.topicId === tid) {
+      const live = Graph.graphData().nodes.find((x3) => x3.id === m3.id);
+      select2(live || m3, !!live);
+    } else if (tid) enterSystem(tid, { selectId: m3.id, fromSystem: state.level === 2, drill: false });
+    else select2(m3, false);
+  });
+  apiJ(`/graph/node/${n2.id}/attachments`).then((list) => {
+    const box = $2("pAtts");
+    if (!box) return;
+    box.innerHTML = (list || []).map((a3) => `<div>\u{1F4CE} <a href="#" data-att="${esc2(a3.uid)}" data-fn="${esc2(a3.filename)}" style="color:var(--cyan)">${esc2(a3.filename)}</a>
+      <span style="color:var(--dim)">(${(a3.size / 1024).toFixed(1)} kB)</span></div>`).join("") || "geen bijlagen";
+    box.querySelectorAll("[data-att]").forEach((a3) => a3.onclick = async (e2) => {
+      e2.preventDefault();
+      const r2 = await fetch(`/attachments/${a3.dataset.att}`, AUTH);
+      if (!r2.ok) {
+        alert("download mislukt");
+        return;
+      }
+      const el2 = document.createElement("a");
+      el2.href = URL.createObjectURL(await r2.blob());
+      el2.download = a3.dataset.fn;
+      el2.click();
+    });
+  }).catch(() => {
+    const b2 = $2("pAtts");
+    if (b2) b2.textContent = "";
+  });
+  const on = (id, fn) => {
+    const x3 = $2(id);
+    if (x3) x3.onclick = () => fn().then(refresh2).catch((e2) => alert(e2.message));
+  };
+  on("pTagSave", () => apiJ(`/graph/node/${n2.id}/tags`, { method: "POST", body: JSON.stringify({ replace: $2("pTags").value.split(",").map((x3) => x3.trim()).filter(Boolean) }) }));
+  on("pLifeSave", () => apiJ("/graph/lifecycle", { method: "POST", body: JSON.stringify({ uid: n2.id, state: $2("pLife").value }) }));
+  on("pImpSave", () => apiJ("/graph/importance", { method: "POST", body: JSON.stringify({ uid: n2.id, value: +$2("pImp").value }) }));
+  on("pDecaySave", () => apiJ("/graph/decay", { method: "POST", body: JSON.stringify({ uid: n2.id, half_life_days: $2("pDecay").value ? +$2("pDecay").value : null }) }));
+  on("pMoveSave", () => apiJ(`/graph/node/${n2.id}/move`, { method: "POST", body: JSON.stringify({ to_topic: $2("pMove").value, keep_others: $2("pMoveKeep").checked }) }));
+  const mrg = $2("pMergeSave");
+  if (mrg) mrg.onclick = async () => {
+    const into = $2("pMerge").value;
+    if (!confirm(`"${f2.title}" samenvoegen in "${into}"? Dit topic wordt daarna verwijderd.`)) return;
+    try {
+      await apiJ("/graph/topics/merge", { method: "POST", body: JSON.stringify({ from_topic: f2.title, into_topic: into }) });
+      alert("samengevoegd \u2014 herlaad de mind voor de nieuwe indeling");
+      closePanel();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  };
+  const sup = $2("pSup");
+  if (sup) {
+    let chosen = null, tmr;
+    sup.oninput = () => {
+      clearTimeout(tmr);
+      tmr = setTimeout(async () => {
+        const q2 = sup.value.trim();
+        const box = $2("pSupPick");
+        if (q2.length < 2) {
+          box.style.display = "none";
+          return;
+        }
+        const rs = (await apiJ(`/graph/search?q=${encodeURIComponent(q2)}`)).slice(0, 8);
+        box.innerHTML = rs.map((r2, i2) => `<div data-i="${i2}">${esc2(r2.title)} <span style="color:var(--dim)">\xB7 ${esc2(r2.type)}</span></div>`).join("");
+        box.style.display = "block";
+        box.querySelectorAll("[data-i]").forEach((d2) => d2.onclick = () => {
+          chosen = rs[+d2.dataset.i];
+          sup.value = chosen.title;
+          box.style.display = "none";
+          $2("pSupSel").textContent = "\u2713 " + chosen.title;
+        });
+      }, 250);
+    };
+    $2("pSupSave").onclick = async () => {
+      if (!chosen) {
+        alert("Zoek en kies eerst de nieuwere node");
+        return;
+      }
+      try {
+        await apiJ("/graph/supersede", { method: "POST", body: JSON.stringify({ old_uid: n2.id, new_uid: chosen.uid }) });
+        refresh2();
+      } catch (e2) {
+        alert(e2.message);
+      }
+    };
+  }
+  const up = $2("pAttUp");
+  if (up) up.onclick = async () => {
+    const file = $2("pAttFile").files[0];
+    if (!file) {
+      alert("Kies eerst een bestand");
+      return;
+    }
+    const r2 = await fetch(`/graph/node/${n2.id}/attachments?filename=${encodeURIComponent(file.name)}`, {
+      method: "POST",
+      body: file,
+      headers: { ...AUTH?.headers || {}, "Content-Type": file.type || "application/octet-stream" }
+    });
+    if (!r2.ok) {
+      alert("upload mislukt");
+      return;
+    }
+    refresh2();
+  };
 }
 function closePanel() {
   el("panel").classList.remove("open");
   state.selected = null;
+  applyDim();
 }
 el("btnClose").onclick = closePanel;
 var searchEl = el("search");
@@ -87661,6 +87892,22 @@ el("btnSuggest").onclick = async () => {
     alert("voorstel mislukt");
   }
 };
+el("btnDelete").onclick = async () => {
+  const n2 = state.selected;
+  if (!n2 || !MEg?.can_review) return;
+  if (!confirm(`Permanent verwijderen?
+
+"${titleOf(n2)}"
+
+Dit kan niet ongedaan worden gemaakt.`)) return;
+  try {
+    await apiJ(`/graph/node/${n2.id}`, { method: "DELETE" });
+    closePanel();
+    alert("verwijderd \u2014 herlaad de mind voor de nieuwe stand");
+  } catch (e2) {
+    alert(e2.message);
+  }
+};
 el("btnArchive").onclick = async () => {
   const n2 = state.selected;
   if (!n2 || !SERVER) return;
@@ -87689,6 +87936,7 @@ if (SERVER) {
      <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">\u2302 legacy</a>`;
   v2.querySelectorAll("[data-deck]").forEach((c3) => c3.onclick = () => Decks.open(c3.dataset.deck));
   fetch("/graph/me", AUTH).then((r2) => r2.json()).then((me) => {
+    MEg = me;
     if (me.ready_chores) {
       const b2 = document.getElementById("navBadge");
       if (b2) {
