@@ -87653,19 +87653,65 @@ function renderNodePanel(n2, f2) {
   apiJ(`/graph/node/${n2.id}/attachments`).then((list) => {
     const box = $2("pAtts");
     if (!box) return;
-    box.innerHTML = (list || []).map((a3) => `<div>\u{1F4CE} <a href="#" data-att="${esc2(a3.uid)}" data-fn="${esc2(a3.filename)}" style="color:var(--cyan)">${esc2(a3.filename)}</a>
-      <span style="color:var(--dim)">(${(a3.size / 1024).toFixed(1)} kB)</span></div>`).join("") || "geen bijlagen";
-    box.querySelectorAll("[data-att]").forEach((a3) => a3.onclick = async (e2) => {
+    box.innerHTML = (list || []).map((a3) => `<div style="margin:5px 0">
+        <div style="display:flex;gap:8px;align-items:center">
+          <a href="#" class="attname" data-prev="${esc2(a3.uid)}" data-fn="${esc2(a3.filename)}" title="klik voor een preview in het paneel">\u{1F4CE} ${esc2(a3.filename)}</a>
+          <span style="color:var(--dim);font-size:10px;flex:1">${(a3.size / 1024).toFixed(1)} kB</span>
+          <span class="mini" data-dl="${esc2(a3.uid)}" data-fn="${esc2(a3.filename)}" title="download">\u2B07</span>
+          ${maintain ? `<span class="mini" data-del="${esc2(a3.uid)}" title="bijlage verwijderen" style="color:#ff7847">\xD7</span>` : ""}
+        </div>
+        <div id="prev-${esc2(a3.uid)}"></div>
+      </div>`).join("") || "geen bijlagen";
+    const getBlob = async (uid) => {
+      const r2 = await fetch(`/attachments/${uid}`, AUTH);
+      if (!r2.ok) throw new Error("bijlage niet op te halen");
+      return r2;
+    };
+    box.querySelectorAll("[data-dl]").forEach((b2) => b2.onclick = async () => {
+      try {
+        const r2 = await getBlob(b2.dataset.dl);
+        const a22 = document.createElement("a");
+        a22.href = URL.createObjectURL(await r2.blob());
+        a22.download = b2.dataset.fn;
+        a22.click();
+      } catch (e2) {
+        alert(e2.message);
+      }
+    });
+    box.querySelectorAll("[data-del]").forEach((b2) => b2.onclick = async () => {
+      if (!confirm("Bijlage verwijderen?")) return;
+      try {
+        await apiJ(`/attachments/${b2.dataset.del}`, { method: "DELETE" });
+        refresh2();
+      } catch (e2) {
+        alert(e2.message);
+      }
+    });
+    box.querySelectorAll("[data-prev]").forEach((b2) => b2.onclick = async (e2) => {
       e2.preventDefault();
-      const r2 = await fetch(`/attachments/${a3.dataset.att}`, AUTH);
-      if (!r2.ok) {
-        alert("download mislukt");
+      const pv = box.querySelector(`[id="prev-${b2.dataset.prev}"]`);
+      if (pv.innerHTML) {
+        pv.innerHTML = "";
         return;
       }
-      const el2 = document.createElement("a");
-      el2.href = URL.createObjectURL(await r2.blob());
-      el2.download = a3.dataset.fn;
-      el2.click();
+      pv.innerHTML = `<div style="color:var(--dim)">laden\u2026</div>`;
+      try {
+        const r2 = await getBlob(b2.dataset.prev);
+        const ct = (r2.headers.get("content-type") || "").toLowerCase();
+        const blob = await r2.blob();
+        const fn = b2.dataset.fn;
+        const textish = ct.startsWith("text/") || /json|sql|xml|csv|javascript|x-python|yaml|markdown|x-sh|plain/.test(ct) || /\.(txt|md|json|sql|xml|csv|ya?ml|py|js|ts|sh|log|conf|ini|ipynb)$/i.test(fn);
+        const meta = `<div style="color:var(--dim);font-size:10px;margin:4px 0">${esc2(ct || "onbekend type")} \xB7 ${(blob.size / 1024).toFixed(1)} kB</div>`;
+        if (ct.startsWith("image/"))
+          pv.innerHTML = meta + `<img src="${URL.createObjectURL(blob)}" style="max-width:100%">`;
+        else if (textish) {
+          const t2 = await blob.text();
+          pv.innerHTML = meta + `<pre style="max-height:280px;overflow:auto;background:rgba(62,224,255,.05);border:1px solid var(--line);padding:8px;font-size:10.5px;white-space:pre-wrap;margin:0">${esc2(t2.slice(0, 2e4))}${t2.length > 2e4 ? "\n\u2026 (afgekapt \u2014 download voor het geheel)" : ""}</pre>`;
+        } else
+          pv.innerHTML = meta + `<div style="color:var(--dim)">binair bestand \u2014 geen preview, gebruik \u2B07</div>`;
+      } catch {
+        pv.innerHTML = `<div style="color:#ff7847">kon bijlage niet laden</div>`;
+      }
     });
   }).catch(() => {
     const b2 = $2("pAtts");

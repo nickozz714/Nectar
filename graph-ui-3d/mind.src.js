@@ -551,14 +551,51 @@ function renderNodePanel(n, f) {
   });
   apiJ(`/graph/node/${n.id}/attachments`).then(list => {
     const box = $("pAtts"); if (!box) return;
-    box.innerHTML = (list || []).map(a => `<div>📎 <a href="#" data-att="${esc(a.uid)}" data-fn="${esc(a.filename)}" style="color:var(--cyan)">${esc(a.filename)}</a>
-      <span style="color:var(--dim)">(${(a.size / 1024).toFixed(1)} kB)</span></div>`).join("") || "geen bijlagen";
-    box.querySelectorAll("[data-att]").forEach(a => a.onclick = async e => {
+    box.innerHTML = (list || []).map(a => `<div style="margin:5px 0">
+        <div style="display:flex;gap:8px;align-items:center">
+          <a href="#" class="attname" data-prev="${esc(a.uid)}" data-fn="${esc(a.filename)}" title="klik voor een preview in het paneel">📎 ${esc(a.filename)}</a>
+          <span style="color:var(--dim);font-size:10px;flex:1">${(a.size / 1024).toFixed(1)} kB</span>
+          <span class="mini" data-dl="${esc(a.uid)}" data-fn="${esc(a.filename)}" title="download">⬇</span>
+          ${maintain ? `<span class="mini" data-del="${esc(a.uid)}" title="bijlage verwijderen" style="color:#ff7847">×</span>` : ""}
+        </div>
+        <div id="prev-${esc(a.uid)}"></div>
+      </div>`).join("") || "geen bijlagen";
+    const getBlob = async uid => {
+      const r = await fetch(`/attachments/${uid}`, AUTH);
+      if (!r.ok) throw new Error("bijlage niet op te halen");
+      return r;
+    };
+    box.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
+      try { const r = await getBlob(b.dataset.dl);
+        const a2 = document.createElement("a");
+        a2.href = URL.createObjectURL(await r.blob()); a2.download = b.dataset.fn; a2.click(); }
+      catch (e) { alert(e.message); } });
+    box.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+      if (!confirm("Bijlage verwijderen?")) return;
+      try { await apiJ(`/attachments/${b.dataset.del}`, { method: "DELETE" }); refresh(); }
+      catch (e) { alert(e.message); } });
+    box.querySelectorAll("[data-prev]").forEach(b => b.onclick = async e => {
       e.preventDefault();
-      const r = await fetch(`/attachments/${a.dataset.att}`, AUTH);
-      if (!r.ok) { alert("download mislukt"); return; }
-      const el2 = document.createElement("a");
-      el2.href = URL.createObjectURL(await r.blob()); el2.download = a.dataset.fn; el2.click();
+      const pv = box.querySelector(`[id="prev-${b.dataset.prev}"]`);
+      if (pv.innerHTML) { pv.innerHTML = ""; return; }        // nogmaals klikken sluit
+      pv.innerHTML = `<div style="color:var(--dim)">laden…</div>`;
+      try {
+        const r = await getBlob(b.dataset.prev);
+        const ct = (r.headers.get("content-type") || "").toLowerCase();
+        const blob = await r.blob();
+        const fn = b.dataset.fn;
+        const textish = ct.startsWith("text/") ||
+          /json|sql|xml|csv|javascript|x-python|yaml|markdown|x-sh|plain/.test(ct) ||
+          /\.(txt|md|json|sql|xml|csv|ya?ml|py|js|ts|sh|log|conf|ini|ipynb)$/i.test(fn);
+        const meta = `<div style="color:var(--dim);font-size:10px;margin:4px 0">${esc(ct || "onbekend type")} · ${(blob.size / 1024).toFixed(1)} kB</div>`;
+        if (ct.startsWith("image/"))
+          pv.innerHTML = meta + `<img src="${URL.createObjectURL(blob)}" style="max-width:100%">`;
+        else if (textish) {
+          const t = await blob.text();
+          pv.innerHTML = meta + `<pre style="max-height:280px;overflow:auto;background:rgba(62,224,255,.05);border:1px solid var(--line);padding:8px;font-size:10.5px;white-space:pre-wrap;margin:0">${esc(t.slice(0, 20000))}${t.length > 20000 ? "\n… (afgekapt — download voor het geheel)" : ""}</pre>`;
+        } else
+          pv.innerHTML = meta + `<div style="color:var(--dim)">binair bestand — geen preview, gebruik ⬇</div>`;
+      } catch { pv.innerHTML = `<div style="color:#ff7847">kon bijlage niet laden</div>`; }
     });
   }).catch(() => { const b = $("pAtts"); if (b) b.textContent = ""; });
   const on = (id, fn) => { const x = $(id); if (x) x.onclick = () => fn().then(refresh).catch(e => alert(e.message)); };
