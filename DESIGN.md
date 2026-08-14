@@ -229,5 +229,11 @@ Docker image needs no Node.
 limiting, full-text index for fallback search, backup automation (volume snapshots for
 now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking
 (v1 relies on `ready` → first-resolver-wins; races are benign at current scale), and
+**Mind 3D** — since 2026-08-14 the GUI has a second front door at `/ui/mind`: a 3D
+galaxy/cockpit interface (topics as stars → fly into a system → cockpit drilldown per
+node), fed by `GET /graph/full`, reachable from every legacy screen and vice versa
+(#tab deep links). `Org.default_ui` (Beheer → Instellingen) decides where members land
+after login; the legacy tabs remain fully supported. Source: `graph-ui-3d/`
+(`npm run build:server`). And
 **Cognition-Pollen** — optional, swarm-native world research on newly written memories
 (org toggle, default off; full design in `docs/COGNITION.md`, decided 2026-08-13).
