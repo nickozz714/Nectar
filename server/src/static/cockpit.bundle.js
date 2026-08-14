@@ -740,7 +740,7 @@ Dit kan niet ongedaan worden gemaakt.`)) return;
       document.getElementById("variants")?.remove();
       for (const c of document.querySelectorAll(".corner")) c.remove();
       const bar = document.createElement("div");
-      bar.style.cssText = "position:fixed;top:18px;right:24px;z-index:30;display:flex;gap:8px";
+      bar.style.cssText = "position:fixed;top:20px;right:24px;z-index:30;display:flex;gap:8px";
       const mk = (txt, fn, amber) => {
         const c = document.createElement("span");
         c.className = "chip";
@@ -756,7 +756,10 @@ Dit kan niet ongedaan worden gemaakt.`)) return;
       mk("\u2715 sluit drilldown", () => post({ type: "close" }));
       document.body.appendChild(bar);
       const sb = document.getElementById("searchBox");
-      if (sb) sb.style.right = "300px";
+      if (sb) {
+        sb.style.top = "58px";
+        sb.style.right = "24px";
+      }
     }
     var MEg = null;
     var TOPICS = [];

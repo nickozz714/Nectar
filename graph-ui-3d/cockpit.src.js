@@ -602,7 +602,7 @@ function initEmbed() {
   document.getElementById("variants")?.remove();
   for (const c of document.querySelectorAll(".corner")) c.remove();
   const bar = document.createElement("div");
-  bar.style.cssText = "position:fixed;top:18px;right:24px;z-index:30;display:flex;gap:8px";
+  bar.style.cssText = "position:fixed;top:20px;right:24px;z-index:30;display:flex;gap:8px";
   const mk = (txt, fn, amber) => {
     const c = document.createElement("span");
     c.className = "chip";
@@ -614,9 +614,9 @@ function initEmbed() {
   mk("⊚ toon in stelsel", () => post({ type: "showInSystem", id: focusId }), true);
   mk("✕ sluit drilldown", () => post({ type: "close" }));
   document.body.appendChild(bar);
-  // zoekbalk iets naar links zodat de embed-chips niet overlappen
+  // zoekbalk ONDER de embed-chips, netjes rechts uitgelijnd — geen gedrang op één regel
   const sb = document.getElementById("searchBox");
-  if (sb) sb.style.right = "300px";
+  if (sb) { sb.style.top = "58px"; sb.style.right = "24px"; }
 }
 
 /* ── start ────────────────────────────────────────── */
