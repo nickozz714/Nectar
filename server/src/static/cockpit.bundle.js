@@ -116,13 +116,11 @@ var require_cockpit_src = __commonJS({
       const rowBand = (ids, kind, dir) => {
         if (!ids.length) return;
         const exp = expanded[kind];
-        const cw = exp ? 150 : CARD_W, ch = exp ? 54 : CARD_H, g = exp ? 10 : GAP;
+        const cw = exp ? 156 : CARD_W, ch = exp ? 64 : CARD_H, g = exp ? 10 : GAP;
         const bandGap = exp ? 66 : BAND_GAP;
         const perRow = Math.max(2, Math.floor((availW + g) / (cw + g)));
         const firstY = cy + dir * (FOCUS_H / 2 + bandGap + ch / 2);
-        const edgeY = dir < 0 ? 96 : H - 96;
-        const maxRows = Math.max(1, Math.floor(Math.abs(edgeY - firstY) / (ch + g)) + 1);
-        const cap = exp ? maxRows * perRow : Math.min(8, perRow);
+        const cap = exp ? ids.length : Math.min(8, perRow);
         let vis = ids, more = 0;
         if (ids.length > cap) {
           vis = ids.slice(0, cap - 1);
@@ -275,6 +273,15 @@ var require_cockpit_src = __commonJS({
       }
       animateWires(animate ? 700 : 60);
       updateStats();
+      let end = document.getElementById("stageEnd");
+      if (!end) {
+        end = document.createElement("div");
+        end.id = "stageEnd";
+        end.style.cssText = "position:absolute;width:1px;height:1px";
+        stage.appendChild(end);
+      }
+      const maxY = Math.max(innerHeight, ...items.filter((i) => i.y != null).map((i) => i.y + (i.h || 0) / 2 + 70));
+      end.style.transform = `translate(0px, ${maxY}px)`;
     }
     function renderLabel(item, animate) {
       let rec = cards.get(item.key);
@@ -534,6 +541,7 @@ var require_cockpit_src = __commonJS({
         goBack();
       });
       window.addEventListener("resize", () => render(false));
+      stage.addEventListener("scroll", () => drawWires(), { passive: true });
       setFocus(best);
       const ex = params.get("expand");
       if (ex && ex in expanded) {
