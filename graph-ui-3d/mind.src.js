@@ -307,10 +307,16 @@ function enterSystem(topicId, opts = {}) {
       updateHud();
       veil(false);
       state.traveling = false;
-      if (opts.selectId) setTimeout(() => {
-        const n = Graph.graphData().nodes.find(m => m.id === opts.selectId);
-        if (n) select(n, true);
-      }, 900);
+      if (opts.drill === false) {
+        // expliciet "toon in stelsel": de 3D is hier het doel, geen overlay erover
+        if (opts.selectId) setTimeout(() => {
+          const n = Graph.graphData().nodes.find(m => m.id === opts.selectId);
+          if (n) select(n, true);
+        }, 900);
+      } else {
+        // aankomst in een stelsel opent de cockpit — eerst even het stelsel zien landen
+        setTimeout(() => openDrill(opts.selectId || topicId), 700);
+      }
     }, 360);
   };
   /* vanaf de galaxy eerst richting de ster vliegen, zodat het als reizen voelt */
@@ -438,8 +444,7 @@ resultsEl.addEventListener("click", e => {
   const tid = parentTopic.get(n.id);
   if (!tid) { select(n, false); return; }
   if (state.level === 2 && state.topicId === tid) {
-    const live = Graph.graphData().nodes.find(m => m.id === id);
-    select(live || n, !!live);
+    openDrill(id);          // al in het juiste stelsel: direct de cockpit erop
   } else enterSystem(tid, { selectId: id, fromSystem: state.level === 2 });
 });
 document.addEventListener("keydown", e => {
@@ -486,10 +491,10 @@ window.addEventListener("message", e => {
     closeDrill();
     const n = nodeById.get(msg.id);
     if (!n) return;
-    if (n.type === "topic") enterSystem(n.id, { fromSystem: true });
+    if (n.type === "topic") enterSystem(n.id, { fromSystem: true, drill: false });
     else {
       const tid = parentTopic.get(n.id);
-      if (tid) enterSystem(tid, { selectId: n.id, fromSystem: true });
+      if (tid) enterSystem(tid, { selectId: n.id, fromSystem: true, drill: false });
     }
   }
 });
