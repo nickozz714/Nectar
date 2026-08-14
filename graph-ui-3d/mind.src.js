@@ -27,7 +27,16 @@ const UID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const titleOf = n => UID_RE.test(n.title) ? "(naamloos topic)" : n.title;
 const trunc = (s, max) => s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
 
-const res = await fetch("./data.json");
+/* server-modus: geserveerd op /ui/mind draait deze pagina tegen de echte API met de
+   GUI-login (Bearer uit localStorage); standalone (dev) valt hij terug op serve.py */
+const SERVER = location.pathname.startsWith("/ui/");
+const TOKEN = SERVER ? (localStorage.getItem("hive_token") || "") : "";
+if (SERVER && !TOKEN) location.replace("/ui");
+const AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : undefined;
+const NODE_URL = id => SERVER ? `/graph/node/${id}` : `/api/node/${id}`;
+
+const res = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
+if (SERVER && (res.status === 401 || res.status === 403)) location.replace("/ui");
 const data = await res.json();
 if (data.error) {
   el("splash").innerHTML = `<div class="t" style="color:#ff7847">hive onbereikbaar: ${esc(data.error)}</div>`;
@@ -407,7 +416,7 @@ async function select(n, fly) {
     return;
   }
   try {
-    const full = await (await fetch(`/api/node/${n.id}`)).json();
+    const full = await (await fetch(NODE_URL(n.id), AUTH)).json();
     let html = esc(full.content || "");
     if (full.tags?.length) html += `\n\n<span style="color:var(--dim)">tags: ${esc(full.tags.join(", "))}</span>`;
     el("pBody").innerHTML = html || "(geen inhoud)";
@@ -477,7 +486,8 @@ el("btnMode").onclick = () => {
 /* ---- cockpit-drilldown: overlay met de cockpit-variant, focus op deze node ---- */
 const drill = el("drill"), drillFrame = el("drillFrame");
 function openDrill(id) {
-  drillFrame.src = `./cockpit.html?embed=1&focus=${encodeURIComponent(id)}`;
+  const base = SERVER ? "/ui/cockpit" : "./cockpit.html";
+  drillFrame.src = `${base}?embed=1&focus=${encodeURIComponent(id)}`;
   drill.classList.add("on");
 }
 function closeDrill() {
@@ -500,6 +510,28 @@ window.addEventListener("message", e => {
 });
 el("btnDrill").onclick = () => { if (state.selected && state.selected.type !== "topic") openDrill(state.selected.id); };
 drill.addEventListener("click", e => { if (e.target === drill) closeDrill(); });
+
+/* ---- server-modus: variant-switcher wordt navigatie naar de rest van Nectar ---- */
+if (SERVER) {
+  const v = el("variants");
+  v.innerHTML =
+    `<a class="chip" href="/ui#focus">◎ focus</a>
+     <a class="chip" href="/ui#chores">🌼 pollen<span id="navBadge"></span></a>
+     <a class="chip" href="/ui#governance">⚖ governance</a>
+     <a class="chip" href="/ui#beheer">⚙ beheer</a>
+     <a class="chip" href="/ui#legacy" onclick="location.href='/ui#legacy'">⌂ legacy</a>`;
+  fetch("/graph/me", AUTH).then(r => r.json()).then(me => {
+    if (me.ready_chores) {
+      const b = document.getElementById("navBadge");
+      if (b) { b.textContent = ` ${me.ready_chores}`; b.style.color = "var(--amber)"; b.style.fontWeight = "700"; }
+    }
+    if (me.can_review) {
+      const r = document.createElement("a");
+      r.className = "chip"; r.href = "/ui#review"; r.textContent = "☑ review";
+      v.insertBefore(r, v.children[3]);
+    }
+  }).catch(() => {});
+}
 
 /* ---- boot: de galaxy, camera trekt in en komt tot rust ---- */
 tuneForces(1);

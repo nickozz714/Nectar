@@ -31,7 +31,18 @@ def me(
         "can_review": has_role(account, "org_admin"),
         "can_resolve": has_role(account, "member"),   # any Swarm member may pick up ready Pollen
         "ready_chores": governance_repo.ready_count(session, account),
+        "default_ui": tenancy_repo.get_default_ui(session, account.org_uid),
     }
+
+
+@router.get("/full")
+def full(
+    account: AuthedAccount = Depends(require_account),
+    session: Session = Depends(get_graph),
+):
+    """The whole visible mind in one response — feeds the 3D 'mind' interface.
+    Read-only: browsing the map must not rejuvenate memories."""
+    return graph_repo.full_graph(session, account)
 
 
 @router.get("/topics")

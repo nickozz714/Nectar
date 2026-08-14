@@ -560,6 +560,37 @@ def neighbors(session: Session, account: AuthedAccount, uid: str) -> dict:
     return node
 
 
+def full_graph(session: Session, account: AuthedAccount) -> dict:
+    """The whole visible mind in ONE round trip, shaped for the 3D interface:
+    nodes as {id,title,type,tags,children,use_count,pagerank,lifecycle,scope} and
+    links as {source,target,rel}. Browsing must not rejuvenate — read-only."""
+    nodes = session.run(
+        f"""
+        MATCH (n:Knowledge {{org_uid: $org_uid}})
+        WHERE coalesce(n.archived, false) = false AND {VISIBLE}
+        OPTIONAL MATCH (n)-[:CONTAINS]->(c:Knowledge)
+        WHERE c.type <> 'topic' AND coalesce(c.archived, false) = false
+        RETURN n.uid AS id, n.title AS title, n.type AS type,
+               coalesce(n.tags, []) AS tags, count(c) AS children,
+               coalesce(n.use_count, 0) AS use_count, coalesce(n.pagerank, 0) AS pagerank,
+               n.lifecycle AS lifecycle, n.scope AS scope
+        """,
+        **_acc_params(account),
+    )
+    node_rows = [dict(r) for r in nodes]
+    visible = {r["id"] for r in node_rows}
+    links = session.run(
+        """
+        MATCH (a:Knowledge {org_uid: $org_uid})-[r:CONTAINS|RELATES]->(b:Knowledge {org_uid: $org_uid})
+        RETURN a.uid AS source, b.uid AS target, type(r) AS rel
+        """,
+        org_uid=account.org_uid,
+    )
+    link_rows = [dict(r) for r in links
+                 if r["source"] in visible and r["target"] in visible]
+    return {"nodes": node_rows, "links": link_rows}
+
+
 def account_info(session: Session, uid: str | None) -> dict:
     if not uid:
         return {"name": None, "person": None}

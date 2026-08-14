@@ -107,6 +107,29 @@ def ui():
     return (_STATIC / "index.html").read_text()
 
 
+# The 3D "mind" interface (galaxy + cockpit drilldown, built from graph-ui-3d/): an
+# alternative front door next to the legacy tabs. Auth happens client-side with the same
+# GUI token; every API call it makes is Bearer-guarded like the rest.
+@app.get("/ui/mind", response_class=HTMLResponse)
+def ui_mind():
+    return (_STATIC / "mind.html").read_text()
+
+
+@app.get("/ui/cockpit", response_class=HTMLResponse)
+def ui_cockpit():
+    return (_STATIC / "cockpit.html").read_text()
+
+
+@app.get("/ui/mind.bundle.js")
+def ui_mind_bundle():
+    return FileResponse(_STATIC / "mind.bundle.js", media_type="text/javascript")
+
+
+@app.get("/ui/cockpit.bundle.js")
+def ui_cockpit_bundle():
+    return FileResponse(_STATIC / "cockpit.bundle.js", media_type="text/javascript")
+
+
 # Built UI assets (the React Flow graph island bundle from graph-ui/): public, immutable files.
 app.mount("/ui/assets", StaticFiles(directory=_STATIC / "assets"), name="ui_assets")
 

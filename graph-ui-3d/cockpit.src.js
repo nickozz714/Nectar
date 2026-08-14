@@ -35,9 +35,16 @@ const cards = new Map();        // key -> {el, kind}
 const pendingRemove = new Map();// key -> timeout
 let wireAnim = 0;               // rAF handle
 
+/* ── server-modus: op /ui/cockpit tegen de echte API met de GUI-login ─────── */
+const SERVER = location.pathname.startsWith("/ui/");
+const TOKEN = SERVER ? (localStorage.getItem("hive_token") || "") : "";
+if (SERVER && !TOKEN) location.replace("/ui");
+const AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : undefined;
+
 /* ── data ──────────────────────────────────────────── */
 async function loadData() {
-  const r = await fetch("./data.json");
+  const r = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
+  if (SERVER && (r.status === 401 || r.status === 403)) { location.replace("/ui"); throw new Error("login"); }
   if (!r.ok) throw new Error(`data.json: HTTP ${r.status}`);
   const d = await r.json();
   totals = { nodes: d.nodes.length, links: d.links.length };
@@ -69,7 +76,8 @@ function bandsFor(id) {
 
 function getDetail(id) {
   if (!detailCache.has(id))
-    detailCache.set(id, fetch(`./api/node/${id}`).then(r => r.ok ? r.json() : null).catch(() => null));
+    detailCache.set(id, fetch(SERVER ? `/graph/node/${id}` : `./api/node/${id}`, AUTH)
+      .then(r => r.ok ? r.json() : null).catch(() => null));
   return detailCache.get(id);
 }
 
@@ -408,6 +416,11 @@ const EMBED = PARAMS.get("embed") === "1";
 const post = msg => { if (EMBED && window.parent !== window) window.parent.postMessage(msg, "*"); };
 
 function initEmbed() {
+  if (SERVER && !EMBED) {
+    // standalone op de server: switcher wordt een terugweg naar mind + legacy
+    const v = document.getElementById("variants");
+    if (v) v.innerHTML = `<a class="chip" href="/ui/mind">◂ mind</a><a class="chip" href="/ui#legacy">⌂ legacy</a>`;
+  }
   if (!EMBED) return;
   document.getElementById("variants")?.remove();
   for (const c of document.querySelectorAll(".corner")) c.remove();

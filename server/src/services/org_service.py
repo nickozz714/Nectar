@@ -65,6 +65,18 @@ def set_consensus_threshold(session: Session, account: AuthedAccount, n: int) ->
     return {"consensus_threshold": n}
 
 
+def set_default_ui(session: Session, account: AuthedAccount, ui: str) -> dict:
+    """Choose the org's default interface after login: 'legacy' or 'mind' (3D HUD).
+    Both stay available; this only decides where members land. org_admin only."""
+    assert_role(account, "org_admin", "Changing the default interface")
+    if ui not in ("legacy", "mind"):
+        raise ValueError("ui must be 'legacy' or 'mind'")
+    tenancy_repo.set_default_ui(session, account.org_uid, ui)
+    audit_repo.log(session, account.org_uid, account.uid, "set_default_ui",
+                   account.org_uid, {"ui": ui})
+    return {"default_ui": ui}
+
+
 def set_cognition_enabled(session: Session, account: AuthedAccount, on: bool) -> dict:
     """Toggle cognition-Pollen: optional world research on newly written memories
     (docs/COGNITION.md). Off by default — it costs web searches and tokens. org_admin only."""

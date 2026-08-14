@@ -287,6 +287,19 @@ def account_names(session: Session, org_uid: str, uids: list[str]) -> dict:
     return {r["uid"]: r["name"] for r in rows}
 
 
+def get_default_ui(session: Session, org_uid: str) -> str:
+    """Which interface the org lands on after login: 'legacy' (classic tabs) or
+    'mind' (the 3D galaxy/cockpit HUD)."""
+    r = session.run("MATCH (o:Org {uid: $u}) RETURN o.default_ui AS ui", u=org_uid).single()
+    ui = r["ui"] if r else None
+    return ui if ui in ("legacy", "mind") else "legacy"
+
+
+def set_default_ui(session: Session, org_uid: str, ui: str) -> str:
+    session.run("MATCH (o:Org {uid: $u}) SET o.default_ui = $ui", u=org_uid, ui=ui)
+    return ui
+
+
 def get_cognition_enabled(session: Session, org_uid: str) -> bool:
     """Whether cognition-Pollen (optional world research on new memories) is on for this
     org. Off unless explicitly enabled — research costs web searches and tokens."""

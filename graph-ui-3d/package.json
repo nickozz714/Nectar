@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild app.js --bundle --format=esm --target=es2022 --outfile=bundle.js"
+    "build": "esbuild app.js --bundle --format=esm --target=es2022 --outfile=bundle.js",
+    "build:server": "esbuild mind.src.js --bundle --format=esm --target=es2022 --outfile=../server/src/static/mind.bundle.js && esbuild cockpit.src.js --bundle --format=esm --target=es2022 --outfile=../server/src/static/cockpit.bundle.js && cp mind.html cockpit.html ../server/src/static/"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +17,8 @@
     "playwright": "^1.62.1",
     "three": "^0.185.1",
     "three-spritetext": "^1.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

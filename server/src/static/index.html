@@ -372,6 +372,7 @@
   <h1>Nectar</h1>
   <div class="tabs">
     <button data-tab="mind" class="active" onclick="showTab('mind')">Mind</button>
+    <button onclick="location.href='/ui/mind'" title="De 3D galaxy/cockpit-interface">Mind 3D ✨</button>
     <button data-tab="focus" onclick="showTab('focus')">Focus</button>
     <button data-tab="chores" onclick="showTab('chores')">Pollen <span id="choreBadge"></span></button>
     <button data-tab="review" id="reviewTab" style="display:none" onclick="showTab('review')">Review</button>
@@ -438,6 +439,7 @@
 
 <nav id="mobilenav">
   <button data-tab="mind" class="active" onclick="showTab('mind')"><span class="mi">🕸️</span><span class="ml">Mind</span></button>
+  <button onclick="location.href='/ui/mind'"><span class="mi">✨</span><span class="ml">3D</span></button>
   <button data-tab="focus" onclick="showTab('focus')"><span class="mi">🎯</span><span class="ml">Focus</span></button>
   <button data-tab="chores" onclick="showTab('chores')"><span class="mi">🌼</span><span class="ml">Pollen</span><span id="choreDotM" class="mdot"></span></button>
   <button data-tab="review" id="reviewTabM" style="display:none" onclick="showTab('review')"><span class="mi">👁️</span><span class="ml">Review</span></button>
@@ -1400,7 +1402,24 @@ async function loadSettings() {
         <div class="sethow">${how(it)}</div>
         ${it.risk ? `<div class="setrisk"><span class="ic">⚠️</span><span>${esc(it.risk)}</span></div>` : ""}
       </details></div>`).join("")}</div>`).join("");
-  box.innerHTML = `<div class="bhint" style="margin-bottom:14px">Zo staat het brein afgesteld. Alleen de <b>consensus-drempel</b> is live aanpasbaar; de rest zet je via <code>.env</code>/config (actief na een herstart). Klik <b>Aanpassen &amp; risico</b> voor uitleg per instelling.</div>${groups}`;
+  const uiPill = ui => ME.default_ui === ui ? ` <span class="pill live">actief</span>` : "";
+  const uiBlock = `<div class="block">
+    <div class="bh"><span class="ic">🖥️</span><h3>Standaardinterface</h3></div>
+    <div class="bhint">Waar leden na inloggen landen. Beide interfaces blijven altijd bereikbaar:
+      de <b>Mind 3D ✨</b>-tab hierboven, en vanuit de mind-interface de <b>⌂ legacy</b>-chip.</div>
+    <div class="ra" style="gap:8px;flex-wrap:wrap">
+      <button class="ghost" onclick="saveDefaultUi('legacy')">Legacy (tabbladen)${uiPill("legacy")}</button>
+      <button class="ghost" onclick="saveDefaultUi('mind')">Mind 3D (galaxy + cockpit)${uiPill("mind")}</button>
+      <span id="uiDefOut" class="ok"></span></div></div>`;
+  box.innerHTML = `<div class="bhint" style="margin-bottom:14px">Zo staat het brein afgesteld. Alleen de <b>consensus-drempel</b> en de <b>standaardinterface</b> zijn live aanpasbaar; de rest zet je via <code>.env</code>/config (actief na een herstart). Klik <b>Aanpassen &amp; risico</b> voor uitleg per instelling.</div>${uiBlock}${groups}`;
+}
+async function saveDefaultUi(ui) {
+  try {
+    await api("/manage/ui-default", { method: "POST", body: JSON.stringify({ ui }) });
+    ME.default_ui = ui;
+    await loadSettings();
+    document.getElementById("uiDefOut").textContent = " ✓ opgeslagen";
+  } catch (e) { alert(e.message); }
 }
 async function reindexEmbeddings() {
   const out = document.getElementById("reidxOut");
@@ -1782,6 +1801,8 @@ async function clearFocus(enc) {
 
 /* ---------- boot ---------- */
 function boot() {
+  // org-standaard: land in de Mind 3D-interface, tenzij expliciet #legacy gevraagd
+  if (ME.default_ui === "mind" && location.hash !== "#legacy") { location.replace("/ui/mind"); return; }
   document.getElementById("who").textContent = ME.name + " · " + ME.role;
   document.getElementById("choreBadge").innerHTML = ME.ready_chores ? `<span class="badge">${ME.ready_chores}</span>` : "";
   document.getElementById("choreDotM").style.display = ME.ready_chores ? "block" : "none";
