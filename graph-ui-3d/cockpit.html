@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NECTAR // MIND — COCKPIT</title>
+<style>
+  :root {
+    --bg: #020409;
+    --amber: #ffb547;
+    --amber-dim: #8a6220;
+    --cyan: #3ee0ff;
+    --cyan-dim: rgba(62, 224, 255, .28);
+    --ink: #d9e6f2;
+    --dim: #5d7286;
+    --panel: rgba(6, 12, 20, .82);
+    --line: rgba(62, 224, 255, .22);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body { font-family: var(--mono); color: var(--ink); }
+
+  /* scanline / vignette overlay */
+  .fx {
+    position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+
+  /* corner brackets */
+  .corner { position: fixed; width: 26px; height: 26px; z-index: 6; pointer-events: none; opacity: .8; }
+  .corner.tl { top: 10px; left: 10px; border-top: 1.5px solid var(--cyan); border-left: 1.5px solid var(--cyan); }
+  .corner.tr { top: 10px; right: 10px; border-top: 1.5px solid var(--cyan); border-right: 1.5px solid var(--cyan); }
+  .corner.bl { bottom: 10px; left: 10px; border-bottom: 1.5px solid var(--cyan); border-left: 1.5px solid var(--cyan); }
+  .corner.br { bottom: 10px; right: 10px; border-bottom: 1.5px solid var(--cyan); border-right: 1.5px solid var(--cyan); }
+
+  .hud { position: fixed; z-index: 10; }
+
+  /* top-left: brand + stats + breadcrumb */
+  #brand { top: 22px; left: 26px; user-select: none; max-width: 40vw; }
+  #brand h1 { margin: 0; font-size: 15px; letter-spacing: .34em; font-weight: 700; color: var(--amber); }
+  #brand h1 span { color: var(--cyan); }
+  #brand .sub { font-size: 10px; letter-spacing: .18em; color: var(--dim); margin-top: 4px; text-transform: uppercase; }
+  #stats { margin-top: 10px; font-size: 10.5px; letter-spacing: .08em; color: var(--dim); line-height: 1.9; }
+  #stats b { color: var(--ink); font-weight: 600; }
+
+  #crumbs { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; max-width: 38vw; }
+  #crumbs .crumb {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+    padding: 4px 9px; font-size: 10px; letter-spacing: .08em; cursor: pointer; color: var(--dim);
+    max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #crumbs .crumb:hover { color: var(--cyan); border-color: var(--cyan); }
+  #crumbs .crumb.now { color: var(--amber); border-color: rgba(255,181,71,.45); cursor: default; }
+  #crumbs .sep { color: var(--dim); font-size: 10px; opacity: .7; }
+
+  /* top-right: search */
+  #searchBox { top: 22px; right: 26px; width: min(340px, 42vw); }
+  #search {
+    width: 100%; background: var(--panel); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px;
+    font: 12px var(--mono); letter-spacing: .06em; padding: 9px 12px; outline: none;
+  }
+  #search:focus { border-color: var(--cyan); box-shadow: 0 0 14px rgba(62,224,255,.18); }
+  #search::placeholder { color: var(--dim); }
+  #results { margin-top: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+             backdrop-filter: blur(8px); max-height: 46vh; overflow-y: auto; display: none; }
+  #results div { padding: 8px 12px; font-size: 11.5px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  #results div:hover, #results div.sel { background: rgba(62,224,255,.08); }
+  #results .rt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+  /* right: detail panel */
+  #panel {
+    top: 96px; right: 26px; width: min(360px, 40vw); max-height: calc(100vh - 220px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    backdrop-filter: blur(10px); display: none; flex-direction: column; overflow: hidden;
+    box-shadow: 0 0 34px rgba(62,224,255,.09);
+  }
+  #panel.open { display: flex; }
+  #panel .phead { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  #panel .ptitle { font-size: 13.5px; font-weight: 600; line-height: 1.45; letter-spacing: .02em; }
+  #panel .pchips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .pchip { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--line);
+           border-radius: 3px; padding: 2px 7px; color: var(--cyan); }
+  .pchip.amber { color: var(--amber); border-color: rgba(255,181,71,.35); }
+  .pchip.dim { color: var(--dim); }
+  #panel .pbody { padding: 12px 16px; overflow-y: auto; font-size: 12px; line-height: 1.7;
+                  color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+  #panel .ptags { padding: 0 16px 12px; display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* ── the cockpit stage ─────────────────────────────── */
+  #stage { position: fixed; inset: 0; z-index: 2; overflow: hidden; }
+  #wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .card {
+    position: absolute; left: 0; top: 0;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 9px 12px; cursor: pointer; overflow: hidden;
+    backdrop-filter: blur(8px);
+    transition: transform .42s cubic-bezier(.25,.9,.3,1), width .42s cubic-bezier(.25,.9,.3,1),
+                height .42s cubic-bezier(.25,.9,.3,1), opacity .34s ease, box-shadow .42s ease,
+                border-color .42s ease;
+    will-change: transform, opacity;
+  }
+  .card:hover { filter: brightness(1.25); }
+  .card .ct { font-size: 11px; line-height: 1.4; letter-spacing: .02em; font-weight: 600;
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .cchip { margin-top: 6px; display: inline-block; font-size: 8.5px; letter-spacing: .16em;
+                 text-transform: uppercase; border: 1px solid; border-radius: 3px; padding: 1px 6px; }
+  .card .cex { display: none; }
+  .card .cnums { display: none; }
+
+  .card.focus { cursor: default; padding: 16px 18px 36px; }
+  .card.focus .ct { font-size: 14.5px; -webkit-line-clamp: 3; line-height: 1.5; }
+  .card.focus .cex { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+                     overflow: hidden; margin-top: 10px; font-size: 11px; line-height: 1.65;
+                     color: rgba(217,230,242,.72); }
+  .card.focus .cnums { display: block; position: absolute; bottom: 10px; left: 18px; right: 18px;
+                       font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+  .card.more { border-style: dashed; border-color: rgba(255,181,71,.4); display: flex;
+               align-items: center; justify-content: center; }
+  .card.more .ct { color: var(--amber); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+                   -webkit-line-clamp: 1; }
+
+  .bandlabel { position: absolute; left: 0; top: 0; font-size: 9px; letter-spacing: .3em;
+               text-transform: uppercase; color: var(--dim); opacity: 0; pointer-events: none;
+               transition: transform .42s cubic-bezier(.25,.9,.3,1), opacity .34s ease; }
+
+  /* bottom-right: variant switcher + hints */
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+    padding: 5px 10px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    cursor: pointer; user-select: none; color: var(--ink); text-decoration: none;
+  }
+  .chip:hover { color: var(--cyan); border-color: var(--cyan); }
+
+  #hints { bottom: 24px; right: 26px; text-align: right; font-size: 10px; letter-spacing: .1em;
+           color: var(--dim); line-height: 1.9; text-transform: uppercase; }
+  #hints .key { color: var(--cyan); }
+
+  /* legend bottom-left */
+  #legend { bottom: 24px; left: 26px; display: flex; gap: 14px; font-size: 9.5px; letter-spacing: .14em;
+            text-transform: uppercase; color: var(--dim); align-items: center; }
+  #legend .sw { width: 18px; height: 0; border-top: 2px solid; display: inline-block; margin-right: 6px;
+                vertical-align: middle; border-radius: 2px; }
+
+  /* loading splash */
+  #splash { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 18px; background: var(--bg); }
+  #splash .ring { width: 54px; height: 54px; border-radius: 50%; border: 2px solid transparent;
+                  border-top-color: var(--amber); border-right-color: var(--cyan);
+                  animation: spin 1.1s linear infinite; }
+  #splash .t { font-size: 11px; letter-spacing: .3em; color: var(--dim); text-transform: uppercase; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="wires"></svg>
+</div>
+<div class="fx"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+
+<div class="hud" id="brand">
+  <h1>NECTAR <span>//</span> MIND</h1>
+  <div class="sub">swarm hud · cockpit</div>
+  <div id="stats"></div>
+  <div id="crumbs"></div>
+</div>
+
+<div class="hud" id="searchBox">
+  <input id="search" type="text" placeholder="▸ zoek in de mind…" autocomplete="off" spellcheck="false">
+  <div id="results"></div>
+</div>
+
+<div class="hud" id="panel">
+  <div class="phead">
+    <div class="ptitle" id="pTitle"></div>
+    <div class="pchips" id="pChips"></div>
+  </div>
+  <div class="pbody" id="pBody"></div>
+  <div class="ptags" id="pTags"></div>
+</div>
+
+<div class="hud" id="legend">
+  <span><span class="sw" style="border-color:rgba(255,181,71,.75)"></span>bevat</span>
+  <span><span class="sw" style="border-color:rgba(62,224,255,.75)"></span>verwant</span>
+</div>
+
+<div class="hud" id="variants" style="bottom:64px;right:26px;display:flex;gap:6px">
+  <a class="chip" href="./index.html">netwerk</a>
+  <a class="chip" style="color:var(--amber);border-color:rgba(255,181,71,.4)" href="./cockpit.html">cockpit</a>
+  <a class="chip" href="./galaxy.html">galaxy</a>
+</div>
+
+<div class="hud" id="hints">
+  <div><span class="key">klik</span> kaart = focus · <span class="key">esc</span> stap terug</div>
+  <div><span class="key">zoek</span> rechtsboven om te springen</div>
+</div>
+
+<div id="splash"><div class="ring"></div><div class="t">cockpit wordt geladen…</div></div>
+
+<script>
+  // never hang silently on the splash — surface any startup error in it
+  const showErr = m => { const s = document.getElementById("splash");
+    if (s) { s.style.display = "flex";
+      s.innerHTML = `<div class="t" style="color:#ff7847;max-width:70vw;letter-spacing:.05em">fout: ${m}</div>`; } };
+  window.addEventListener("error", e => showErr(e.message || e.type));
+  window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
+</script>
+<!-- cockpit.bundle.js = cockpit.src.js; rebuild after editing:
+     npx esbuild cockpit.src.js --bundle --format=esm --target=es2022 --outfile=cockpit.bundle.js -->
+<script type="module" src="./cockpit.bundle.js"></script>
+</body>
+</html>

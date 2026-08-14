@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NECTAR // MIND — 3D HUD</title>
+<title>NECTAR // MIND — GALAXY</title>
 <style>
   :root {
     --bg: #020409;
@@ -31,6 +31,11 @@
       radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
   }
 
+  /* travel veil: short fade between galaxy and a star system */
+  #veil { position: fixed; inset: 0; z-index: 15; pointer-events: none;
+          background: var(--bg); opacity: 0; transition: opacity .32s ease; }
+  #veil.on { opacity: 1; }
+
   /* corner brackets */
   .corner { position: fixed; width: 26px; height: 26px; z-index: 6; pointer-events: none; opacity: .8; }
   .corner.tl { top: 10px; left: 10px; border-top: 1.5px solid var(--cyan); border-left: 1.5px solid var(--cyan); }
@@ -40,14 +45,19 @@
 
   .hud { position: fixed; z-index: 10; }
 
-  /* top-left: brand + stats */
-  #brand { top: 22px; left: 26px; user-select: none; }
+  /* top-left: brand + stats + breadcrumb */
+  #brand { top: 22px; left: 26px; user-select: none; max-width: 44vw; }
   #brand h1 { margin: 0; font-size: 15px; letter-spacing: .34em; font-weight: 700; color: var(--amber); }
   #brand h1 span { color: var(--cyan); }
   #brand .sub { font-size: 10px; letter-spacing: .18em; color: var(--dim); margin-top: 4px; text-transform: uppercase; }
   #stats { margin-top: 12px; font-size: 10.5px; letter-spacing: .08em; color: var(--dim); line-height: 1.9; }
   #stats b { color: var(--ink); font-weight: 600; }
   #stats .ok { color: #55ffa1; }
+  #crumb { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #crumbPath { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--amber); }
+  #crumbPath .sep { color: var(--dim); margin: 0 4px; }
+  #crumbPath .here { color: var(--ink); letter-spacing: .1em; }
+  #btnBack { display: none; }
 
   /* top-right: search */
   #searchBox { top: 22px; right: 26px; width: min(320px, 42vw); }
@@ -58,44 +68,32 @@
   }
   #search:focus { border-color: var(--cyan); box-shadow: 0 0 14px rgba(62,224,255,.18); }
   #search::placeholder { color: var(--dim); }
-  #nav { display: flex; gap: 6px; margin-top: 6px; justify-content: flex-end; }
-  #nav a {
-    color: var(--dim); text-decoration: none; font-size: 10px; letter-spacing: .12em;
-    text-transform: uppercase; border: 1px solid var(--line); border-radius: 3px;
-    padding: 4px 9px; background: var(--panel); cursor: pointer;
-  }
-  #nav a:hover { color: var(--cyan); border-color: var(--cyan); }
-  #nav .badge { color: var(--amber); margin-left: 5px; font-weight: 700; }
   #results { margin-top: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
              backdrop-filter: blur(8px); max-height: 46vh; overflow-y: auto; display: none; }
   #results div { padding: 8px 12px; font-size: 11.5px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
   #results div:hover { background: rgba(62,224,255,.08); }
+  #results .topicTag { color: var(--dim); font-size: 9.5px; margin-left: auto; letter-spacing: .08em; }
   .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 
-  /* bottom-left: type filters */
-  #filters { bottom: 24px; left: 26px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 46vw; }
   .chip {
     display: inline-flex; align-items: center; gap: 7px;
     background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
     padding: 5px 10px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
-    cursor: pointer; user-select: none; color: var(--ink);
+    cursor: pointer; user-select: none; color: var(--ink); text-decoration: none;
   }
-  .chip.off { opacity: .32; }
-  .chip b { font-weight: 600; color: var(--dim); }
+  .chip:hover { border-color: var(--cyan); color: var(--cyan); }
 
-  /* bottom-right: hints + refresh */
+  /* bottom-right: hints */
   #hints { bottom: 24px; right: 26px; text-align: right; font-size: 10px; letter-spacing: .1em;
            color: var(--dim); line-height: 1.9; text-transform: uppercase; }
   #hints .key { color: var(--cyan); }
-  #refresh { color: var(--amber); cursor: pointer; text-decoration: none; }
-  #refresh:hover { text-shadow: 0 0 8px rgba(255,181,71,.6); }
 
   /* right: detail panel */
   #panel {
     top: 90px; right: 26px; width: min(360px, 46vw); max-height: calc(100vh - 210px);
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
     backdrop-filter: blur(10px); display: none; flex-direction: column; overflow: hidden;
-    box-shadow: 0 0 34px rgba(62,224,255,.09);
+    box-shadow: 0 0 34px rgba(62,224,255,.09); z-index: 11;
   }
   #panel.open { display: flex; }
   #panel .phead { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
@@ -110,8 +108,6 @@
   .btn { flex: 1; text-align: center; border: 1px solid var(--line); border-radius: 3px; padding: 7px 0;
          font-size: 10px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; color: var(--cyan); }
   .btn:hover { background: rgba(62,224,255,.08); }
-  .btn.amber { color: var(--amber); border-color: rgba(255,181,71,.35); }
-  .btn.amber:hover { background: rgba(255,181,71,.08); }
 
   /* loading splash */
   #splash { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
@@ -130,22 +126,22 @@
 <body>
 <div id="graph"></div>
 <div class="fx"></div>
+<div id="veil"></div>
 <div class="corner tl"></div><div class="corner tr"></div>
 <div class="corner bl"></div><div class="corner br"></div>
 
 <div class="hud" id="brand">
   <h1>NECTAR <span>//</span> MIND</h1>
-  <div class="sub">swarm hud · live graph</div>
+  <div class="sub">swarm hud · galaxy</div>
   <div id="stats"></div>
+  <div id="crumb">
+    <span id="crumbPath">GALAXY</span>
+    <span class="chip" id="btnBack">◂ terug naar galaxy</span>
+  </div>
 </div>
 
 <div class="hud" id="searchBox">
   <input id="search" type="text" placeholder="▸ zoek in de mind…" autocomplete="off" spellcheck="false">
-  <div id="nav">
-    <a data-tab="chores">🌼 pollen<span id="navBadge"></span></a>
-    <a data-tab="governance">⚖ governance</a>
-    <a data-tab="beheer">⚙ beheer</a>
-  </div>
   <div id="results"></div>
 </div>
 
@@ -156,35 +152,32 @@
   </div>
   <div class="pbody" id="pBody"></div>
   <div class="pfoot">
-    <div class="btn amber" id="btnIsolate">isolate</div>
     <div class="btn" id="btnClose">sluit</div>
   </div>
 </div>
 
-<div class="hud" id="filters"></div>
-
 <div class="hud" id="variants" style="bottom:64px;right:26px;display:flex;gap:6px">
-  <a class="chip" style="text-decoration:none;color:var(--amber);border-color:rgba(255,181,71,.4)" href="./index.html">netwerk</a>
-  <a class="chip" style="text-decoration:none" href="./cockpit.html">cockpit</a>
-  <a class="chip" style="text-decoration:none" href="./galaxy.html">galaxy</a>
+  <a class="chip" href="./index.html">netwerk</a>
+  <a class="chip" href="./cockpit.html">cockpit</a>
+  <a class="chip" style="color:var(--amber);border-color:rgba(255,181,71,.4)" href="./galaxy.html">galaxy</a>
 </div>
 
 <div class="hud" id="hints">
-  <div><span class="key">sleep</span> draai · <span class="key">scroll</span> zoom · <span class="key">klik</span> focus</div>
-  <div><a id="refresh">⟳ herlaad data uit de hive</a></div>
+  <div><span class="key">klik ster</span> vlieg naar stelsel · <span class="key">esc</span> terug</div>
+  <div><span class="key">sleep</span> draai · <span class="key">scroll</span> zoom · <span class="key">/</span> zoekt</div>
 </div>
 
-<div id="splash"><div class="ring"></div><div class="t">mind wordt geladen…</div></div>
+<div id="splash"><div class="ring"></div><div class="t">galaxy wordt geladen…</div></div>
 
 <script>
-  // never hang silently on the splash — surface any startup error in it
+  // never hang silently on the splash — surface any startup error on the page
   const showErr = m => { const s = document.getElementById("splash");
     if (s) s.innerHTML = `<div class="t" style="color:#ff7847;max-width:70vw;letter-spacing:.05em">fout: ${m}</div>`; };
   window.addEventListener("error", e => showErr(e.message || e.type));
   window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
 </script>
-<!-- bundle.js = app.js + deps; rebuild after editing app.js:
-     npx esbuild app.js --bundle --format=esm --target=es2022 --outfile=bundle.js -->
-<script type="module" src="./bundle.js"></script>
+<!-- galaxy.bundle.js = galaxy.src.js + deps; rebuild after editing:
+     npx esbuild galaxy.src.js --bundle --format=esm --target=es2022 --outfile=galaxy.bundle.js -->
+<script type="module" src="./galaxy.bundle.js"></script>
 </body>
 </html>
