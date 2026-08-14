@@ -86941,6 +86941,9 @@ tuneForces(1);
 Graph.graphData(galaxyData);
 Graph.cameraPosition({ x: 0, y: 0, z: 1100 });
 setTimeout(() => Graph.zoomToFit(1600, 70), 1200);
+setTimeout(() => {
+  if (state.level === 1 && !state.traveling && !drill.classList.contains("on")) Graph.zoomToFit(900, 80);
+}, 4800);
 updateHud();
 var deepLink = location.hash.match(/^#t=([\w-]+)$/)?.[1];
 if (deepLink && nodeById.get(deepLink)?.type === "topic")

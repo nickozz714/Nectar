@@ -538,6 +538,8 @@ tuneForces(1);
 Graph.graphData(galaxyData);
 Graph.cameraPosition({ x: 0, y: 0, z: 1100 });
 setTimeout(() => Graph.zoomToFit(1600, 70), 1200);
+/* de layout kan na de eerste fit nog uitdijen — fit nogmaals zodra hij tot rust is */
+setTimeout(() => { if (state.level === 1 && !state.traveling && !drill.classList.contains("on")) Graph.zoomToFit(900, 80); }, 4800);
 updateHud();
 
 /* deep-link: #t=<topic-id> opent direct dat stelsel */
