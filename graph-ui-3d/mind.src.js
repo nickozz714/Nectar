@@ -409,6 +409,8 @@ async function select(n, fly) {
   el("pBody").textContent = "…";
   el("panel").classList.add("open");
   el("btnDrill").style.display = n.type === "topic" ? "none" : "block";
+  for (const b of ["btnLineage", "btnSuggest", "btnArchive"])
+    el(b).style.display = SERVER && n.type !== "topic" ? "block" : "none";
   if (n.type === "topic") {
     const kids = (topicChildren.get(n.id) || []).map(id => nodeById.get(id)).filter(Boolean);
     el("pBody").innerHTML = kids.map(k =>
@@ -511,6 +513,54 @@ window.addEventListener("message", e => {
   }
 });
 el("btnDrill").onclick = () => { if (state.selected && state.selected.type !== "topic") openDrill(state.selected.id); };
+
+/* ---- node-acties uit de legacy Mind-tab: lineage, wijziging voorstellen, archiveren ---- */
+el("btnLineage").onclick = async () => {
+  const n = state.selected;
+  if (!n || !SERVER) return;
+  el("pBody").textContent = "…";
+  try {
+    const L = await (await fetch(`/graph/lineage/${n.id}`, AUTH)).json();
+    const rows = [
+      ["persoon", L.created_by_person], ["account", L.created_by_account],
+      ["model", L.created_by_model], ["gevoeligheid", L.sensitivity],
+      ["aangemaakt", L.created_at ? new Date(L.created_at).toLocaleString("nl-NL") : null],
+    ].filter(([, v]) => v);
+    const events = (L.events || L.audit || []).slice(0, 20).map(e =>
+      `<div style="margin:3px 0;color:var(--dim)">▸ ${esc(e.action || e.event || "?")} — ${esc(e.account || "")} ${e.at ? "· " + new Date(e.at).toLocaleString("nl-NL") : ""}</div>`).join("");
+    el("pBody").innerHTML =
+      `<div style="color:var(--cyan);letter-spacing:.18em;font-size:10px;text-transform:uppercase;margin-bottom:8px">🧬 lineage</div>` +
+      rows.map(([k, v]) => `<div><span style="color:var(--dim)">${k}:</span> ${esc(String(v))}</div>`).join("") +
+      (events ? `<div style="margin-top:10px">${events}</div>` : "") +
+      `<div style="margin-top:12px"><span class="pchip" style="cursor:pointer" id="backToContent">◂ terug naar inhoud</span></div>`;
+    el("pBody").querySelector("#backToContent").onclick = () => select(n, false);
+  } catch { el("pBody").textContent = "(lineage niet op te halen)"; }
+};
+el("btnSuggest").onclick = async () => {
+  const n = state.selected;
+  if (!n || !SERVER) return;
+  const content = prompt("Voorgestelde nieuwe inhoud (consensus beslist):");
+  if (!content) return;
+  const rationale = prompt("Waarom? (korte motivatie)") || "via mind";
+  try {
+    await fetch("/graph/suggest", { method: "POST",
+      headers: { ...AUTH.headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "edit", node_uid: n.id, payload: { content }, rationale, model_name: "mens-via-mind" }) });
+    el("pBody").textContent = "✓ wijzigingsvoorstel ingediend — de swarm beslist (zie de Pollen-deck)";
+  } catch (e) { alert("voorstel mislukt"); }
+};
+el("btnArchive").onclick = async () => {
+  const n = state.selected;
+  if (!n || !SERVER) return;
+  const reason = prompt(`"${titleOf(n)}" voorstellen te archiveren — reden:`);
+  if (!reason) return;
+  try {
+    await fetch("/graph/suggest", { method: "POST",
+      headers: { ...AUTH.headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "invalidate", node_uid: n.id, payload: { reason }, rationale: reason, model_name: "mens-via-mind" }) });
+    el("pBody").textContent = "✓ archiveer-voorstel ingediend — de swarm beslist (zie de Pollen-deck)";
+  } catch { alert("voorstel mislukt"); }
+};
 drill.addEventListener("click", e => { if (e.target === drill) closeDrill(); });
 
 /* ---- server-modus: variant-switcher wordt navigatie naar de rest van Nectar ---- */

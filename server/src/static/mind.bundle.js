@@ -85654,8 +85654,20 @@ var CSS = `
         align-items: center; justify-content: center; }
 #deck.on { opacity: 1; pointer-events: auto; }
 #deck .dpanel { width: min(1080px, 94vw); height: 88vh; display: flex; flex-direction: column;
-  background: rgba(4,8,15,.92); border: 1px solid var(--line); border-radius: 8px;
-  backdrop-filter: blur(12px); box-shadow: 0 0 60px rgba(62,224,255,.12); overflow: hidden; }
+  background: rgba(4,8,15,.92); border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  backdrop-filter: blur(12px); box-shadow: 0 0 60px rgba(62,224,255,.12); overflow: hidden;
+  position: relative;
+  transform: perspective(1600px) rotateX(9deg) scale(.92) translateY(34px); opacity: 0;
+  transition: transform .42s cubic-bezier(.2,.9,.25,1), opacity .3s ease; }
+#deck.on .dpanel { transform: none; opacity: 1; }
+#deck .dpanel::before { content: ""; position: absolute; top: 0; left: 22px; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--amber), transparent 60%); opacity: .7; }
+#deck.on .dpanel::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(62,224,255,.07) 50%, transparent 100%);
+  background-size: 100% 220%; animation: dsweep .9s ease-out 1; opacity: 0; }
+@keyframes dsweep { from { opacity: 1; background-position: 0 -110%; } to { opacity: 0; background-position: 0 110%; } }
+@media (prefers-reduced-motion: reduce) { #deck .dpanel { transition: none; transform: none; } }
 #deck .dhead { display: flex; align-items: center; gap: 10px; padding: 14px 18px;
   border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 #deck .dtitle { font-size: 12px; letter-spacing: .28em; color: var(--amber); text-transform: uppercase; font-weight: 700; }
@@ -85665,13 +85677,15 @@ var CSS = `
 #deck .chip.on { color: var(--amber); border-color: rgba(255,181,71,.4); }
 #deck h3 { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan);
   margin: 22px 0 10px; } #deck h3:first-child { margin-top: 0; }
-#deck .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+#deck .card { background: var(--panel); border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   padding: 13px 15px; margin-bottom: 12px; }
 #deck .card .ct { font-weight: 600; font-size: 13px; line-height: 1.5; }
 #deck .crow { display: flex; gap: 5px; flex-wrap: wrap; margin: 7px 0; }
 #deck .cex { color: var(--dim); white-space: pre-wrap; max-height: 130px; overflow-y: auto;
   margin: 6px 0; border-left: 2px solid var(--line); padding-left: 10px; }
-#deck .abtn { display: inline-flex; border: 1px solid var(--line); border-radius: 3px;
+#deck .abtn { display: inline-flex; border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
   padding: 5px 11px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
   cursor: pointer; color: var(--cyan); user-select: none; }
 #deck .abtn:hover { background: rgba(62,224,255,.08); }
@@ -85679,7 +85693,8 @@ var CSS = `
 #deck .abtn.red { color: #ff7847; border-color: rgba(255,120,71,.4); }
 #deck .abtn.green { color: #55ffa1; border-color: rgba(85,255,161,.35); }
 #deck .stat { display: inline-flex; flex-direction: column; gap: 2px; border: 1px solid var(--line);
-  border-radius: 6px; padding: 10px 16px; margin: 0 8px 8px 0; min-width: 110px; }
+  border-radius: 0; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  padding: 10px 16px; margin: 0 8px 8px 0; min-width: 110px; }
 #deck .stat b { font-size: 18px; } #deck .stat span { font-size: 9.5px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--dim); }
 #deck table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
@@ -85687,7 +85702,7 @@ var CSS = `
   text-transform: uppercase; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); }
 #deck td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgba(62,224,255,.08); }
 #deck input[type=text], #deck input[type=number], #deck textarea, #deck select {
-  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 0;
   font: 12px var(--mono); padding: 7px 10px; outline: none; }
 #deck input:focus, #deck textarea:focus { border-color: var(--cyan); }
 #deck .ok { color: #55ffa1; font-size: 11px; margin-left: 8px; }
@@ -87249,6 +87264,8 @@ async function select2(n2, fly) {
   el("pBody").textContent = "\u2026";
   el("panel").classList.add("open");
   el("btnDrill").style.display = n2.type === "topic" ? "none" : "block";
+  for (const b2 of ["btnLineage", "btnSuggest", "btnArchive"])
+    el(b2).style.display = SERVER && n2.type !== "topic" ? "block" : "none";
   if (n2.type === "topic") {
     const kids = (topicChildren.get(n2.id) || []).map((id) => nodeById.get(id)).filter(Boolean);
     el("pBody").innerHTML = kids.map((k2) => `<div style="margin:2px 0"><span style="color:${colorOf(k2)}">\u25C8</span> ${esc2(titleOf(k2))}</div>`).join("") || "leeg topic";
@@ -87375,6 +87392,59 @@ window.addEventListener("message", (e2) => {
 });
 el("btnDrill").onclick = () => {
   if (state.selected && state.selected.type !== "topic") openDrill(state.selected.id);
+};
+el("btnLineage").onclick = async () => {
+  const n2 = state.selected;
+  if (!n2 || !SERVER) return;
+  el("pBody").textContent = "\u2026";
+  try {
+    const L2 = await (await fetch(`/graph/lineage/${n2.id}`, AUTH)).json();
+    const rows = [
+      ["persoon", L2.created_by_person],
+      ["account", L2.created_by_account],
+      ["model", L2.created_by_model],
+      ["gevoeligheid", L2.sensitivity],
+      ["aangemaakt", L2.created_at ? new Date(L2.created_at).toLocaleString("nl-NL") : null]
+    ].filter(([, v2]) => v2);
+    const events = (L2.events || L2.audit || []).slice(0, 20).map((e2) => `<div style="margin:3px 0;color:var(--dim)">\u25B8 ${esc2(e2.action || e2.event || "?")} \u2014 ${esc2(e2.account || "")} ${e2.at ? "\xB7 " + new Date(e2.at).toLocaleString("nl-NL") : ""}</div>`).join("");
+    el("pBody").innerHTML = `<div style="color:var(--cyan);letter-spacing:.18em;font-size:10px;text-transform:uppercase;margin-bottom:8px">\u{1F9EC} lineage</div>` + rows.map(([k2, v2]) => `<div><span style="color:var(--dim)">${k2}:</span> ${esc2(String(v2))}</div>`).join("") + (events ? `<div style="margin-top:10px">${events}</div>` : "") + `<div style="margin-top:12px"><span class="pchip" style="cursor:pointer" id="backToContent">\u25C2 terug naar inhoud</span></div>`;
+    el("pBody").querySelector("#backToContent").onclick = () => select2(n2, false);
+  } catch {
+    el("pBody").textContent = "(lineage niet op te halen)";
+  }
+};
+el("btnSuggest").onclick = async () => {
+  const n2 = state.selected;
+  if (!n2 || !SERVER) return;
+  const content = prompt("Voorgestelde nieuwe inhoud (consensus beslist):");
+  if (!content) return;
+  const rationale = prompt("Waarom? (korte motivatie)") || "via mind";
+  try {
+    await fetch("/graph/suggest", {
+      method: "POST",
+      headers: { ...AUTH.headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "edit", node_uid: n2.id, payload: { content }, rationale, model_name: "mens-via-mind" })
+    });
+    el("pBody").textContent = "\u2713 wijzigingsvoorstel ingediend \u2014 de swarm beslist (zie de Pollen-deck)";
+  } catch (e2) {
+    alert("voorstel mislukt");
+  }
+};
+el("btnArchive").onclick = async () => {
+  const n2 = state.selected;
+  if (!n2 || !SERVER) return;
+  const reason = prompt(`"${titleOf(n2)}" voorstellen te archiveren \u2014 reden:`);
+  if (!reason) return;
+  try {
+    await fetch("/graph/suggest", {
+      method: "POST",
+      headers: { ...AUTH.headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "invalidate", node_uid: n2.id, payload: { reason }, rationale: reason, model_name: "mens-via-mind" })
+    });
+    el("pBody").textContent = "\u2713 archiveer-voorstel ingediend \u2014 de swarm beslist (zie de Pollen-deck)";
+  } catch {
+    alert("voorstel mislukt");
+  }
 };
 drill.addEventListener("click", (e2) => {
   if (e2.target === drill) closeDrill();

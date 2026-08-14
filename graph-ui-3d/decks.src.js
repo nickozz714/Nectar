@@ -30,8 +30,20 @@ const CSS = `
         align-items: center; justify-content: center; }
 #deck.on { opacity: 1; pointer-events: auto; }
 #deck .dpanel { width: min(1080px, 94vw); height: 88vh; display: flex; flex-direction: column;
-  background: rgba(4,8,15,.92); border: 1px solid var(--line); border-radius: 8px;
-  backdrop-filter: blur(12px); box-shadow: 0 0 60px rgba(62,224,255,.12); overflow: hidden; }
+  background: rgba(4,8,15,.92); border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  backdrop-filter: blur(12px); box-shadow: 0 0 60px rgba(62,224,255,.12); overflow: hidden;
+  position: relative;
+  transform: perspective(1600px) rotateX(9deg) scale(.92) translateY(34px); opacity: 0;
+  transition: transform .42s cubic-bezier(.2,.9,.25,1), opacity .3s ease; }
+#deck.on .dpanel { transform: none; opacity: 1; }
+#deck .dpanel::before { content: ""; position: absolute; top: 0; left: 22px; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--amber), transparent 60%); opacity: .7; }
+#deck.on .dpanel::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(62,224,255,.07) 50%, transparent 100%);
+  background-size: 100% 220%; animation: dsweep .9s ease-out 1; opacity: 0; }
+@keyframes dsweep { from { opacity: 1; background-position: 0 -110%; } to { opacity: 0; background-position: 0 110%; } }
+@media (prefers-reduced-motion: reduce) { #deck .dpanel { transition: none; transform: none; } }
 #deck .dhead { display: flex; align-items: center; gap: 10px; padding: 14px 18px;
   border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 #deck .dtitle { font-size: 12px; letter-spacing: .28em; color: var(--amber); text-transform: uppercase; font-weight: 700; }
@@ -41,13 +53,15 @@ const CSS = `
 #deck .chip.on { color: var(--amber); border-color: rgba(255,181,71,.4); }
 #deck h3 { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan);
   margin: 22px 0 10px; } #deck h3:first-child { margin-top: 0; }
-#deck .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+#deck .card { background: var(--panel); border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   padding: 13px 15px; margin-bottom: 12px; }
 #deck .card .ct { font-weight: 600; font-size: 13px; line-height: 1.5; }
 #deck .crow { display: flex; gap: 5px; flex-wrap: wrap; margin: 7px 0; }
 #deck .cex { color: var(--dim); white-space: pre-wrap; max-height: 130px; overflow-y: auto;
   margin: 6px 0; border-left: 2px solid var(--line); padding-left: 10px; }
-#deck .abtn { display: inline-flex; border: 1px solid var(--line); border-radius: 3px;
+#deck .abtn { display: inline-flex; border: 1px solid var(--line); border-radius: 0;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
   padding: 5px 11px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
   cursor: pointer; color: var(--cyan); user-select: none; }
 #deck .abtn:hover { background: rgba(62,224,255,.08); }
@@ -55,7 +69,8 @@ const CSS = `
 #deck .abtn.red { color: #ff7847; border-color: rgba(255,120,71,.4); }
 #deck .abtn.green { color: #55ffa1; border-color: rgba(85,255,161,.35); }
 #deck .stat { display: inline-flex; flex-direction: column; gap: 2px; border: 1px solid var(--line);
-  border-radius: 6px; padding: 10px 16px; margin: 0 8px 8px 0; min-width: 110px; }
+  border-radius: 0; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  padding: 10px 16px; margin: 0 8px 8px 0; min-width: 110px; }
 #deck .stat b { font-size: 18px; } #deck .stat span { font-size: 9.5px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--dim); }
 #deck table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
@@ -63,7 +78,7 @@ const CSS = `
   text-transform: uppercase; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--line); }
 #deck td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgba(62,224,255,.08); }
 #deck input[type=text], #deck input[type=number], #deck textarea, #deck select {
-  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 0;
   font: 12px var(--mono); padding: 7px 10px; outline: none; }
 #deck input:focus, #deck textarea:focus { border-color: var(--cyan); }
 #deck .ok { color: #55ffa1; font-size: 11px; margin-left: 8px; }

@@ -127,8 +127,35 @@
                   box-shadow: 0 0 60px rgba(62,224,255,.12); }
 
   .scene-tooltip { font: 11px var(--mono) !important; color: var(--ink) !important;
-                   background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+                   background: var(--panel); border: 1px solid var(--line); border-radius: 0;
                    padding: 5px 9px !important; letter-spacing: .04em; }
+
+  /* ── JARVIS-laag: hoekig (niets rond) + invliegende panelen ─────────────── */
+  .chip, .btn, #search, #results, #panel, .pchip, #veil, #splash .t { border-radius: 0 !important; }
+  .chip { clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); }
+  #search { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+  #panel {
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+    border-radius: 0;
+  }
+  #panel.open { animation: panelIn .38s cubic-bezier(.2,.9,.25,1); transform-origin: 100% 30%; }
+  @keyframes panelIn {
+    from { opacity: 0; transform: perspective(1200px) translateX(46px) rotateY(-7deg) scale(.96); }
+    to   { opacity: 1; transform: none; }
+  }
+  .dot { border-radius: 0; transform: rotate(45deg); width: 6px; height: 6px; }
+  #splash .ring { border-radius: 0; }        /* draaiend hoekig frame i.p.v. cirkel */
+  #drill iframe {
+    border-radius: 0;
+    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+    transform: perspective(1400px) rotateX(7deg) scale(.94) translateY(26px);
+    transition: transform .4s cubic-bezier(.2,.9,.25,1);
+  }
+  #drill.on iframe { transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    #panel.open { animation: none; }
+    #drill iframe { transition: none; transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -160,8 +187,11 @@
     <div class="pchips" id="pChips"></div>
   </div>
   <div class="pbody" id="pBody"></div>
-  <div class="pfoot">
+  <div class="pfoot" style="flex-wrap:wrap">
     <div class="btn" id="btnDrill" style="color:var(--amber);border-color:rgba(255,181,71,.4)">⌕ drilldown</div>
+    <div class="btn" id="btnLineage">🧬 lineage</div>
+    <div class="btn" id="btnSuggest">✎ voorstel</div>
+    <div class="btn" id="btnArchive">🗑</div>
     <div class="btn" id="btnClose">sluit</div>
   </div>
 </div>
