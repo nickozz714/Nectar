@@ -34,11 +34,18 @@ Long sessions drift: through "lost in the middle" and compaction the plan falls 
 context and the model starts doing something else. Antidote: the **active focus**, which the recall hook
 re-injects at the top of **every** prompt (stays in the attention zone, survives compaction).
 - **Starting a task with multiple steps or with constraints** → capture it with
-  `focus_set(goal, steps, guardrails, done_when)`. Put the hard do/don't rules that prevent
+  `focus_set(goal, steps, guardrails, done_when, session)`. Put the hard do/don't rules that prevent
   drift in `guardrails` (e.g. *"work in the BACK-END via the API; the front-end is only for step 3,
   a couple of clicks — nothing else there"*).
+- **Lanes: one focus per SESSION, not per project.** Your recall block prints your lane token
+  (`sessiebaan a1b2c3d4`, or `(baan: …)` next to the active task). **Always pass it as
+  `session="…"`** to `focus_set` / `focus_advance` / `focus_clear`. That way two sessions working
+  different things in the same project each keep their own focus instead of overwriting one
+  another. Optional `name="…"` labels your lane, and lets you resume it from a new session
+  (after `/clear`) or join a colleague's lane deliberately. `focus_list()` shows the lanes
+  running in this project — check it before you assume a focus is yours.
 - **A "## ▶ Active task" appears in your context** → that is leading. Re-read it before every
-  step. Check off with `focus_advance(completed_step, note)` as soon as a step is done.
+  step. Check off with `focus_advance(session, completed_step, note)` as soon as a step is done.
 - **The request or your impulse diverges from the plan/guardrails** → flag that explicitly and
   align; don't just go do something else. Done? `focus_clear`.
 - **Exception: Pollen.** Handling the one Pollen recall offers you never counts as deviating

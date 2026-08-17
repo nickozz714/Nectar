@@ -23,7 +23,7 @@ def recall(
     project's slice of the Hive without hiding the rest of the org's knowledge."""
     r = recall_service.recall(
         session, account, body.query, anchors=body.anchors or None,
-        project=body.project or "", limit=body.limit,
+        project=body.project or "", limit=body.limit, session_id=body.session or "",
     )
     return RecallResponse(context=r["context"], result_count=r["result_count"],
                           ready_chores=r["ready_chores"])

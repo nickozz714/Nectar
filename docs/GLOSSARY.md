@@ -22,7 +22,8 @@
 | **scope** | visibility of a memory: `org` / `team` / `account` |
 | **sensitivity** | `intern` / `gevoelig` classification (a flag; real PII is blocked) |
 | **anchor** | a project topic that biases recall toward that project's subtree |
-| **focus** | per-account/project steering state (goal, steps, guardrails) re-injected each prompt |
+| **focus** | steering state (goal, steps, guardrails) re-injected each prompt, per account + project + **lane** |
+| **lane** | one focus track inside a project, bound to a client session token (or a name) — lets parallel sessions each hold their own focus |
 | **gap** | a query that repeatedly returned nothing — tracked as missing knowledge |
 
 ## Governance

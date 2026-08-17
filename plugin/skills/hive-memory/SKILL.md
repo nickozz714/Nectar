@@ -84,10 +84,15 @@ backend it was using). Antidote: the **active focus**, re-injected at the top of
 every prompt (stays in the high-attention zone, survives compaction).
 
 - Starting a multi-step task or one with constraints → `focus_set(goal, steps, guardrails,
-  done_when)`. Put the hard do/don't rules in `guardrails` (e.g. "work in the BACKEND via the
-  API; the frontend is only for step 3 — a few clicks; nothing else there").
+  done_when, session)`. Put the hard do/don't rules in `guardrails` (e.g. "work in the BACKEND via
+  the API; the frontend is only for step 3 — a few clicks; nothing else there").
+- **One focus per session (a "lane"), not per project.** Your recall block prints your lane token
+  (`sessiebaan a1b2c3d4`, or `(baan: …)` behind the active task). Pass it as `session="…"` to
+  every focus call, so parallel sessions in the same project don't overwrite each other's focus.
+  `name="…"` labels a lane (and lets a fresh session resume it); `focus_list()` shows which lanes
+  are running in this project.
 - When a "## ▶ Actieve taak" block is in your context, it is authoritative: re-read it before
-  each step, and call `focus_advance(completed_step, note)` when a step is done.
+  each step, and call `focus_advance(session, completed_step, note)` when a step is done.
 - If the request or your impulse departs from the plan/guardrails, say so and confirm — do
   not silently switch tasks. Finished? `focus_clear`.
 

@@ -174,6 +174,59 @@ def set_account_role(session: Session, org_uid: str, account_name: str, role: st
     return record is not None
 
 
+def set_account_role_by_uid(session: Session, org_uid: str, account_uid: str, role: str) -> dict | None:
+    """Same as set_account_role but addressed by uid — what the GUI has in hand. Returns
+    {uid, name, previous} so the caller can audit-log the person's name."""
+    record = session.run(
+        """
+        MATCH (a:Account {org_uid: $org_uid, uid: $uid})
+        WITH a, a.role AS previous
+        SET a.role = $role
+        WITH a, previous
+        OPTIONAL MATCH (a)-[:HAS_TOKEN]->(t:Token)
+        SET t.role = $role
+        RETURN a.uid AS uid, a.name AS name, previous
+        """,
+        org_uid=org_uid, uid=account_uid, role=role,
+    ).single()
+    return dict(record) if record is not None else None
+
+
+def count_accounts_with_role(session: Session, org_uid: str, role: str) -> int:
+    """How many accounts in this org hold `role` — used to refuse demoting the last org_admin
+    (which would lock every human out of membership management)."""
+    record = session.run(
+        "MATCH (a:Account {org_uid: $org_uid}) WHERE a.role = $role RETURN count(a) AS n",
+        org_uid=org_uid, role=role,
+    ).single()
+    return record["n"] if record else 0
+
+
+def get_account(session: Session, org_uid: str, account_uid: str) -> dict | None:
+    record = session.run(
+        """
+        MATCH (a:Account {org_uid: $org_uid, uid: $uid})
+        RETURN a.uid AS uid, a.name AS name, a.person AS person, a.role AS role
+        """,
+        org_uid=org_uid, uid=account_uid,
+    ).single()
+    return dict(record) if record is not None else None
+
+
+def token_owner(session: Session, token_hash: str) -> dict | None:
+    """The account a token belongs to (with the token's own role) — lets an org_admin-only
+    endpoint check the token lives in the caller's own org before touching it."""
+    record = session.run(
+        """
+        MATCH (a:Account)-[:HAS_TOKEN]->(t:Token {hash: $hash})
+        RETURN a.uid AS account_uid, a.name AS account_name, a.org_uid AS org_uid,
+               a.role AS account_role, t.role AS token_role
+        """,
+        hash=token_hash,
+    ).single()
+    return dict(record) if record is not None else None
+
+
 def revoke_token(session: Session, token_hash: str) -> bool:
     record = session.run(
         "MATCH (t:Token {hash: $hash}) SET t.revoked = true RETURN t.hash AS hash",

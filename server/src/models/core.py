@@ -107,6 +107,7 @@ class RecallRequest(BaseModel):
     anchors: list[str] = []
     limit: int = 8
     project: str = ""  # project slug (HIVE_PROJECT) — scopes the active focus
+    session: str = ""  # client session id — picks THIS session's focus lane within the project
 
 
 class RecallResponse(BaseModel):
