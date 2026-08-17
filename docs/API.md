@@ -71,7 +71,9 @@ contradiction-scan, reclassify-sensitivity, train-ranker}` · `POST /graph/reind
 ### Admin / manage (org_admin, own account token)
 `/manage/accounts`, `/manage/tokens` (+ `/{hash}/rotate|revoke|role`, `/cleanup`),
 `/manage/invites` (+ `/{hash}/revoke`), `/manage/teams`, `/manage/swarm` + `/manage/swarm/consensus`,
-`GET /manage/settings` (read-only tuning view).
+`GET /manage/settings` (read-only tuning view) · `POST /manage/accounts/{uid}/role`
+(promote/demote a member — account + all its tokens; refuses removing the last org_admin) ·
+`POST /manage/tokens/{hash}/role` (one token only, org-scoped + audited).
 
 ### Skills, secrets, backup, focus
 `GET/POST /skills`, `GET /skills/{uid}` · `GET/PUT /secrets/{name}` (REST-only, audited) ·

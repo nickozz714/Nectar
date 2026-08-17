@@ -270,6 +270,21 @@ def list_accounts(
     return tenancy_repo.list_accounts(session, account.org_uid)
 
 
+@router.post("/accounts/{account_uid}/role")
+def set_account_role(
+    account_uid: str,
+    body: TokenRoleBody,
+    account: AuthedAccount = Depends(require_role("org_admin")),
+    session: Session = Depends(get_graph),
+):
+    """Promote/demote a member: the role lands on the account AND all its tokens. Refused when
+    it would remove the org's last org_admin."""
+    try:
+        return org_service.set_role_by_uid(session, account, account_uid, body.role)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.get("/accounts/{account_uid}/tokens")
 def list_tokens(
     account_uid: str,
@@ -299,12 +314,13 @@ def set_token_role(
     account: AuthedAccount = Depends(require_role("org_admin")),
     session: Session = Depends(get_graph),
 ):
-    """Bind a role to a specific token (member/maintainer/org_admin)."""
-    if body.role not in registration_repo.VALID_ROLES:
-        raise HTTPException(status_code=400, detail=f"role must be one of {registration_repo.VALID_ROLES}")
-    if not tenancy_repo.set_token_role(session, token_hash, body.role):
-        raise HTTPException(status_code=404, detail="Token not found")
-    return {"role": body.role}
+    """Bind a role to a specific token (member/maintainer/org_admin), leaving the owner
+    account's own role alone. Scoped to the caller's org and audited."""
+    try:
+        return org_service.set_token_role(session, account, token_hash, body.role)
+    except ValueError as exc:
+        status = 404 if "No such token" in str(exc) else 400
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
 @router.post("/tokens/{token_hash}/rotate", response_model=TokenOut)

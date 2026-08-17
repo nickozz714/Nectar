@@ -85746,6 +85746,15 @@ function distBars(obj, colorFn) {
 function pill(txt, cls = "") {
   return `<span class="pchip ${cls}">${esc(txt)}</span>`;
 }
+var ROLE_LABELS = {
+  member: "member \u2014 lezen & schrijven",
+  maintainer: "maintainer \u2014 + onderhoud",
+  org_admin: "org_admin \u2014 + leden & reviewen"
+};
+function roleSelect(id, current2, { inherit = false } = {}) {
+  const opts = (inherit ? [["", "\u2014 accountrol \u2014"]] : []).concat(Object.entries(ROLE_LABELS));
+  return `<select id="${id}" style="width:auto">${opts.map(([v2, l2]) => `<option value="${v2}"${(current2 || "") === v2 ? " selected" : ""}>${esc(l2)}</option>`).join("")}</select>`;
+}
 function fmt(ms) {
   return ms ? new Date(ms).toLocaleString("nl-NL") : "";
 }
@@ -86117,11 +86126,15 @@ var BEHEER_RENDER = {
           \u{1F511} ${esc(i2.role)} \xB7 ${i2.uses_left}\xD7 over ${i2.uses_left ? `<span class="abtn red" data-rvk="${esc(i2.code_hash)}">intrekken</span>` : `<span class="pchip">op</span>`}</div>`).join("")}</div></div>
     </div>
     <h3>\u{1F5DD}\uFE0F accounts & tokens <span class="abtn" id="tokClean" style="margin-left:8px">verlopen opruimen</span></h3>
+    <div style="color:var(--dim);margin-bottom:6px">rol wijzigen geldt voor het account <b>\xE9n al zijn tokens</b>; een token kan daarna apart lager gezet worden</div>
     <div id="accList">${accounts.map((a3) => `<div style="margin:6px 0">
       <div style="display:flex;gap:10px;align-items:center">
         <span style="flex:1"><b>${esc(a3.name)}</b>${a3.person ? ` <span style="color:var(--dim)">\xB7 ${esc(a3.person)}</span>` : ""}
           <span style="color:var(--dim)"> \u2014 ${a3.active}/${a3.tokens} tokens actief</span></span>
-        ${pill(a3.role, "amber")}<span class="abtn" data-toks="${a3.uid}">tokens</span></div>
+        ${roleSelect(`role-${a3.uid}`, a3.role)}
+        <span class="abtn amber" data-role-acc="${a3.uid}" data-role-name="${esc(a3.name)}">rol opslaan</span>
+        <span class="ok" id="roleOut-${a3.uid}"></span>
+        <span class="abtn" data-toks="${a3.uid}">tokens</span></div>
       <div id="tk-${a3.uid}"></div></div>`).join("")}</div>`;
     const A2 = { headers: {} };
     sec.querySelector("#accMake").onclick = async () => {
@@ -86182,13 +86195,44 @@ var BEHEER_RENDER = {
         alert(e2.message);
       }
     };
+    sec.querySelectorAll("[data-role-acc]").forEach((b2) => b2.onclick = async () => {
+      const uid = b2.dataset.roleAcc, out = sec.querySelector(`#roleOut-${uid}`);
+      const role = sec.querySelector(`#role-${uid}`).value;
+      if (!confirm(`Rol van ${b2.dataset.roleName} op "${role}" zetten? Dit geldt ook voor al zijn tokens.`)) return;
+      out.textContent = " bezig\u2026";
+      try {
+        const r2 = await api(`/manage/accounts/${uid}/role`, { method: "POST", body: JSON.stringify({ role }) });
+        out.textContent = ` \u2713 ${r2.previous || "?"} \u2192 ${r2.role}`;
+      } catch (e2) {
+        out.textContent = "";
+        alert(e2.message);
+      }
+    });
     sec.querySelectorAll("[data-toks]").forEach((b2) => b2.onclick = async () => {
       const box = sec.querySelector(`#tk-${b2.dataset.toks}`);
       const tks = await api(`/manage/accounts/${b2.dataset.toks}/tokens`);
       const fmtD = (ms) => ms ? new Date(ms).toLocaleDateString("nl-NL") : "\u2014";
-      box.innerHTML = tks.map((t2) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0 3px 20px;color:var(--dim)">
-        <span style="flex:1">${esc(t2.label || "(zonder label)")} \xB7 rol ${esc(t2.role || "accountrol")} \xB7 verloopt ${fmtD(t2.expires_at)}${t2.revoked ? " \xB7 <b>ingetrokken</b>" : ""}</span>
-        ${t2.revoked ? "" : `<span class="abtn" data-rot="${esc(t2.token_hash)}">rotate</span><span class="abtn red" data-rev="${esc(t2.token_hash)}">intrekken</span>`}</div>`).join("") || `<div class="empty" style="margin-left:20px">geen tokens</div>`;
+      box.innerHTML = tks.map((t2, i2) => `<div style="display:flex;gap:8px;align-items:center;margin:3px 0 3px 20px;color:var(--dim)">
+        <span style="flex:1">${esc(t2.label || "(zonder label)")} \xB7 verloopt ${fmtD(t2.expires_at)}${t2.revoked ? " \xB7 <b>ingetrokken</b>" : ""}</span>
+        ${t2.revoked ? "" : `${roleSelect(`trole-${b2.dataset.toks}-${i2}`, t2.role, { inherit: true })}
+          <span class="abtn" data-trole="${esc(t2.token_hash)}" data-trole-sel="trole-${b2.dataset.toks}-${i2}">rol</span>
+          <span class="abtn" data-rot="${esc(t2.token_hash)}">rotate</span><span class="abtn red" data-rev="${esc(t2.token_hash)}">intrekken</span>`}
+        <span class="ok" id="troleOut-${b2.dataset.toks}-${i2}"></span></div>`).join("") || `<div class="empty" style="margin-left:20px">geen tokens</div>`;
+      box.querySelectorAll("[data-trole]").forEach((x3) => x3.onclick = async () => {
+        const sel = box.querySelector(`#${x3.dataset.troleSel}`);
+        const out = box.querySelector(`#${x3.dataset.troleSel.replace("trole-", "troleOut-")}`);
+        const role = sel.value;
+        if (!role) {
+          alert("Kies een rol; '\u2014 accountrol \u2014' laten staan verandert niets. Zet de rol van het account zelf om de accountrol te wijzigen.");
+          return;
+        }
+        try {
+          await api(`/manage/tokens/${x3.dataset.trole}/role`, { method: "POST", body: JSON.stringify({ role }) });
+          out.textContent = " \u2713";
+        } catch (e2) {
+          alert(e2.message);
+        }
+      });
       box.querySelectorAll("[data-rot]").forEach((x3) => x3.onclick = async () => {
         try {
           const r2 = await api(`/manage/tokens/${x3.dataset.rot}/rotate`, { method: "POST" });

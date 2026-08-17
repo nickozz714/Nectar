@@ -26,15 +26,63 @@ def list_members(session: Session, account: AuthedAccount) -> list[dict]:
             for a in tenancy_repo.list_accounts(session, account.org_uid)]
 
 
+def _assert_not_last_org_admin(session: Session, org_uid: str, current_role: str, new_role: str) -> None:
+    """Refuse a demotion that would leave the org without a single org_admin — nobody could
+    then manage members, roles or tokens any more (only the operator admin token could)."""
+    if current_role == "org_admin" and new_role != "org_admin" \
+            and tenancy_repo.count_accounts_with_role(session, org_uid, "org_admin") <= 1:
+        raise ValueError("This is the last org_admin — promote someone else first, "
+                         "otherwise nobody can manage the org any more")
+
+
 def set_role(session: Session, account: AuthedAccount, target_name: str, role: str) -> dict:
     assert_role(account, "org_admin", "Changing roles")
     if role not in VALID_ROLES:
         raise ValueError(f"role must be one of: {', '.join(VALID_ROLES)}")
+    members = {a["name"]: a for a in tenancy_repo.list_accounts(session, account.org_uid)}
+    target = members.get(target_name)
+    if target is None:
+        raise ValueError(f"No account named '{target_name}' in your org")
+    _assert_not_last_org_admin(session, account.org_uid, target["role"], role)
     if not tenancy_repo.set_account_role(session, account.org_uid, target_name, role):
         raise ValueError(f"No account named '{target_name}' in your org")
     audit_repo.log(session, account.org_uid, account.uid, "set_role", target_name, {"role": role})
     return {"account": target_name, "role": role,
             "note": "role applied to the account and all its tokens"}
+
+
+def set_role_by_uid(session: Session, account: AuthedAccount, account_uid: str, role: str) -> dict:
+    """Promote/demote by account uid — what the GUI's member list works with. Applies the role
+    to the account AND all its tokens (the role is token-bound, so both must move)."""
+    assert_role(account, "org_admin", "Changing roles")
+    if role not in VALID_ROLES:
+        raise ValueError(f"role must be one of: {', '.join(VALID_ROLES)}")
+    target = tenancy_repo.get_account(session, account.org_uid, account_uid)
+    if target is None:
+        raise ValueError("No such account in your org")
+    _assert_not_last_org_admin(session, account.org_uid, target["role"], role)
+    updated = tenancy_repo.set_account_role_by_uid(session, account.org_uid, account_uid, role)
+    audit_repo.log(session, account.org_uid, account.uid, "set_role", updated["name"],
+                   {"role": role, "previous": updated["previous"]})
+    return {"uid": updated["uid"], "account": updated["name"], "role": role,
+            "previous": updated["previous"],
+            "note": "role applied to the account and all its tokens"}
+
+
+def set_token_role(session: Session, account: AuthedAccount, token_hash: str, role: str) -> dict:
+    """Bind a role to ONE token (a machine may be allowed less than its owner account). Scoped
+    to the caller's own org, and audited. The account's own role is left untouched."""
+    assert_role(account, "org_admin", "Changing roles")
+    if role not in VALID_ROLES:
+        raise ValueError(f"role must be one of: {', '.join(VALID_ROLES)}")
+    owner = tenancy_repo.token_owner(session, token_hash)
+    if owner is None or owner["org_uid"] != account.org_uid:
+        raise ValueError("No such token in your org")
+    if not tenancy_repo.set_token_role(session, token_hash, role):
+        raise ValueError("No such token in your org")
+    audit_repo.log(session, account.org_uid, account.uid, "set_token_role",
+                   owner["account_name"], {"role": role, "token": token_hash[:8] + "…"})
+    return {"account": owner["account_name"], "role": role, "token_hash": token_hash}
 
 
 def get_swarm_settings(session: Session, account: AuthedAccount) -> dict:
