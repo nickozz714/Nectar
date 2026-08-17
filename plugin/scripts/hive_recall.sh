@@ -18,12 +18,16 @@ INPUT=$(cat)
 
 BODY=$(printf '%s' "$INPUT" | python3 -c '
 import json, os, sys
-prompt = json.load(sys.stdin).get("prompt", "").strip()
+hook = json.load(sys.stdin)
+prompt = hook.get("prompt", "").strip()
 if not prompt:
     sys.exit(1)
 anchors = [a.strip() for a in os.environ.get("HIVE_ANCHORS", "").split(",") if a.strip()]
 project = os.environ.get("HIVE_PROJECT", "").strip()
-print(json.dumps({"query": prompt, "anchors": anchors, "project": project}))
+# The session id makes the focus PER SESSION (a "lane"): several Claude sessions can work
+# different tasks in the same project without overwriting each others active focus.
+sid = str(hook.get("session_id") or "").strip()
+print(json.dumps({"query": prompt, "anchors": anchors, "project": project, "session": sid}))
 ') || exit 0
 
 RESPONSE=$(curl -sf -m 10 -X POST "$HIVE_URL/recall" \

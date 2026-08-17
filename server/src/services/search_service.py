@@ -189,10 +189,11 @@ def search(
 _STEP_ICON = {"done": "✓", "current": "▶", "open": "○"}
 
 
-def render_focus(focus: dict) -> str:
+def render_focus(focus: dict, session_token: str = "") -> str:
     """Render the active focus as a compact, unmissable block. Injected FIRST on every
     prompt so the goal, plan and guardrails stay in the high-attention zone and survive
-    compaction — the antidote to mid-session drift."""
+    compaction — the antidote to mid-session drift. With a session_token the update hint
+    carries it, so the model keeps writing to ITS OWN lane instead of a sibling session's."""
     lines = [f"**Doel:** {focus.get('goal', '').strip()}"]
     steps = focus.get("steps") or []
     if steps:
@@ -209,10 +210,16 @@ def render_focus(focus: dict) -> str:
     notes = focus.get("notes") or []
     if notes:
         lines.append("**Laatste voortgang:** " + notes[-1])
+    if session_token:
+        update = (f'`focus_advance(session="{session_token}", completed_step=…, note=…)` — geef '
+                  "`session` altijd mee, dit is JOUW baan; parallelle sessies in dit project "
+                  "hebben hun eigen focus")
+    else:
+        update = "`focus_advance`"
     lines.append("_Herlees dit vóór elke stap. Wijkt de vraag hiervan af? Meld het eerst — "
                  "ga niet zomaar iets anders doen. Uitzondering: het aangeboden 🌼 Pollen "
                  "afhandelen telt níét als afwijken (mag ook via een background-subagent). "
-                 "Werk je stap af? Update met `focus_advance`._")
+                 f"Werk je stap af? Update met {update}._")
     return "\n".join(lines)
 
 

@@ -122,19 +122,33 @@ async function renderFocus() {
   const foci = await api("/focus");
   const list = Array.isArray(foci) ? foci : (foci ? [foci] : []);
   const stepTxt = s => typeof s === "string" ? s : (s.text ?? s.step ?? JSON.stringify(s));
-  const stepDone = s => typeof s === "object" && !!s.done;
-  body.innerHTML = (list.length ? list.map(f => `
+  const stepIcon = s => ({ done: "✓", current: "▶" }[typeof s === "object" ? s.status : ""] || "○");
+  const stepDone = s => typeof s === "object" && s.status === "done";
+  // Meerdere banen (lanes) per project: elke sessie steert zijn eigen focus. De baan-pill laat
+  // zien welke dat is (label of sleutel; "" = project-breed) plus hoeveel sessies eraan hangen.
+  const laneLbl = f => f.label || (f.lane ? f.lane : "project-breed");
+  const perProject = new Map();
+  list.forEach(f => {
+    const key = f.project || "";
+    if (!perProject.has(key)) perProject.set(key, []);
+    perProject.get(key).push(f);
+  });
+  const cards = [...perProject.entries()].map(([proj, foci]) => `
+    <h3>${esc(proj || "(geen project)")} · ${foci.length} ${foci.length === 1 ? "baan" : "banen"}</h3>
+    ` + foci.map(f => `
     <div class="card">
       <div class="ct">🎯 ${esc(f.goal || "(zonder doel)")}</div>
-      <div class="crow">${f.project ? pill("project: " + f.project) : ""}${f.done_when ? pill("klaar: " + f.done_when, "amber") : ""}</div>
+      <div class="crow">${pill("baan: " + laneLbl(f), f.lane ? "amber" : "")}${(f.sessions || []).length ? pill((f.sessions || []).length + "× sessie") : ""}${f.done_when ? pill("klaar: " + f.done_when, "amber") : ""}${f.last_seen ? pill("gezien: " + fmt(f.last_seen)) : ""}</div>
       ${(f.steps || []).map(s => `
         <div style="display:flex;gap:9px;align-items:center;margin:3px 0;${stepDone(s) ? "opacity:.45" : ""}">
-          <span>${stepDone(s) ? "✓" : "○"}</span><span style="flex:1">${esc(stepTxt(s))}</span>
-          ${stepDone(s) ? "" : `<span class="abtn green" data-adv="${esc(stepTxt(s))}" data-proj="${esc(f.project || "")}">✓ afronden</span>`}
+          <span>${stepIcon(s)}</span><span style="flex:1">${esc(stepTxt(s))}</span>
+          ${stepDone(s) ? "" : `<span class="abtn green" data-adv="${esc(stepTxt(s))}" data-proj="${esc(f.project || "")}" data-lane="${esc(f.lane || "")}">✓ afronden</span>`}
         </div>`).join("")}
       ${f.guardrails ? `<div class="cex">guardrails: ${esc(Array.isArray(f.guardrails) ? f.guardrails.join(" · ") : f.guardrails)}</div>` : ""}
-      <div class="crow" style="margin-top:8px"><span class="abtn red" data-clear="${esc(f.project || "")}">✕ focus wissen</span></div>
-    </div>`).join("") : `<div class="empty">Geen actieve focus — hieronder zet je er één.</div>`) + `
+      ${(f.notes || []).length ? `<div class="cex">voortgang: ${esc(f.notes[f.notes.length - 1])}</div>` : ""}
+      <div class="crow" style="margin-top:8px"><span class="abtn red" data-clear="${esc(f.project || "")}" data-lane="${esc(f.lane || "")}">✕ baan wissen</span></div>
+    </div>`).join("")).join("");
+  body.innerHTML = (list.length ? cards : `<div class="empty">Geen actieve focus — hieronder zet je er één.</div>`) + `
     <h3>nieuwe focus</h3>
     <div class="card">
       <div style="display:flex;flex-direction:column;gap:8px">
@@ -142,13 +156,17 @@ async function renderFocus() {
         <textarea id="fSteps" rows="4" placeholder="stappen — één per regel"></textarea>
         <input type="text" id="fGuard" placeholder="guardrails (optioneel)">
         <input type="text" id="fDone" placeholder="klaar wanneer… (optioneel)">
+        <div style="display:flex;gap:8px">
+          <input type="text" id="fProj" placeholder="project (optioneel)" style="flex:1">
+          <input type="text" id="fName" placeholder="baan-naam (optioneel)" style="flex:1">
+        </div>
         <div><span class="abtn amber" id="fSet">focus zetten</span><span class="ok" id="fOut"></span></div>
       </div></div>`;
   body.querySelectorAll("[data-adv]").forEach(b => b.onclick = async () => {
-    try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b.dataset.adv, project: b.dataset.proj }) }); renderFocus(); }
+    try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b.dataset.adv, project: b.dataset.proj, lane: b.dataset.lane }) }); renderFocus(); }
     catch (e) { alert(e.message); } });
   body.querySelectorAll("[data-clear]").forEach(b => b.onclick = async () => {
-    try { await api(`/focus?project=${encodeURIComponent(b.dataset.clear)}`, { method: "DELETE" }); renderFocus(); }
+    try { await api(`/focus?project=${encodeURIComponent(b.dataset.clear)}&lane=${encodeURIComponent(b.dataset.lane)}`, { method: "DELETE" }); renderFocus(); }
     catch (e) { alert(e.message); } });
   body.querySelector("#fSet").onclick = async () => {
     const goal = body.querySelector("#fGoal").value.trim();
@@ -156,7 +174,9 @@ async function renderFocus() {
     try {
       await api("/focus", { method: "POST", body: JSON.stringify({
         goal, steps: body.querySelector("#fSteps").value.split("\n").map(s => s.trim()).filter(Boolean),
-        guardrails: body.querySelector("#fGuard").value.trim(), done_when: body.querySelector("#fDone").value.trim() }) });
+        guardrails: body.querySelector("#fGuard").value.split(/[·;]|,\s/).map(s => s.trim()).filter(Boolean),
+        done_when: body.querySelector("#fDone").value.trim(),
+        project: body.querySelector("#fProj").value.trim(), name: body.querySelector("#fName").value.trim() }) });
       renderFocus();
     } catch (e) { alert(e.message); }
   };

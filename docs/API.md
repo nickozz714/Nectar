@@ -11,7 +11,7 @@ models how to use recall + write + feedback out of the box.
 
 | Tool | Does |
 |---|---|
-| `hive_recall(query, anchors?, project?)` | **The main entry point.** Returns the full context block: active focus + standing instructions + top-ranked memories + one contextual Pollen. Client-agnostic. |
+| `hive_recall(query, anchors?, session?)` | **The main entry point.** Returns the full context block: the caller's active focus (its lane) + standing instructions + top-ranked memories + one contextual Pollen. Client-agnostic. |
 | `hive_search(query, tags?)` | Ranked search hits (no rejuvenation). |
 | `hive_get(uid)` | One memory + its files/relations (scope-checked). |
 | `hive_remember(type, title, content, scope, …)` | Write a memory through the write-gate. |
@@ -24,7 +24,7 @@ models how to use recall + write + feedback out of the box.
 | `hive_resolve_chore(uid, apply\|reject)` | Resolve a consensus Pollen. |
 | `hive_resolve_think(uid, ADD\|UPDATE\|DELETE\|NOOP, …)` | Resolve an `op_route` near-duplicate think-Pollen. |
 | `hive_resolve_contradiction(uid, contradiction\|compatible, current?, outdated?)` | Judge a contradiction-check think-Pollen. |
-| `focus_set` / `focus_advance` / `focus_get` / `focus_clear` | The active-task steering state (per project). |
+| `focus_set` / `focus_advance` / `focus_get` / `focus_list` / `focus_clear` | The active-task steering state, one focus per **lane** (`session` token or `name`) within a project — parallel sessions don't overwrite each other. |
 | `skill_put` / `skill_get` / `skill_list` / `workflow_put` | File-backed skills & workflows. |
 | `topic_create` / `topic_list` / `topic_merge` / `node_move` | Structure the graph. |
 | `hive_attachments` | Attach/list files on a memory. |
@@ -75,8 +75,9 @@ contradiction-scan, reclassify-sensitivity, train-ranker}` · `POST /graph/reind
 
 ### Skills, secrets, backup, focus
 `GET/POST /skills`, `GET /skills/{uid}` · `GET/PUT /secrets/{name}` (REST-only, audited) ·
-`GET /export`, `POST /import?mode=merge|replace` (org_admin) · `GET/POST /focus`, `/focus/advance`,
-`DELETE /focus`.
+`GET /export`, `POST /import?mode=merge|replace` (org_admin) · `GET /focus?project=`, `POST /focus`,
+`POST /focus/advance`, `POST /focus/bind` (attach a session to a lane),
+`DELETE /focus?project=&lane=&all_lanes=`.
 
 ### Auth & sign-up
 `POST /auth/login`, `/auth/password`, `/auth/password/for` · `GET /register`, `POST /register` ·

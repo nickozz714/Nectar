@@ -14,6 +14,7 @@ def recall(
     anchors: list[str] | None = None,
     project: str = "",
     limit: int = 8,
+    session_id: str = "",
 ) -> dict:
     """Compose the full recall context for a task — the same block the Claude Code hook injects
     automatically, now shared so ANY MCP client can pull it on demand via the hive_recall tool:
@@ -39,9 +40,28 @@ def recall(
     ready = governance_repo.ready_count(session, account)
     parts: list[str] = []
     # Active focus first: the current task/plan/guardrails, kept in the high-attention zone.
-    focus = focus_repo.get_focus(session, account, project=project or "")
+    # Resolved per LANE: with a session id the caller sees ITS OWN focus, so several sessions can
+    # work different tasks in one project without overwriting each other. No lane of its own ->
+    # the project-wide focus (lane ""), the original behaviour.
+    token = focus_repo.session_token(session_id)
+    focus = focus_repo.get_focus(session, account, project=project or "", session_id=session_id)
     if focus and focus.get("goal"):
-        parts.append("## ▶ Actieve taak — blijf hierbij\n" + search_service.render_focus(focus))
+        head = "## ▶ Actieve taak — blijf hierbij"
+        lane_name = focus.get("label") or (focus["lane"] if focus["lane"] else "")
+        if lane_name:
+            head += f" (baan: {lane_name})"
+        parts.append(head + "\n" + search_service.render_focus(focus, session_token=token))
+        if token:
+            focus_repo.touch(session, account, project or "", focus["lane"])
+    elif token and project:
+        # No focus yet: hand the session its lane token so the focus it sets is ITS OWN and a
+        # parallel session in this project can't overwrite it.
+        parts.append(
+            f"_Sessiebaan `{token}` (project `{project}`) — leg een taak met meerdere stappen "
+            f"vast met `focus_set(..., session=\"{token}\")`, dan houdt elke parallelle sessie "
+            "in dit project zijn eigen focus._")
+    if token:
+        focus_repo.prune_stale(session, account)
     if system:
         parts.append("## Nectar — vaste instructies (altijd van toepassing)\n"
                      + search_service.render_system(system))

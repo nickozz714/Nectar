@@ -36,6 +36,13 @@ MIGRATIONS = [
         WHEN n.type IN ['convention', 'decision', 'learning'] OR coalesce(n.use_count, 0) >= 3 THEN 'mature'
         ELSE 'validated' END
     """,
+    # Focus lanes: a focus is now keyed by (account, project, LANE) so parallel sessions in one
+    # project each steer their own task. Legacy foci become the project-wide lane ("").
+    """
+    MATCH (f:HiveFocus) WHERE f.lane IS NULL
+    SET f.lane = '', f.label = coalesce(f.label, ''), f.sessions = coalesce(f.sessions, []),
+        f.last_seen = coalesce(f.last_seen, f.updated)
+    """,
 ]
 
 

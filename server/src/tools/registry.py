@@ -53,7 +53,8 @@ def _project() -> str:
 
 
 @mcp.tool
-def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8) -> str:
+def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8,
+                session: str = "") -> str:
     """Load the organization's relevant knowledge for your CURRENT task — the same context the
     Claude Code hook injects automatically, so ANY MCP client (Cursor, Cline, Windsurf, your own
     agent, …) can tap the shared brain the same way. Returns the active focus, the standing
@@ -61,10 +62,13 @@ def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8) ->
 
     Call this at the START of a task and whenever the topic shifts. Afterwards, tell the brain
     what actually helped with hive_feedback(node_uid, helped) so recall keeps improving. Pass
-    `anchors` (your project's topic titles) to bias ranking toward that project."""
-    with _authed() as (session, account):
+    `anchors` (your project's topic titles) to bias ranking toward that project. Pass `session`
+    (your client's session id) to get YOUR focus lane instead of the project-wide focus — that
+    is what lets several sessions run their own task in one project."""
+    with _authed() as (graph, account):
         from src.services import recall_service
-        return recall_service.recall(session, account, query, anchors=anchors, limit=limit)["context"]
+        return recall_service.recall(graph, account, query, anchors=anchors, limit=limit,
+                                     project=_project(), session_id=session)["context"]
 
 
 @mcp.tool
@@ -461,7 +465,7 @@ def session_delete(name: str) -> dict:
 
 @mcp.tool
 def focus_set(goal: str, steps: list, guardrails: list[str] | None = None,
-              done_when: str = "") -> dict:
+              done_when: str = "", session: str = "", name: str = "") -> dict:
     """Set (or replace) your ACTIVE FOCUS: the current multi-step task. It is re-injected at
     the top of recall on EVERY prompt, so it stays in the model's high-attention zone and
     survives compaction — the fix for long sessions drifting off-course. Use it whenever a
@@ -471,42 +475,70 @@ def focus_set(goal: str, steps: list, guardrails: list[str] | None = None,
     - guardrails: hard do/don't rules that prevent drift, e.g. "work in the BACKEND via the
       API; the frontend is only for step 3 (a few clicks), nothing else there".
     - done_when: how you know it's finished.
-    Update progress with focus_advance as you go; clear it with focus_clear when done."""
-    with _authed() as (session, account):
+    - session: YOUR LANE TOKEN — the `sessiebaan`/`baan` token printed in your recall block.
+      ALWAYS pass it: it gives this session its own focus lane, so parallel sessions working
+      different tasks in the SAME project don't overwrite each other's focus. Omit it only if
+      you deliberately want the single project-wide focus that every session sees.
+    - name: optional human name for the lane ("ollama-migratie"). Pass it together with
+      `session` to join/resume an existing named lane (e.g. after a /clear gave you a new
+      session), or just to label your lane in the GUI.
+    Update progress with focus_advance (same `session`); clear it with focus_clear when done.
+    See the lanes running in this project with focus_list."""
+    with _authed() as (graph, account):
         if not goal.strip():
             raise ValueError("goal is required")
-        return focus_repo.set_focus(session, account, goal, steps, guardrails,
-                                    done_when, project=_project())
+        return focus_repo.set_focus(graph, account, goal, steps, guardrails,
+                                    done_when, project=_project(),
+                                    session_id=session, name=name)
 
 
 @mcp.tool
-def focus_advance(completed_step: str | int | None = None, note: str | None = None) -> dict:
+def focus_advance(completed_step: str | int | None = None, note: str | None = None,
+                  session: str = "", name: str = "") -> dict:
     """Update your active focus as you make progress: mark a step done (by its 1-based number
     or its text) — the next open step becomes current — and/or append a short progress note.
-    Call this at the end of each step so the re-injected plan always reflects where you are."""
-    with _authed() as (session, account):
-        updated = focus_repo.advance_focus(session, account, completed_step, note,
-                                           project=_project())
+    Call this at the end of each step so the re-injected plan always reflects where you are.
+    Pass `session` (your lane token from the recall block) so you update YOUR lane and not a
+    parallel session's focus; `name` addresses a named lane instead."""
+    with _authed() as (graph, account):
+        updated = focus_repo.advance_focus(graph, account, completed_step, note,
+                                           project=_project(), session_id=session, name=name)
         if updated is None:
-            raise ValueError("No active focus — set one with focus_set first")
+            raise ValueError("No active focus for this lane — set one with focus_set first")
         return updated
 
 
 @mcp.tool
-def focus_get() -> dict:
-    """Return your current active focus (goal, steps with status, guardrails, notes)."""
-    with _authed() as (session, account):
-        focus = focus_repo.get_focus(session, account, project=_project())
+def focus_get(session: str = "", name: str = "") -> dict:
+    """Return your current active focus (goal, steps with status, guardrails, notes). Pass
+    `session` (your lane token) for YOUR lane, or `name` for a named lane; without either you
+    get the project-wide focus."""
+    with _authed() as (graph, account):
+        focus = focus_repo.get_focus(graph, account, project=_project(),
+                                     session_id=session, name=name)
         if focus is None:
             return {"active": False}
         return {"active": True, **focus}
 
 
 @mcp.tool
-def focus_clear() -> dict:
-    """Clear your active focus — the task is done or abandoned, stop re-injecting it."""
-    with _authed() as (session, account):
-        return {"cleared": focus_repo.clear_focus(session, account, project=_project())}
+def focus_list() -> list[dict]:
+    """List every active focus LANE in this project — what each parallel session in this
+    project is working on. Use it to avoid colliding with a sibling session, or to find the
+    lane name to resume with focus_set(..., name=...)."""
+    with _authed() as (graph, account):
+        return focus_repo.list_for(graph, account, project=_project())
+
+
+@mcp.tool
+def focus_clear(session: str = "", name: str = "", all_lanes: bool = False) -> dict:
+    """Clear your active focus — the task is done or abandoned, stop re-injecting it. Pass
+    `session` (your lane token) to clear only YOUR lane, `name` for a named lane, or
+    all_lanes=True to wipe every lane in this project."""
+    with _authed() as (graph, account):
+        removed = focus_repo.clear_focus(graph, account, project=_project(),
+                                         session_id=session, name=name, all_lanes=all_lanes)
+        return {"cleared": removed > 0, "removed": removed}
 
 
 @mcp.tool
