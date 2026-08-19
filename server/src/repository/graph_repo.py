@@ -170,6 +170,22 @@ def find_or_create_topic(
         ).single()
         if hit:
             return {"uid": hit["uid"], "title": hit["title"], "created": False}
+    # Same failure, other shape: hanging a learning under the SKILL it came from is the
+    # documented pattern, but MERGE-on-title only ever matches a :Topic — so it built a Topic
+    # doppelganger beside the skill and the skill's own lessons ended up on the twin instead.
+    # An existing skill/workflow with this exact title IS the node the caller meant.
+    # Note: only :Topic nodes carry title_key, so this matches on the title itself.
+    twin = session.run(
+        """
+        MATCH (n:Knowledge {org_uid: $org_uid})
+        WHERE n.type IN ['skill', 'workflow'] AND toLower(n.title) = toLower($title)
+          AND coalesce(n.archived, false) = false
+        RETURN n.uid AS uid, n.title AS title
+        """,
+        org_uid=org_uid, title=title.strip(),
+    ).single()
+    if twin:
+        return {"uid": twin["uid"], "title": twin["title"], "created": False}
     record = session.run(
         """
         MERGE (t:Topic:Knowledge {org_uid: $org_uid, title_key: toLower($title)})

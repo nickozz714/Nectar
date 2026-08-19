@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from src.repository import graph_repo
-from src.services import curation_service, memory_service, search_service
+from src.services import curation_service, memory_service, search_service, skill_service
 
 
 def _mem(graph, acc, title, content, topics, tags=None):
@@ -119,3 +119,43 @@ def test_bulk_tags_and_nodes_brief(graph, account):
     ])
     assert out["updated"] == 2
     assert set(graph_repo.get_node(graph, maint, a["uid"])["tags"]) == {"swinkels", "fabric"}
+
+
+# ---- A topic reference must resolve to the node the caller meant ------------------------------
+# Both bugs below were found in the live hive: MERGE-on-title only ever matches a :Topic, so a
+# caller naming anything else silently got a NEW topic — and the knowledge split across the twin.
+
+def test_moving_a_node_under_a_skill_hangs_it_on_the_skill_not_a_topic_twin(graph, account):
+    """Hanging a learning under the skill it came from is the documented pattern. It built a
+    Topic doppelganger beside the skill instead, so the skill never gained its own lessons."""
+    acc = account("nick", role="org_admin")
+    skill = skill_service.put_skill(graph, acc, "silver-validation (capability)",
+                                    "Een silver-domein naar GROEN valideren.",
+                                    [{"path": "SKILL.md", "content": "# silver-validation"}],
+                                    [], scope="org")
+    mem = memory_service.remember(graph, acc, "learning", "Nul weesrijen bewijst geen juiste join",
+                                  "Een anti-join vindt geen kinderen aan de VERKEERDE ouder.",
+                                  [], scope="org")
+    curation_service.move_node(graph, acc, mem["uid"], "silver-validation (capability)")
+
+    parents = graph_repo.parent_titles(graph, [mem["uid"]])[mem["uid"]]
+    assert parents == ["silver-validation (capability)"]
+    kids = [c["uid"] for c in graph_repo.get_node(graph, acc, skill["uid"])["children"]]
+    assert mem["uid"] in kids          # on the skill itself
+    twins = [t for t in graph_repo.list_topics(graph, acc)
+             if t["title"] == "silver-validation (capability)"]
+    assert twins == []                 # and no Topic twin was created
+
+
+def test_a_uid_passed_where_a_title_belongs_resolves_to_that_topic(graph, account):
+    """An agent holding a uid readily passes it as the topic. That created a topic literally
+    NAMED after the other one's uid — it happened: a '6f789c7b-…' topic beside ND3X."""
+    acc = account("nick", role="org_admin")
+    topic = curation_service.create_topic(graph, acc, "ND3X")
+    mem = memory_service.remember(graph, acc, "memory", "ND3X routing per project",
+                                  "Routing staat uitsluitend op projectniveau.", [], scope="org")
+    curation_service.move_node(graph, acc, mem["uid"], topic["uid"])
+
+    assert graph_repo.parent_titles(graph, [mem["uid"]])[mem["uid"]] == ["ND3X"]
+    assert [t["title"] for t in graph_repo.list_topics(graph, acc)].count("ND3X") == 1
+    assert topic["uid"] not in [t["title"] for t in graph_repo.list_topics(graph, acc)]
