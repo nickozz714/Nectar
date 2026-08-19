@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from neo4j import Session
 
 from src.authentication.deps import AuthedAccount
@@ -16,7 +18,9 @@ KNOWLEDGE_TYPES = {
     "learning": "Learning",
 }
 # Learnings and conventions/decisions are durable — their value is stability, so they decay slowly.
-STABLE_TYPES = {"convention", "decision", "learning"}
+# Skills and their process steps too: a way of working stays valid however long ago it was last
+# run, and with the fast half-life a skill nobody used for two months sank out of recall entirely.
+STABLE_TYPES = {"convention", "decision", "learning", "skill", "process", "workflow"}
 
 # Visibility: org-wide, own team, or own account. Comparisons with NULL are falsy in Cypher.
 VISIBLE = (
@@ -150,9 +154,22 @@ def parent_titles(session: Session, uids: list[str]) -> dict[str, list[str]]:
     return {r["uid"]: r["parents"] for r in result}
 
 
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
 def find_or_create_topic(
     session: Session, org_uid: str, title: str, account_uid: str, embedding: list[float] | None = None
 ) -> dict:
+    # Callers pass a topic by TITLE, but an agent holding a uid readily passes that instead —
+    # and MERGE-on-title then silently creates a second topic literally named after the first
+    # one's uid, splitting its knowledge in two. Resolve a uid-shaped title to the real node.
+    if _UUID_RE.match(title.strip()):
+        hit = session.run(
+            "MATCH (t:Topic {org_uid: $org_uid, uid: $uid}) RETURN t.uid AS uid, t.title AS title",
+            org_uid=org_uid, uid=title.strip().lower(),
+        ).single()
+        if hit:
+            return {"uid": hit["uid"], "title": hit["title"], "created": False}
     record = session.run(
         """
         MERGE (t:Topic:Knowledge {org_uid: $org_uid, title_key: toLower($title)})
