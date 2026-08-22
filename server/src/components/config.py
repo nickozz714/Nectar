@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     DECISION_BOOST: float = 0.1
     # Learnings are always high priority — a hard-won lesson must surface above ordinary recall.
     LEARNING_BOOST: float = 0.3
+    # A skill/workflow that fits the task must surface too. Without this it competed on raw
+    # similarity while learnings carried a boost, so recall kept offering the LESSONS about a
+    # way of working and never the way of working itself — and a client only discovers its
+    # LOCAL skills, so an unsurfaced hive skill is effectively invisible.
+    SKILL_BOOST: float = 0.3
     # A node whose tag appears in the search query gets a ranking nudge (tags count in search).
     TAG_BOOST: float = 0.12
     # Recall-hook injection budget (anti "context rot"): inject only a FEW, highly-relevant

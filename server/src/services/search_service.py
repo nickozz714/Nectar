@@ -73,7 +73,7 @@ def _worth(node: dict) -> float:
 
 # ---- Ranking = dot(features, weights). The weights are the hand-tuned defaults until a
 # ---- learning-to-rank model is trained from feedback (then those weights take over). ----
-FEATURE_KEYS = ("sim", "freshness", "anchor", "decision", "learning", "tag",
+FEATURE_KEYS = ("sim", "freshness", "anchor", "decision", "learning", "skill", "tag",
                 "superseded", "bloom", "importance", "worth", "pagerank")
 
 
@@ -85,6 +85,7 @@ def _features(node: dict, sim: float, now_ms: float, anchor_uids: set, qlow: str
         "anchor": 1.0 if node["uid"] in anchor_uids else 0.0,
         "decision": 1.0 if node.get("type") == "decision" else 0.0,
         "learning": 1.0 if node.get("type") == "learning" else 0.0,
+        "skill": 1.0 if node.get("type") in ("skill", "workflow") else 0.0,
         "tag": 1.0 if any(t in qlow for t in (node.get("tags") or [])) else 0.0,
         "superseded": 1.0 if node.get("superseded_by") else 0.0,
         "bloom": s.BLOOM_BOOST.get(node.get("lifecycle"), 0.0),
@@ -97,7 +98,8 @@ def _features(node: dict, sim: float, now_ms: float, anchor_uids: set, qlow: str
 def _default_weights() -> tuple[dict, float]:
     s = get_settings()
     return ({"sim": s.SEMANTIC_WEIGHT, "freshness": s.FRESHNESS_WEIGHT, "anchor": s.ANCHOR_BOOST,
-             "decision": s.DECISION_BOOST, "learning": s.LEARNING_BOOST, "tag": s.TAG_BOOST,
+             "decision": s.DECISION_BOOST, "learning": s.LEARNING_BOOST,
+             "skill": s.SKILL_BOOST, "tag": s.TAG_BOOST,
              "superseded": -s.SUPERSEDE_PENALTY, "bloom": 1.0, "importance": s.IMPORTANCE_WEIGHT,
              "worth": s.OUTCOME_WEIGHT, "pagerank": s.PAGERANK_WEIGHT}, 0.0)
 
@@ -243,8 +245,17 @@ def render_results(results: list[dict]) -> str:
         snippet = (node.get("content") or "").strip().replace("\n", " ")
         if len(snippet) > 220:
             snippet = snippet[:220] + "…"
-        lines.append(f"- [{node.get('type')}] **{node.get('title')}** ({topics}) — {snippet} "
-                     f"(uid: {node.get('uid')})")
+        line = (f"- [{node.get('type')}] **{node.get('title')}** ({topics}) — {snippet} "
+                f"(uid: {node.get('uid')})")
+        # A surfaced skill is useless without the next step: a client discovers only its LOCAL
+        # skills, so say out loud that this one exists in the hive and how to pull it in.
+        # Deliberately only skill_get: some skills carry installable files, others are
+        # graph-native capabilities with none, and skill_get is the one call right for both.
+        if node.get("type") in ("skill", "workflow"):
+            line += (f"\n  ↳ Hive-{node.get('type')}, niet lokaal geïnstalleerd. Past hij bij je "
+                     f"taak? Laad hem met `skill_get(\"{node.get('uid')}\")` — dat geeft de "
+                     f"werkwijze plus eventuele bestanden — en werk ernaar.")
+        lines.append(line)
     return "\n".join(lines)
 
 

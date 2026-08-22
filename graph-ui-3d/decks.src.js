@@ -19,10 +19,13 @@ let ME = null;
 let current = null;          // open deck-naam
 let host, body, tabsEl, titleEl;
 
+/* [sleutel, label, alleen-voor-org_admin] */
 const DECKS = [
-  ["focus", "◎ focus"], ["chores", "🌼 pollinate"], ["review", "☑ review"],
-  ["governance", "⚖ governance"], ["beheer", "⚙ beheer"],
+  ["focus", "◎ focus"], ["chores", "🌼 pollinate"], ["review", "☑ review", true],
+  ["governance", "⚖ governance"], ["historie", "🕘 historie", true], ["beheer", "⚙ beheer"],
 ];
+const ADMIN_ONLY = new Set(DECKS.filter(d => d[2]).map(d => d[0]));
+let onJump = null;         // (uid) => void — springt in de mind naar die node
 
 const CSS = `
 #deck { position: fixed; inset: 0; z-index: 18; background: rgba(2,4,9,.6);
@@ -128,12 +131,19 @@ function roleSelect(id, current, { inherit = false } = {}) {
 function fmt(ms) { return ms ? new Date(ms).toLocaleString("nl-NL") : ""; }
 
 /* ─── Focus ─────────────────────────────────────────────────────────── */
+/* welke baan staat open in het formulier: null = nieuw, anders de baan zelf (bewerken) */
+let focusEdit = null;
+const stepTxt = s => typeof s === "string" ? s : (s.text ?? s.step ?? JSON.stringify(s));
+const stepDone = s => typeof s === "object" && s.status === "done";
+/* stappen als tekst, met de legacy-conventie: regels die met "x " beginnen zijn afgerond */
+const stepsToText = steps => (steps || []).map(s => (stepDone(s) ? "x " : "") + stepTxt(s)).join("\n");
+const textToSteps = t => t.split("\n").map(l => l.trim()).filter(Boolean).map(l =>
+  l.toLowerCase().startsWith("x ") ? { text: l.slice(2).trim(), status: "done" } : { text: l, status: "open" });
+
 async function renderFocus() {
   const foci = await api("/focus");
   const list = Array.isArray(foci) ? foci : (foci ? [foci] : []);
-  const stepTxt = s => typeof s === "string" ? s : (s.text ?? s.step ?? JSON.stringify(s));
   const stepIcon = s => ({ done: "✓", current: "▶" }[typeof s === "object" ? s.status : ""] || "○");
-  const stepDone = s => typeof s === "object" && s.status === "done";
   // Meerdere banen (lanes) per project: elke sessie steert zijn eigen focus. De baan-pill laat
   // zien welke dat is (label of sleutel; "" = project-breed) plus hoeveel sessies eraan hangen.
   const laneLbl = f => f.label || (f.lane ? f.lane : "project-breed");
@@ -156,39 +166,64 @@ async function renderFocus() {
         </div>`).join("")}
       ${f.guardrails ? `<div class="cex">guardrails: ${esc(Array.isArray(f.guardrails) ? f.guardrails.join(" · ") : f.guardrails)}</div>` : ""}
       ${(f.notes || []).length ? `<div class="cex">voortgang: ${esc(f.notes[f.notes.length - 1])}</div>` : ""}
-      <div class="crow" style="margin-top:8px"><span class="abtn red" data-clear="${esc(f.project || "")}" data-lane="${esc(f.lane || "")}">✕ baan wissen</span></div>
+      <div class="crow" style="margin-top:8px">
+        <span class="abtn" data-edit="${esc(JSON.stringify({ project: f.project || "", lane: f.lane || "" }))}">✎ bewerken</span>
+        <span class="abtn" data-note="${esc(f.project || "")}" data-lane="${esc(f.lane || "")}">✎ voortgangsnotitie</span>
+        <span class="abtn red" data-clear="${esc(f.project || "")}" data-lane="${esc(f.lane || "")}">✕ baan wissen</span></div>
     </div>`).join("")).join("");
+  /* één formulier, twee standen: nieuwe focus of een bestaande baan bewerken */
+  const f = focusEdit;
   body.innerHTML = (list.length ? cards : `<div class="empty">Geen actieve focus — hieronder zet je er één.</div>`) + `
-    <h3>nieuwe focus</h3>
+    <h3>${f ? "focus bewerken" : "nieuwe focus"}</h3>
     <div class="card">
       <div style="display:flex;flex-direction:column;gap:8px">
-        <input type="text" id="fGoal" placeholder="doel…">
-        <textarea id="fSteps" rows="4" placeholder="stappen — één per regel"></textarea>
-        <input type="text" id="fGuard" placeholder="guardrails (optioneel)">
-        <input type="text" id="fDone" placeholder="klaar wanneer… (optioneel)">
+        <label class="fl">doel — wat bereiken we, in één zin</label>
+        <input type="text" id="fGoal" placeholder="doel…" value="${esc(f?.goal || "")}">
+        <label class="fl">stappen — één per regel; begin met 'x ' voor afgerond</label>
+        <textarea id="fSteps" rows="5">${esc(stepsToText(f?.steps))}</textarea>
+        <label class="fl">guardrails — één per regel; harde wel/niet-regels</label>
+        <textarea id="fGuard" rows="3">${esc((f?.guardrails || []).join("\n"))}</textarea>
+        <label class="fl">klaar wanneer…</label>
+        <input type="text" id="fDone" placeholder="definition of done" value="${esc(f?.done_when || "")}">
         <div style="display:flex;gap:8px">
-          <input type="text" id="fProj" placeholder="project (optioneel)" style="flex:1">
-          <input type="text" id="fName" placeholder="baan-naam (optioneel)" style="flex:1">
+          <input type="text" id="fProj" placeholder="project (optioneel)" style="flex:1" value="${esc(f?.project || "")}" ${f ? "readonly" : ""}>
+          <input type="text" id="fName" placeholder="baan-naam (optioneel)" style="flex:1" value="${esc(f ? (f.label || f.lane || "") : "")}" ${f ? "readonly" : ""}>
         </div>
-        <div><span class="abtn amber" id="fSet">focus zetten</span><span class="ok" id="fOut"></span></div>
+        <div><span class="abtn amber" id="fSet">${f ? "opslaan" : "focus zetten"}</span>
+          ${f ? `<span class="abtn" id="fCancel">annuleren</span>` : ""}<span class="ok" id="fOut"></span></div>
       </div></div>`;
   body.querySelectorAll("[data-adv]").forEach(b => b.onclick = async () => {
     try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b.dataset.adv, project: b.dataset.proj, lane: b.dataset.lane }) }); renderFocus(); }
     catch (e) { alert(e.message); } });
-  body.querySelectorAll("[data-clear]").forEach(b => b.onclick = async () => {
-    try { await api(`/focus?project=${encodeURIComponent(b.dataset.clear)}&lane=${encodeURIComponent(b.dataset.lane)}`, { method: "DELETE" }); renderFocus(); }
+  body.querySelectorAll("[data-note]").forEach(b => b.onclick = async () => {
+    const note = prompt("Voortgangsnotitie:");
+    if (!note) return;
+    try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ note, project: b.dataset.note, lane: b.dataset.lane }) }); renderFocus(); }
     catch (e) { alert(e.message); } });
+  body.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
+    const key = JSON.parse(b.dataset.edit);
+    focusEdit = list.find(x => (x.project || "") === key.project && (x.lane || "") === key.lane) || null;
+    renderFocus();
+  });
+  body.querySelectorAll("[data-clear]").forEach(b => b.onclick = async () => {
+    if (!confirm("Deze baan wissen?")) return;
+    try { await api(`/focus?project=${encodeURIComponent(b.dataset.clear)}&lane=${encodeURIComponent(b.dataset.lane)}`, { method: "DELETE" });
+      focusEdit = null; renderFocus(); }
+    catch (e) { alert(e.message); } });
+  if (f) body.querySelector("#fCancel").onclick = () => { focusEdit = null; renderFocus(); };
   body.querySelector("#fSet").onclick = async () => {
     const goal = body.querySelector("#fGoal").value.trim();
-    if (!goal) return;
-    try {
-      await api("/focus", { method: "POST", body: JSON.stringify({
-        goal, steps: body.querySelector("#fSteps").value.split("\n").map(s => s.trim()).filter(Boolean),
-        guardrails: body.querySelector("#fGuard").value.split(/[·;]|,\s/).map(s => s.trim()).filter(Boolean),
-        done_when: body.querySelector("#fDone").value.trim(),
-        project: body.querySelector("#fProj").value.trim(), name: body.querySelector("#fName").value.trim() }) });
-      renderFocus();
-    } catch (e) { alert(e.message); }
+    if (!goal) { alert("Doel is verplicht"); return; }
+    const payload = {
+      goal, steps: textToSteps(body.querySelector("#fSteps").value),
+      guardrails: body.querySelector("#fGuard").value.split("\n").map(s => s.trim()).filter(Boolean),
+      done_when: body.querySelector("#fDone").value.trim(),
+      project: body.querySelector("#fProj").value.trim(),
+    };
+    /* bewerken: stuur de exacte baan-sleutel mee, anders zou dit een nieuwe baan openen */
+    if (f) payload.lane = f.lane || ""; else payload.name = body.querySelector("#fName").value.trim();
+    try { await api("/focus", { method: "POST", body: JSON.stringify(payload) }); focusEdit = null; renderFocus(); }
+    catch (e) { alert(e.message); }
   };
 }
 
@@ -204,13 +239,18 @@ async function renderChores() {
       v.similarity != null ? pill("gelijkenis " + Number(v.similarity).toFixed(2)) : "",
       c.votes ? pill(c.votes + " stem(men)") : "",
       c.claimed_by_name ? pill(`🐝 ${c.claim_active ? "geclaimd" : "eerder geclaimd"} door ${c.claimed_by_name}`) : ""].join("");
+    /* niet-ready pollen wachten op consensus; alleen een org_admin mag die bypassen (geaudit) */
+    const wait = `<span class="pchip">wacht op meer stemmen (consensus)</span>`;
+    const ready = c.status === "ready";
     let buttons = "";
     if (v.route === "op_route") {
-      buttons = ["ADD", "REPLACE", "DELETE", "NOOP"].map(d =>
+      buttons = !ready ? wait : ["ADD", "REPLACE", "DELETE", "NOOP"].map(d =>
         `<span class="abtn" data-think="${d}" data-uid="${c.uid}">${d.toLowerCase()}</span>`).join("") +
-        `<span class="abtn amber" data-merge="${c.uid}">⇄ samenvoegen aanvragen</span>`;
+        (v.merge_requested
+          ? `<span class="pchip amber">samenvoegen aangevraagd · wacht op de zwerm</span>`
+          : `<span class="abtn amber" data-merge="${c.uid}">⇄ samenvoegen aanvragen</span>`);
     } else if (v.route === "contradiction") {
-      buttons = `<span class="abtn green" data-contra="compatible" data-uid="${c.uid}">verenigbaar</span>
+      buttons = !ready ? wait : `<span class="abtn green" data-contra="compatible" data-uid="${c.uid}">verenigbaar</span>
         <span class="abtn" data-contra="a" data-uid="${c.uid}">A is actueel</span>
         <span class="abtn" data-contra="b" data-uid="${c.uid}">B is actueel</span>`;
     } else if (v.route === "human") {
@@ -218,9 +258,15 @@ async function renderChores() {
     } else if (c.type === "cognition") {
       buttons = `<span class="pchip">onderzoekswerk voor een agent (websearch)</span>
         <span class="abtn red" data-res="reject" data-uid="${c.uid}">✕ taak laten vervallen</span>`;
-    } else {
+    } else if (ready) {
       buttons = `<span class="abtn green" data-res="apply" data-uid="${c.uid}">✓ toepassen</span>
         <span class="abtn red" data-res="reject" data-uid="${c.uid}">✕ afwijzen</span>`;
+    } else if (ME?.can_review) {
+      buttons = `<span class="abtn green" data-res="apply" data-direct="1" data-uid="${c.uid}">✓ direct toepassen</span>
+        <span class="abtn red" data-res="reject" data-direct="1" data-uid="${c.uid}">✕ afwijzen</span>
+        <span class="pchip">org_admin — bypasst consensus (geaudit)</span>`;
+    } else {
+      buttons = wait;
     }
     return `<div class="card"><div class="ct">${esc(v.headline || c.type)}</div>
       <div class="crow">${chips}</div>
@@ -231,13 +277,14 @@ async function renderChores() {
   const done = (data.resolved || []).slice(0, 12).map(c => {
     const ok = c.status === "resolved";
     return `<div style="opacity:.65;margin:4px 0">${ok ? "✓" : "✗"} ${esc(c.view?.headline || c.type)}
-      <span style="color:var(--dim)"> — ${ok ? "toegepast" : "afgewezen"}${c.resolved_by_name ? " door " + esc(c.resolved_by_name) : ""}${c.resolved ? " · " + fmt(c.resolved) : ""}</span></div>`;
+      <span style="color:var(--dim)"> — ${ok ? "toegepast" : "afgewezen"}${c.resolved_by_name ? " door " + esc(c.resolved_by_name) : ""}${c.resolved ? " · " + fmt(c.resolved) : ""}</span>
+      ${c.resolution ? `<div class="cex">${esc(c.resolution)}</div>` : ""}</div>`;
   }).join("");
   body.innerHTML = `<div class="crow"><span class="stat"><b>${data.ready ?? 0}</b><span>ready</span></span>
     <span class="stat"><b>${(data.chores || []).length}</b><span>open</span></span></div>
     <h3>open / actief</h3>${cards}<h3>afgehandeld</h3>${done || `<div class="empty">nog niets</div>`}`;
   body.querySelectorAll("[data-res]").forEach(b => b.onclick = () => act(() =>
-    api(`/graph/chores/${b.dataset.uid}/resolve?action=${b.dataset.res}${ME?.can_review ? "&direct=true" : ""}`,
+    api(`/graph/chores/${b.dataset.uid}/resolve?action=${b.dataset.res}${b.dataset.direct ? "&direct=true" : ""}`,
         { method: "POST", body: JSON.stringify({ note: "via mind" }) })));
   body.querySelectorAll("[data-think]").forEach(b => b.onclick = () => act(() =>
     api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: b.dataset.uid, decision: b.dataset.think, note: "via mind" }) })));
@@ -285,7 +332,7 @@ async function renderGovernance() {
       audit = `<h3>📜 audit-trail (laatste ${rows.length})</h3>` + rows.map(e => `
         <div style="margin:7px 0;border-left:2px solid var(--line);padding-left:10px">
           <div style="color:var(--dim);font-size:10px">${fmt(e.at)}</div>
-          <div><b>${esc(e.action)}</b> · ${esc(e.account || "systeem")}${e.target_title ? ` — ${esc(e.target_title)}` : ""}</div>
+          <div><b>${esc(histLabel(e.action))}</b> · ${esc(e.account || "systeem")}${e.target_title ? ` — ${esc(e.target_title)}` : ""}</div>
           ${detTxt(e.detail) ? `<div style="color:var(--dim)">${detTxt(e.detail)}</div>` : ""}
         </div>`).join("");
     } catch {}
@@ -314,6 +361,61 @@ async function renderGovernance() {
     ${(g.sensitive_nodes || []).map(n => `<div style="margin:3px 0"><span class="ddot" style="background:#ff6a45"></span>${esc(n.title)} ${pill(n.type)}</div>`).join("")
       || `<div class="empty">niets gemarkeerd — schoon</div>`}
     ${audit}`;
+}
+
+/* ─── Historie (audit-trail, org_admin) ─────────────────────────────── */
+/* Nederlandse namen voor de audit-acties — anders leest de historie als logregels. */
+const HIST_LABELS = { remember: "onthouden", create_topic: "topic aangemaakt", move_node: "verplaatst",
+  merge_topics: "topics samengevoegd", delete: "verwijderd", suggest: "wijziging voorgesteld",
+  resolve_chore: "pollen afgehandeld", admin_resolve_chore: "pollen afgehandeld (admin)",
+  attach: "bijlage toegevoegd", attach_delete: "bijlage verwijderd", set_system: "systeemvlag gezet",
+  set_role: "rol gewijzigd", invite_create: "uitnodiging aangemaakt", login: "ingelogd",
+  login_entra: "ingelogd (Microsoft)", login_entra_provision: "account aangemaakt (Microsoft)",
+  password_set: "wachtwoord ingesteld", password_set_for: "wachtwoord ingesteld voor",
+  secret_set: "secret opgeslagen", secret_get: "secret gelezen", secret_read: "secret gelezen",
+  skill_create: "skill aangemaakt", skill_update: "skill bijgewerkt",
+  workflow_create: "workflow aangemaakt", workflow_update: "workflow bijgewerkt",
+  approve_scope_widening: "scope-verbreding goedgekeurd", supersede: "vervangen (superseded)",
+  resolve_contradiction: "tegenspraak afgehandeld", resolve_think: "denk-pollen afgehandeld",
+  lifecycle: "levensfase gewijzigd", set_importance: "belang aangepast", set_decay: "verval aangepast",
+  reclassify_sensitivity: "gevoeligheid herbeoordeeld", pagerank_scan: "pagerank herberekend",
+  contradiction_scan: "tegenspraak-scan", linkpred_scan: "link-predictie", tidy_scan: "opruim-scan",
+  staleness_scan: "staleness-scan", relate: "gekoppeld", unlink: "koppeling verwijderd",
+  reembed: "opnieuw ge-embed", train_ranker: "ranker getraind", feedback: "feedback gegeven",
+  invite_revoke: "uitnodiging ingetrokken", token_rotate: "token geroteerd", token_revoke: "token ingetrokken",
+  create_account: "account aangemaakt", create_token: "token aangemaakt",
+  set_consensus: "consensus-drempel gewijzigd", set_default_ui: "standaardinterface gewijzigd" };
+const histLabel = a => HIST_LABELS[a] || (a || "").replace(/_/g, " ");
+function timeAgo(ms) {
+  if (!ms) return "";
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return "zojuist";
+  const m = Math.floor(s / 60); if (m < 60) return m + " min geleden";
+  const h = Math.floor(m / 60); if (h < 24) return h + " uur geleden";
+  const d = Math.floor(h / 24); if (d < 7) return d + (d > 1 ? " dagen" : " dag") + " geleden";
+  return new Date(ms).toLocaleDateString("nl-NL");
+}
+
+async function renderHistorie() {
+  const ev = await api("/graph/audit?limit=200");
+  body.innerHTML = `<div style="color:var(--dim);margin-bottom:10px">alles wat er in de hive gebeurde — mens én zwerm. klik een naam om de node in de mind op te zoeken.</div>` +
+    (ev.length ? ev.map(e => {
+      let detail = {}; try { detail = JSON.parse(e.detail || "{}"); } catch {}
+      const name = e.target_title || detail.title || (UIDISH(e.target || "") ? "(verwijderd)" : (e.target || ""));
+      const shown = name.length > 64 ? name.slice(0, 63) + "…" : name;
+      /* alleen nog bestaande nodes zijn klikbaar — de rest is historie zonder bestemming */
+      const tgt = e.target_title
+        ? `<span class="abtn" data-jump="${esc(e.target)}">${esc(shown)}</span>`
+        : (shown ? `<span style="color:var(--dim)">${esc(shown)}</span>` : "");
+      return `<div style="margin:7px 0;border-left:2px solid var(--line);padding-left:10px">
+        <div style="color:var(--dim);font-size:10px">${timeAgo(e.at)} · ${esc(e.account || "systeem")}</div>
+        <div><b>${esc(histLabel(e.action))}</b> ${tgt}</div></div>`;
+    }).join("") : `<div class="empty">nog geen gebeurtenissen</div>`);
+  body.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
+    if (!onJump) return;
+    close();
+    onJump(b.dataset.jump);
+  });
 }
 
 /* ─── Beheer ────────────────────────────────────────────────────────── */
@@ -386,13 +488,14 @@ const BEHEER_RENDER = {
         <div style="display:flex;gap:8px;align-items:baseline"><b>${esc(it.key)}</b>
           <span class="pchip">${esc(String(it.value))}</span>${it.editable ? `<span class="pchip amber">live hierboven</span>` : ""}</div>
         ${it.what ? `<div style="color:var(--dim)">${esc(it.what)}</div>` : ""}
-        ${it.risk ? `<details><summary>risico</summary><div style="color:var(--dim)">⚠️ ${esc(it.risk)}${it.env ? ` — aanpasbaar via ${esc(it.env)} in .env + rebuild` : ""}</div></details>` : ""}
+        <details><summary>aanpassen &amp; risico</summary>
+          <div style="color:var(--dim)">${it.editable ? "live aanpasbaar hierboven — direct actief."
+            : it.env ? `aanpasbaar via ${esc(it.env)} in <code>.env</code>, daarna <code>docker compose up -d --build</code>.`
+            : "niet aanpasbaar."}</div>
+          ${it.risk ? `<div style="color:var(--dim)">⚠️ ${esc(it.risk)}</div>` : ""}
+        </details>
       </div>`).join("")}</div>`).join("");
     sec.innerHTML = `
-      <div class="card"><div class="ct">🖥️ standaardinterface</div>
-        <div style="color:var(--dim)">waar leden na inloggen landen — beide blijven bereikbaar</div>
-        <div class="crow"><span class="abtn ${ME.default_ui !== "mind" ? "amber" : ""}" data-ui="legacy">legacy</span>
-          <span class="abtn ${ME.default_ui === "mind" ? "amber" : ""}" data-ui="mind">mind 3d</span><span class="ok" id="uiOut"></span></div></div>
       <div class="card"><div class="ct">🐝 consensus-drempel <span class="pchip amber">live</span></div>
         <div style="color:var(--dim)">stemmen (per account) voordat een Pollinate 'ready' wordt</div>
         <div class="crow"><input type="number" id="consN" min="1" style="width:80px" value="${s.consensus_threshold}">
@@ -401,10 +504,8 @@ const BEHEER_RENDER = {
         <div style="color:var(--dim)">nieuwe memories krijgen een research-taak; budget: max ${s.cognition_budget?.max_new}/job · ${s.cognition_budget?.max_depth} rondes · ${s.cognition_budget?.daily_cap}/dag</div>
         <div class="crow"><span class="abtn ${s.cognition_enabled ? "green" : ""}" data-cog="true">aan</span>
           <span class="abtn ${!s.cognition_enabled ? "red" : ""}" data-cog="false">uit</span><span class="ok" id="cogOut"></span></div></div>
-      <h3>zo staat het brein afgesteld (via .env, actief na herstart)</h3>${knobHtml}`;
-    sec.querySelectorAll("[data-ui]").forEach(b => b.onclick = async () => {
-      try { await api("/manage/ui-default", { method: "POST", body: JSON.stringify({ ui: b.dataset.ui }) });
-        ME.default_ui = b.dataset.ui; BEHEER_RENDER.instellingen(sec); } catch (e) { alert(e.message); } });
+      <h3>zo staat het brein afgesteld (via .env, actief na herstart)</h3>
+      <div style="color:var(--dim);margin:-4px 0 10px">alleen de twee knoppen hierboven zijn live; de rest zet je in <b>.env</b>, gevolgd door <code>docker compose up -d --build</code>. klap "risico" open voor wat er misgaat als je eraan draait.</div>${knobHtml}`;
     sec.querySelector("#consSave").onclick = async () => {
       try { await api("/manage/swarm/consensus", { method: "POST", body: JSON.stringify({ threshold: +sec.querySelector("#consN").value }) });
         sec.querySelector("#consOut").textContent = " ✓"; } catch (e) { alert(e.message); } };
@@ -551,16 +652,37 @@ const BEHEER_RENDER = {
       ${skills.map(sk => { const cmd = `~/.hivemind/scripts/hive-skill-install.sh "${sk.title}"`;
         return `<div style="margin:8px 0"><b>✨ ${esc(sk.title)}</b>
           <div style="display:flex;gap:8px;align-items:center"><code style="flex:1;color:var(--dim);font-size:10.5px">${esc(cmd)}</code>
-          <span class="abtn" data-copy="${esc(cmd)}">kopieer</span></div></div>`; }).join("") || `<div class="empty">nog geen skills in de hive</div>`}`;
+          <span class="abtn" data-view="${esc(sk.uid)}">bekijken</span>
+          ${onJump ? `<span class="abtn" data-node="${esc(sk.uid)}">naar node</span>` : ""}
+          <span class="abtn" data-copy="${esc(cmd)}">kopieer</span></div>
+          <div id="sk-${esc(sk.uid)}"></div></div>`; }).join("") || `<div class="empty">nog geen skills in de hive</div>`}`;
     sec.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
       navigator.clipboard?.writeText(b.dataset.copy); b.textContent = "✓"; setTimeout(() => b.textContent = "kopieer", 1200); });
+    sec.querySelectorAll("[data-node]").forEach(b => b.onclick = () => { close(); onJump?.(b.dataset.node); });
+    /* bekijken = de bestanden van de skill uitklappen, zoals in de legacy-GUI */
+    sec.querySelectorAll("[data-view]").forEach(b => b.onclick = async () => {
+      const box = sec.querySelector(`[id="sk-${b.dataset.view}"]`);
+      if (box.dataset.open === "1") { box.innerHTML = ""; box.dataset.open = ""; b.textContent = "bekijken"; return; }
+      box.innerHTML = `<div style="color:var(--dim)">laden…</div>`;
+      try {
+        const s = await api("/skills/" + b.dataset.view);
+        const files = (s.files || []).map(f =>
+          `<div style="margin-top:8px"><div style="color:var(--cyan);font-size:10.5px">${esc(f.path)}</div>
+            <div class="cex" style="max-height:260px">${esc(f.content)}</div></div>`).join("");
+        box.innerHTML = `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+          ${s.description ? `<div style="color:var(--dim)">${esc(s.description)}</div>` : ""}
+          ${files || `<div class="empty">deze skill heeft geen bestanden</div>`}</div>`;
+        box.dataset.open = "1"; b.textContent = "verbergen";
+      } catch (e) { box.innerHTML = `<div style="color:#ff7847">${esc(e.message)}</div>`; }
+    });
   },
 };
 
 /* ─── raamwerk ──────────────────────────────────────────────────────── */
 const RENDER = { focus: renderFocus, chores: renderChores, review: renderReview,
-                 governance: renderGovernance, beheer: renderBeheer };
-const TITLES = { focus: "focus", chores: "pollinate", review: "review", governance: "governance", beheer: "beheer" };
+                 governance: renderGovernance, historie: renderHistorie, beheer: renderBeheer };
+const TITLES = { focus: "focus", chores: "pollinate", review: "review",
+                 governance: "governance", historie: "historie", beheer: "beheer" };
 
 function build() {
   const style = document.createElement("style"); style.textContent = CSS; document.head.appendChild(style);
@@ -579,11 +701,11 @@ function build() {
 
 async function open(name) {
   if (!host) build();
-  if (!ME) { try { ME = await api("/graph/me"); } catch { location.replace("/ui"); return; } }
-  if (name === "review" && !ME.can_review) name = "chores";
+  if (!ME) { try { ME = await api("/graph/me"); } catch { location.reload(); return; } }
+  if (ADMIN_ONLY.has(name) && !ME.can_review) name = "chores";
   current = name;
   titleEl.textContent = TITLES[name] || name;
-  tabsEl.innerHTML = DECKS.filter(([k]) => k !== "review" || ME.can_review).map(([k, l]) =>
+  tabsEl.innerHTML = DECKS.filter(([k]) => !ADMIN_ONLY.has(k) || ME.can_review).map(([k, l]) =>
     `<span class="chip ${k === current ? "on" : ""}" data-deck="${k}">${l}${k === "chores" && ME.ready_chores ? ` <b style="color:var(--amber)">${ME.ready_chores}</b>` : ""}</span>`).join("");
   tabsEl.querySelectorAll("[data-deck]").forEach(c => c.onclick = () => open(c.dataset.deck));
   host.classList.add("on");
@@ -594,4 +716,7 @@ async function open(name) {
 function close() { host?.classList.remove("on"); current = null; }
 function isOpen() { return !!host?.classList.contains("on"); }
 
-export const Decks = { open, close, isOpen };
+/* mind.src.js geeft hier de spring-naar-node callback door (historie → de 3D-mind) */
+function init(opts = {}) { onJump = opts.onJump || null; }
+
+export const Decks = { open, close, isOpen, init };
