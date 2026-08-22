@@ -51,14 +51,18 @@ var require_cockpit_src = __commonJS({
     var cards = /* @__PURE__ */ new Map();
     var pendingRemove = /* @__PURE__ */ new Map();
     var wireAnim = 0;
-    var SERVER = location.pathname.startsWith("/ui/");
+    var SERVER = location.pathname.startsWith("/ui");
     var TOKEN = SERVER ? localStorage.getItem("hive_token") || "" : "";
-    if (SERVER && !TOKEN) location.replace("/ui");
+    var reauth = () => {
+      localStorage.removeItem("hive_token");
+      location.replace("/ui");
+    };
+    if (SERVER && !TOKEN) reauth();
     var AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : void 0;
     async function loadData() {
       const r = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
       if (SERVER && (r.status === 401 || r.status === 403)) {
-        location.replace("/ui");
+        reauth();
         throw new Error("login");
       }
       if (!r.ok) throw new Error(`data.json: HTTP ${r.status}`);
@@ -734,7 +738,7 @@ Dit kan niet ongedaan worden gemaakt.`)) return;
     function initEmbed() {
       if (SERVER && !EMBED) {
         const v = document.getElementById("variants");
-        if (v) v.innerHTML = `<a class="chip" href="/ui/mind">\u25C2 mind</a><a class="chip" href="/ui#legacy">\u2302 legacy</a>`;
+        if (v) v.innerHTML = `<a class="chip" href="/ui/mind">\u25C2 mind</a>`;
       }
       if (!EMBED) return;
       document.getElementById("variants")?.remove();

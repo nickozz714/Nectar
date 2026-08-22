@@ -28,16 +28,19 @@ const UID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const titleOf = n => UID_RE.test(n.title) ? "(naamloos topic)" : n.title;
 const trunc = (s, max) => s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
 
-/* server-modus: geserveerd op /ui/mind draait deze pagina tegen de echte API met de
-   GUI-login (Bearer uit localStorage); standalone (dev) valt hij terug op serve.py */
-const SERVER = location.pathname.startsWith("/ui/");
+/* server-modus: geserveerd op /ui (en /ui/mind) draait deze pagina tegen de echte API met de
+   GUI-login (Bearer uit localStorage — de gate in mind.html zette 'm daar neer);
+   standalone (dev) valt hij terug op serve.py */
+const SERVER = location.pathname.startsWith("/ui");
 const TOKEN = SERVER ? (localStorage.getItem("hive_token") || "") : "";
-if (SERVER && !TOKEN) location.replace("/ui");
+/* token weg of verlopen → herladen; de gate vangt 'm dan op met het loginscherm */
+const reauth = () => { localStorage.removeItem("hive_token"); location.reload(); };
+if (SERVER && !TOKEN) reauth();
 const AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : undefined;
 const NODE_URL = id => SERVER ? `/graph/node/${id}` : `/api/node/${id}`;
 
 const res = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
-if (SERVER && (res.status === 401 || res.status === 403)) location.replace("/ui");
+if (SERVER && (res.status === 401 || res.status === 403)) reauth();
 const data = await res.json();
 if (data.error) {
   el("splash").innerHTML = `<div class="t" style="color:#ff7847">hive onbereikbaar: ${esc(data.error)}</div>`;
@@ -122,6 +125,30 @@ function systemData(topicId) {
     links.push({ source: inId, target: outId, __kind: "portal" });
   }
   return { nodes, links };
+}
+
+/* ---- typefilter + legenda (bottom-left HUD) --------------------------------
+   Hetzelfde filter als de legacy-GUI: types uitzetten haalt ze uit de 3D én uit
+   de zoekresultaten. De chips zijn tegelijk de legenda (kleur per type). */
+const ALL_TYPES = Object.keys(COLORS);
+const activeTypes = new Set((() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("mind_types") || "null");
+    const ok = Array.isArray(saved) ? saved.filter(t => ALL_TYPES.includes(t)) : [];
+    return ok.length ? ok : ALL_TYPES;
+  } catch { return ALL_TYPES; }
+})());
+const typeVisible = t => activeTypes.has(t);
+const allTypesOn = () => activeTypes.size === ALL_TYPES.length;
+
+/* filter een dataset; de zon van het huidige stelsel blijft altijd staan (anders leeg scherm) */
+function filtered(dataset) {
+  if (allTypesOn()) return dataset;
+  const keep = new Set(dataset.nodes.filter(n => typeVisible(n.type) || n.__role === "sun").map(n => n.id));
+  return {
+    nodes: dataset.nodes.filter(n => keep.has(n.id)),
+    links: dataset.links.filter(l => keep.has(linkSrc(l)) && keep.has(linkTgt(l))),
+  };
 }
 
 /* ---- rendering: donkere kern + emissive typekleur + additive halo ---- */
@@ -339,7 +366,8 @@ function enterSystem(topicId, opts = {}) {
       state.level = 2; state.topicId = topicId;
       closePanel();
       tuneForces(2);
-      Graph.graphData(systemData(topicId));
+      state.sysData = systemData(topicId);
+      Graph.graphData(filtered(state.sysData));
       Graph.cameraPosition({ x: 0, y: 50, z: 235 }, { x: 0, y: 0, z: 0 }, 0);
       history.replaceState(null, "", `#t=${topicId}`);
       updateHud();
@@ -380,7 +408,7 @@ function backToGalaxy() {
       state.level = 1; state.topicId = null;
       closePanel();
       tuneForces(state.overview === "organism" ? "organism" : 1);
-      Graph.graphData(state.overview === "organism" ? organismData : galaxyData);
+      Graph.graphData(filtered(state.overview === "organism" ? organismData : galaxyData));
       Graph.cameraPosition({ x: 0, y: 0, z: state.overview === "organism" ? 1400 : 860 }, { x: 0, y: 0, z: 0 }, 0);
       setTimeout(() => Graph.zoomToFit(900, state.overview === "organism" ? 140 : 70), 500);
       history.replaceState(null, "", location.pathname);
@@ -680,7 +708,8 @@ let searchSeq = 0, searchTimer;
 searchEl.addEventListener("input", () => {
   const q = searchEl.value.trim().toLowerCase();
   if (q.length < 2) { resultsEl.style.display = "none"; return; }
-  const local = searchable.filter(n => n.title.toLowerCase().includes(q)).slice(0, 12);
+  /* het typefilter geldt ook hier — anders klik je een hit aan die niet in beeld staat */
+  const local = searchable.filter(n => typeVisible(n.type) && n.title.toLowerCase().includes(q)).slice(0, 12);
   renderResults(local);
   if (!SERVER) return;
   /* de semantische hive-zoek denkt even na (embeddings + reranker) — toon dat */
@@ -695,7 +724,7 @@ searchEl.addEventListener("input", () => {
       const seen = new Set(local.map(n => n.id));
       const extra = (sem || []).map(r => {
         const live = nodeById.get(r.uid);
-        return live && !seen.has(live.id) ? { ...live, __sem: true } : null;
+        return live && !seen.has(live.id) && typeVisible(live.type) ? { ...live, __sem: true } : null;
       }).filter(Boolean);
       renderResults([...local, ...extra].slice(0, 14));
     } catch (err) {
@@ -738,7 +767,7 @@ el("btnMode").onclick = () => {
     state.overview = state.overview === "organism" ? "galaxy" : "organism";
     closePanel();
     tuneForces(state.overview === "organism" ? "organism" : 1);
-    Graph.graphData(state.overview === "organism" ? organismData : galaxyData);
+    Graph.graphData(filtered(state.overview === "organism" ? organismData : galaxyData));
     Graph.cameraPosition({ x: 0, y: 0, z: state.overview === "organism" ? 1400 : 900 }, { x: 0, y: 0, z: 0 }, 0);
     setTimeout(() => Graph.zoomToFit(1200, state.overview === "organism" ? 140 : 70), 1100);
     updateHud();
@@ -830,35 +859,120 @@ el("btnArchive").onclick = async () => {
 };
 drill.addEventListener("click", e => { if (e.target === drill) closeDrill(); });
 
+/* ---- springen naar een node: vanuit zoekresultaten, historie en skills ---- */
+function goToNode(id) {
+  const n = nodeById.get(id);
+  if (!n) { alert("die node bestaat niet meer in deze mind — herlaad de pagina"); return; }
+  if (n.type === "topic") { enterSystem(n.id, { fromSystem: state.level === 2, drill: false }); return; }
+  const tid = parentTopic.get(n.id);
+  if (!tid) { select(n, false); return; }
+  if (state.level === 2 && state.topicId === tid) {
+    const live = Graph.graphData().nodes.find(x => x.id === id);
+    select(live || n, !!live);
+  } else enterSystem(tid, { selectId: id, fromSystem: state.level === 2, drill: false });
+}
+
 /* ---- server-modus: variant-switcher wordt navigatie naar de rest van Nectar ---- */
 if (SERVER) {
-  /* elke Nectar-functie heeft hier z'n eigen deck — nooit terug naar de legacy-pagina */
+  /* elke Nectar-functie heeft hier z'n eigen deck — dit is de enige interface */
+  Decks.init({ onJump: goToNode });
   const v = el("variants");
+  v.style.flexWrap = "wrap";
+  v.style.justifyContent = "flex-end";
+  v.style.maxWidth = "52vw";
   v.innerHTML =
     `<span class="chip" data-deck="focus">◎ focus</span>
      <span class="chip" data-deck="chores">🌼 pollinate<span id="navBadge"></span></span>
      <span class="chip" data-deck="governance">⚖ governance</span>
      <span class="chip" data-deck="beheer">⚙ beheer</span>
-     <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">⌂ legacy</a>`;
+     <span class="chip" id="btnTopic" title="Maak een nieuw topic aan">＋ topic</span>
+     <span class="chip" id="btnAcct" title="Wachtwoord wijzigen of uitloggen">◍ account</span>`;
   v.querySelectorAll("[data-deck]").forEach(c => c.onclick = () => Decks.open(c.dataset.deck));
+
+  el("btnTopic").onclick = async () => {
+    const title = prompt("Naam van het nieuwe topic:");
+    if (!title) return;
+    const parent = prompt("Onder welk bestaand topic hangen? (leeg = top-level)") || "";
+    try {
+      await apiJ("/graph/topics", { method: "POST", body: JSON.stringify({ title, parent_topic: parent }) });
+      if (confirm(`Topic "${title}" aangemaakt. De mind opnieuw laden om 'm te zien?`)) location.reload();
+    } catch (e) { alert(e.message); }
+  };
+
+  el("btnAcct").onclick = async () => {
+    const what = prompt(`Ingelogd als ${MEg?.name || "?"} (${MEg?.role || "?"}).\n\n` +
+      `Typ "wachtwoord" om een nieuw wachtwoord te zetten, of "uitloggen" om af te melden.`);
+    if (!what) return;
+    if (what.toLowerCase().startsWith("uit")) { reauth(); return; }
+    if (!what.toLowerCase().startsWith("wacht")) return;
+    const pw = prompt(`Nieuw wachtwoord (min. 8 tekens) voor '${MEg?.name}':`);
+    if (!pw) return;
+    try {
+      await apiJ("/auth/password", { method: "POST", body: JSON.stringify({ password: pw }) });
+      alert(`Wachtwoord ingesteld. Je kunt nu inloggen met '${MEg?.name}' + wachtwoord.`);
+    } catch (e) { alert(e.message); }
+  };
+
   fetch("/graph/me", AUTH).then(r => r.json()).then(me => {
     MEg = me;
+    el("btnAcct").textContent = `◍ ${me.name} · ${me.role}`;
     if (me.ready_chores) {
       const b = document.getElementById("navBadge");
       if (b) { b.textContent = ` ${me.ready_chores}`; b.style.color = "var(--amber)"; b.style.fontWeight = "700"; }
     }
     if (me.can_review) {
-      const r = document.createElement("span");
-      r.className = "chip"; r.textContent = "☑ review";
-      r.onclick = () => Decks.open("review");
-      v.insertBefore(r, v.children[3]);
+      /* review + historie zijn org_admin-werk en staan naast de andere decks */
+      for (const [key, label] of [["review", "☑ review"], ["historie", "🕘 historie"]]) {
+        const c = document.createElement("span");
+        c.className = "chip"; c.textContent = label;
+        c.onclick = () => Decks.open(key);
+        v.insertBefore(c, el("btnTopic"));
+      }
+    }
+    /* deep-links uit de oude GUI: /ui#beheer, #focus, #chores, #governance, #review, #historie */
+    const want = (location.hash || "").slice(1);
+    if (["focus", "chores", "governance", "beheer", "review", "historie"].includes(want)) {
+      history.replaceState(null, "", location.pathname);
+      Decks.open(want);
     }
   }).catch(() => {});
 }
 
+/* ---- typefilter-HUD: chips die tegelijk de legenda vormen ---- */
+function renderFilters() {
+  const box = el("filters");
+  if (!box) return;
+  box.innerHTML = `<div class="ftitle">filter op type<span class="fall" id="fAll">${allTypesOn() ? "niets uit" : "alles aan"}</span></div>
+    <div class="frow">${ALL_TYPES.map(t =>
+      `<span class="tchip ${typeVisible(t) ? "on" : ""}" data-type="${t}">
+        <span class="sw" style="background:${COLORS[t]}"></span>${t}</span>`).join("")}</div>`;
+  box.querySelectorAll("[data-type]").forEach(c => c.onclick = () => {
+    const t = c.dataset.type;
+    activeTypes.has(t) ? activeTypes.delete(t) : activeTypes.add(t);
+    if (!activeTypes.size) activeTypes.add(t);        // nooit alles uit — dan is het scherm leeg
+    applyTypeFilter();
+  });
+  el("fAll").onclick = () => {
+    if (allTypesOn()) { activeTypes.clear(); activeTypes.add("topic"); }
+    else ALL_TYPES.forEach(t => activeTypes.add(t));
+    applyTypeFilter();
+  };
+}
+
+function applyTypeFilter() {
+  localStorage.setItem("mind_types", JSON.stringify([...activeTypes]));
+  renderFilters();
+  const base = state.level === 2
+    ? (state.sysData ||= systemData(state.topicId))
+    : (state.overview === "organism" ? organismData : galaxyData);
+  Graph.graphData(filtered(base));
+  updateHud();
+}
+renderFilters();
+
 /* ---- boot: de galaxy, camera trekt in en komt tot rust ---- */
 tuneForces(1);
-Graph.graphData(galaxyData);
+Graph.graphData(filtered(galaxyData));
 Graph.cameraPosition({ x: 0, y: 0, z: 1100 });
 setTimeout(() => Graph.zoomToFit(1600, 70), 1200);
 /* de layout kan na de eerste fit nog uitdijen — fit nogmaals zodra hij tot rust is */

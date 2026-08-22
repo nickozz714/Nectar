@@ -36,15 +36,17 @@ const pendingRemove = new Map();// key -> timeout
 let wireAnim = 0;               // rAF handle
 
 /* ── server-modus: op /ui/cockpit tegen de echte API met de GUI-login ─────── */
-const SERVER = location.pathname.startsWith("/ui/");
+const SERVER = location.pathname.startsWith("/ui");
 const TOKEN = SERVER ? (localStorage.getItem("hive_token") || "") : "";
-if (SERVER && !TOKEN) location.replace("/ui");
+/* geen (geldig) token: herladen — de login-gate op de mind-pagina vangt het op */
+const reauth = () => { localStorage.removeItem("hive_token"); location.replace("/ui"); };
+if (SERVER && !TOKEN) reauth();
 const AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN } } : undefined;
 
 /* ── data ──────────────────────────────────────────── */
 async function loadData() {
   const r = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
-  if (SERVER && (r.status === 401 || r.status === 403)) { location.replace("/ui"); throw new Error("login"); }
+  if (SERVER && (r.status === 401 || r.status === 403)) { reauth(); throw new Error("login"); }
   if (!r.ok) throw new Error(`data.json: HTTP ${r.status}`);
   const d = await r.json();
   totals = { nodes: d.nodes.length, links: d.links.length };
@@ -594,9 +596,9 @@ const post = msg => { if (EMBED && window.parent !== window) window.parent.postM
 
 function initEmbed() {
   if (SERVER && !EMBED) {
-    // standalone op de server: switcher wordt een terugweg naar mind + legacy
+    // standalone op de server: switcher wordt een terugweg naar de mind
     const v = document.getElementById("variants");
-    if (v) v.innerHTML = `<a class="chip" href="/ui/mind">◂ mind</a><a class="chip" href="/ui#legacy">⌂ legacy</a>`;
+    if (v) v.innerHTML = `<a class="chip" href="/ui/mind">◂ mind</a>`;
   }
   if (!EMBED) return;
   document.getElementById("variants")?.remove();

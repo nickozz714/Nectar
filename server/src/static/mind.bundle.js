@@ -16446,7 +16446,7 @@ var ArcCurve = class extends EllipseCurve {
 };
 function CubicPoly() {
   let c0 = 0, c1 = 0, c22 = 0, c3 = 0;
-  function init5(x0, x1, t0, t1) {
+  function init6(x0, x1, t0, t1) {
     c0 = x0;
     c1 = t0;
     c22 = -3 * x0 + 3 * x1 - 2 * t0 - t1;
@@ -16454,14 +16454,14 @@ function CubicPoly() {
   }
   return {
     initCatmullRom: function(x0, x1, x22, x3, tension) {
-      init5(x1, x22, tension * (x22 - x0), tension * (x3 - x1));
+      init6(x1, x22, tension * (x22 - x0), tension * (x3 - x1));
     },
     initNonuniformCatmullRom: function(x0, x1, x22, x3, dt0, dt1, dt2) {
       let t1 = (x1 - x0) / dt0 - (x22 - x0) / (dt0 + dt1) + (x22 - x1) / dt1;
       let t2 = (x22 - x1) / dt1 - (x3 - x1) / (dt1 + dt2) + (x3 - x22) / dt2;
       t1 *= dt1;
       t2 *= dt1;
-      init5(x1, x22, t1, t2);
+      init6(x1, x22, t1, t2);
     },
     calc: function(t2) {
       const t22 = t2 * t2;
@@ -26900,7 +26900,7 @@ function WebGLRenderList() {
   const opaque = [];
   const transmissive = [];
   const transparent = [];
-  function init5() {
+  function init6() {
     renderItemsIndex = 0;
     opaque.length = 0;
     transmissive.length = 0;
@@ -26986,7 +26986,7 @@ function WebGLRenderList() {
     opaque,
     transmissive,
     transparent,
-    init: init5,
+    init: init6,
     push,
     unshift,
     finish,
@@ -27392,7 +27392,7 @@ function WebGLRenderState(extensions) {
   const lightsArray = [];
   const shadowsArray = [];
   const lightProbeGridArray = [];
-  function init5(camera3) {
+  function init6(camera3) {
     state2.camera = camera3;
     lightsArray.length = 0;
     shadowsArray.length = 0;
@@ -27423,7 +27423,7 @@ function WebGLRenderState(extensions) {
     textureUnits: 0
   };
   return {
-    init: init5,
+    init: init6,
     state: state2,
     setupLights,
     setupLightsView,
@@ -85644,10 +85644,13 @@ var titleEl;
 var DECKS = [
   ["focus", "\u25CE focus"],
   ["chores", "\u{1F33C} pollinate"],
-  ["review", "\u2611 review"],
+  ["review", "\u2611 review", true],
   ["governance", "\u2696 governance"],
+  ["historie", "\u{1F558} historie", true],
   ["beheer", "\u2699 beheer"]
 ];
+var ADMIN_ONLY = new Set(DECKS.filter((d2) => d2[2]).map((d2) => d2[0]));
+var onJump = null;
 var CSS = `
 #deck { position: fixed; inset: 0; z-index: 18; background: rgba(2,4,9,.6);
         opacity: 0; pointer-events: none; transition: opacity .25s ease; display: flex;
@@ -85758,47 +85761,59 @@ function roleSelect(id, current2, { inherit = false } = {}) {
 function fmt(ms) {
   return ms ? new Date(ms).toLocaleString("nl-NL") : "";
 }
+var focusEdit = null;
+var stepTxt = (s2) => typeof s2 === "string" ? s2 : s2.text ?? s2.step ?? JSON.stringify(s2);
+var stepDone = (s2) => typeof s2 === "object" && s2.status === "done";
+var stepsToText = (steps) => (steps || []).map((s2) => (stepDone(s2) ? "x " : "") + stepTxt(s2)).join("\n");
+var textToSteps = (t2) => t2.split("\n").map((l2) => l2.trim()).filter(Boolean).map((l2) => l2.toLowerCase().startsWith("x ") ? { text: l2.slice(2).trim(), status: "done" } : { text: l2, status: "open" });
 async function renderFocus() {
   const foci = await api("/focus");
   const list = Array.isArray(foci) ? foci : foci ? [foci] : [];
-  const stepTxt = (s2) => typeof s2 === "string" ? s2 : s2.text ?? s2.step ?? JSON.stringify(s2);
   const stepIcon = (s2) => ({ done: "\u2713", current: "\u25B6" })[typeof s2 === "object" ? s2.status : ""] || "\u25CB";
-  const stepDone = (s2) => typeof s2 === "object" && s2.status === "done";
-  const laneLbl = (f2) => f2.label || (f2.lane ? f2.lane : "project-breed");
+  const laneLbl = (f3) => f3.label || (f3.lane ? f3.lane : "project-breed");
   const perProject = /* @__PURE__ */ new Map();
-  list.forEach((f2) => {
-    const key = f2.project || "";
+  list.forEach((f3) => {
+    const key = f3.project || "";
     if (!perProject.has(key)) perProject.set(key, []);
-    perProject.get(key).push(f2);
+    perProject.get(key).push(f3);
   });
   const cards = [...perProject.entries()].map(([proj, foci2]) => `
     <h3>${esc(proj || "(geen project)")} \xB7 ${foci2.length} ${foci2.length === 1 ? "baan" : "banen"}</h3>
-    ` + foci2.map((f2) => `
+    ` + foci2.map((f3) => `
     <div class="card">
-      <div class="ct">\u{1F3AF} ${esc(f2.goal || "(zonder doel)")}</div>
-      <div class="crow">${pill("baan: " + laneLbl(f2), f2.lane ? "amber" : "")}${(f2.sessions || []).length ? pill((f2.sessions || []).length + "\xD7 sessie") : ""}${f2.done_when ? pill("klaar: " + f2.done_when, "amber") : ""}${f2.last_seen ? pill("gezien: " + fmt(f2.last_seen)) : ""}</div>
-      ${(f2.steps || []).map((s2) => `
+      <div class="ct">\u{1F3AF} ${esc(f3.goal || "(zonder doel)")}</div>
+      <div class="crow">${pill("baan: " + laneLbl(f3), f3.lane ? "amber" : "")}${(f3.sessions || []).length ? pill((f3.sessions || []).length + "\xD7 sessie") : ""}${f3.done_when ? pill("klaar: " + f3.done_when, "amber") : ""}${f3.last_seen ? pill("gezien: " + fmt(f3.last_seen)) : ""}</div>
+      ${(f3.steps || []).map((s2) => `
         <div style="display:flex;gap:9px;align-items:center;margin:3px 0;${stepDone(s2) ? "opacity:.45" : ""}">
           <span>${stepIcon(s2)}</span><span style="flex:1">${esc(stepTxt(s2))}</span>
-          ${stepDone(s2) ? "" : `<span class="abtn green" data-adv="${esc(stepTxt(s2))}" data-proj="${esc(f2.project || "")}" data-lane="${esc(f2.lane || "")}">\u2713 afronden</span>`}
+          ${stepDone(s2) ? "" : `<span class="abtn green" data-adv="${esc(stepTxt(s2))}" data-proj="${esc(f3.project || "")}" data-lane="${esc(f3.lane || "")}">\u2713 afronden</span>`}
         </div>`).join("")}
-      ${f2.guardrails ? `<div class="cex">guardrails: ${esc(Array.isArray(f2.guardrails) ? f2.guardrails.join(" \xB7 ") : f2.guardrails)}</div>` : ""}
-      ${(f2.notes || []).length ? `<div class="cex">voortgang: ${esc(f2.notes[f2.notes.length - 1])}</div>` : ""}
-      <div class="crow" style="margin-top:8px"><span class="abtn red" data-clear="${esc(f2.project || "")}" data-lane="${esc(f2.lane || "")}">\u2715 baan wissen</span></div>
+      ${f3.guardrails ? `<div class="cex">guardrails: ${esc(Array.isArray(f3.guardrails) ? f3.guardrails.join(" \xB7 ") : f3.guardrails)}</div>` : ""}
+      ${(f3.notes || []).length ? `<div class="cex">voortgang: ${esc(f3.notes[f3.notes.length - 1])}</div>` : ""}
+      <div class="crow" style="margin-top:8px">
+        <span class="abtn" data-edit="${esc(JSON.stringify({ project: f3.project || "", lane: f3.lane || "" }))}">\u270E bewerken</span>
+        <span class="abtn" data-note="${esc(f3.project || "")}" data-lane="${esc(f3.lane || "")}">\u270E voortgangsnotitie</span>
+        <span class="abtn red" data-clear="${esc(f3.project || "")}" data-lane="${esc(f3.lane || "")}">\u2715 baan wissen</span></div>
     </div>`).join("")).join("");
+  const f2 = focusEdit;
   body.innerHTML = (list.length ? cards : `<div class="empty">Geen actieve focus \u2014 hieronder zet je er \xE9\xE9n.</div>`) + `
-    <h3>nieuwe focus</h3>
+    <h3>${f2 ? "focus bewerken" : "nieuwe focus"}</h3>
     <div class="card">
       <div style="display:flex;flex-direction:column;gap:8px">
-        <input type="text" id="fGoal" placeholder="doel\u2026">
-        <textarea id="fSteps" rows="4" placeholder="stappen \u2014 \xE9\xE9n per regel"></textarea>
-        <input type="text" id="fGuard" placeholder="guardrails (optioneel)">
-        <input type="text" id="fDone" placeholder="klaar wanneer\u2026 (optioneel)">
+        <label class="fl">doel \u2014 wat bereiken we, in \xE9\xE9n zin</label>
+        <input type="text" id="fGoal" placeholder="doel\u2026" value="${esc(f2?.goal || "")}">
+        <label class="fl">stappen \u2014 \xE9\xE9n per regel; begin met 'x ' voor afgerond</label>
+        <textarea id="fSteps" rows="5">${esc(stepsToText(f2?.steps))}</textarea>
+        <label class="fl">guardrails \u2014 \xE9\xE9n per regel; harde wel/niet-regels</label>
+        <textarea id="fGuard" rows="3">${esc((f2?.guardrails || []).join("\n"))}</textarea>
+        <label class="fl">klaar wanneer\u2026</label>
+        <input type="text" id="fDone" placeholder="definition of done" value="${esc(f2?.done_when || "")}">
         <div style="display:flex;gap:8px">
-          <input type="text" id="fProj" placeholder="project (optioneel)" style="flex:1">
-          <input type="text" id="fName" placeholder="baan-naam (optioneel)" style="flex:1">
+          <input type="text" id="fProj" placeholder="project (optioneel)" style="flex:1" value="${esc(f2?.project || "")}" ${f2 ? "readonly" : ""}>
+          <input type="text" id="fName" placeholder="baan-naam (optioneel)" style="flex:1" value="${esc(f2 ? f2.label || f2.lane || "" : "")}" ${f2 ? "readonly" : ""}>
         </div>
-        <div><span class="abtn amber" id="fSet">focus zetten</span><span class="ok" id="fOut"></span></div>
+        <div><span class="abtn amber" id="fSet">${f2 ? "opslaan" : "focus zetten"}</span>
+          ${f2 ? `<span class="abtn" id="fCancel">annuleren</span>` : ""}<span class="ok" id="fOut"></span></div>
       </div></div>`;
   body.querySelectorAll("[data-adv]").forEach((b2) => b2.onclick = async () => {
     try {
@@ -85808,26 +85823,53 @@ async function renderFocus() {
       alert(e2.message);
     }
   });
-  body.querySelectorAll("[data-clear]").forEach((b2) => b2.onclick = async () => {
+  body.querySelectorAll("[data-note]").forEach((b2) => b2.onclick = async () => {
+    const note = prompt("Voortgangsnotitie:");
+    if (!note) return;
     try {
-      await api(`/focus?project=${encodeURIComponent(b2.dataset.clear)}&lane=${encodeURIComponent(b2.dataset.lane)}`, { method: "DELETE" });
+      await api("/focus/advance", { method: "POST", body: JSON.stringify({ note, project: b2.dataset.note, lane: b2.dataset.lane }) });
       renderFocus();
     } catch (e2) {
       alert(e2.message);
     }
   });
+  body.querySelectorAll("[data-edit]").forEach((b2) => b2.onclick = () => {
+    const key = JSON.parse(b2.dataset.edit);
+    focusEdit = list.find((x3) => (x3.project || "") === key.project && (x3.lane || "") === key.lane) || null;
+    renderFocus();
+  });
+  body.querySelectorAll("[data-clear]").forEach((b2) => b2.onclick = async () => {
+    if (!confirm("Deze baan wissen?")) return;
+    try {
+      await api(`/focus?project=${encodeURIComponent(b2.dataset.clear)}&lane=${encodeURIComponent(b2.dataset.lane)}`, { method: "DELETE" });
+      focusEdit = null;
+      renderFocus();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  });
+  if (f2) body.querySelector("#fCancel").onclick = () => {
+    focusEdit = null;
+    renderFocus();
+  };
   body.querySelector("#fSet").onclick = async () => {
     const goal = body.querySelector("#fGoal").value.trim();
-    if (!goal) return;
+    if (!goal) {
+      alert("Doel is verplicht");
+      return;
+    }
+    const payload = {
+      goal,
+      steps: textToSteps(body.querySelector("#fSteps").value),
+      guardrails: body.querySelector("#fGuard").value.split("\n").map((s2) => s2.trim()).filter(Boolean),
+      done_when: body.querySelector("#fDone").value.trim(),
+      project: body.querySelector("#fProj").value.trim()
+    };
+    if (f2) payload.lane = f2.lane || "";
+    else payload.name = body.querySelector("#fName").value.trim();
     try {
-      await api("/focus", { method: "POST", body: JSON.stringify({
-        goal,
-        steps: body.querySelector("#fSteps").value.split("\n").map((s2) => s2.trim()).filter(Boolean),
-        guardrails: body.querySelector("#fGuard").value.split(/[·;]|,\s/).map((s2) => s2.trim()).filter(Boolean),
-        done_when: body.querySelector("#fDone").value.trim(),
-        project: body.querySelector("#fProj").value.trim(),
-        name: body.querySelector("#fName").value.trim()
-      }) });
+      await api("/focus", { method: "POST", body: JSON.stringify(payload) });
+      focusEdit = null;
       renderFocus();
     } catch (e2) {
       alert(e2.message);
@@ -85854,11 +85896,13 @@ async function renderChores() {
       c3.votes ? pill(c3.votes + " stem(men)") : "",
       c3.claimed_by_name ? pill(`\u{1F41D} ${c3.claim_active ? "geclaimd" : "eerder geclaimd"} door ${c3.claimed_by_name}`) : ""
     ].join("");
+    const wait = `<span class="pchip">wacht op meer stemmen (consensus)</span>`;
+    const ready = c3.status === "ready";
     let buttons = "";
     if (v2.route === "op_route") {
-      buttons = ["ADD", "REPLACE", "DELETE", "NOOP"].map((d2) => `<span class="abtn" data-think="${d2}" data-uid="${c3.uid}">${d2.toLowerCase()}</span>`).join("") + `<span class="abtn amber" data-merge="${c3.uid}">\u21C4 samenvoegen aanvragen</span>`;
+      buttons = !ready ? wait : ["ADD", "REPLACE", "DELETE", "NOOP"].map((d2) => `<span class="abtn" data-think="${d2}" data-uid="${c3.uid}">${d2.toLowerCase()}</span>`).join("") + (v2.merge_requested ? `<span class="pchip amber">samenvoegen aangevraagd \xB7 wacht op de zwerm</span>` : `<span class="abtn amber" data-merge="${c3.uid}">\u21C4 samenvoegen aanvragen</span>`);
     } else if (v2.route === "contradiction") {
-      buttons = `<span class="abtn green" data-contra="compatible" data-uid="${c3.uid}">verenigbaar</span>
+      buttons = !ready ? wait : `<span class="abtn green" data-contra="compatible" data-uid="${c3.uid}">verenigbaar</span>
         <span class="abtn" data-contra="a" data-uid="${c3.uid}">A is actueel</span>
         <span class="abtn" data-contra="b" data-uid="${c3.uid}">B is actueel</span>`;
     } else if (v2.route === "human") {
@@ -85866,9 +85910,15 @@ async function renderChores() {
     } else if (c3.type === "cognition") {
       buttons = `<span class="pchip">onderzoekswerk voor een agent (websearch)</span>
         <span class="abtn red" data-res="reject" data-uid="${c3.uid}">\u2715 taak laten vervallen</span>`;
-    } else {
+    } else if (ready) {
       buttons = `<span class="abtn green" data-res="apply" data-uid="${c3.uid}">\u2713 toepassen</span>
         <span class="abtn red" data-res="reject" data-uid="${c3.uid}">\u2715 afwijzen</span>`;
+    } else if (ME?.can_review) {
+      buttons = `<span class="abtn green" data-res="apply" data-direct="1" data-uid="${c3.uid}">\u2713 direct toepassen</span>
+        <span class="abtn red" data-res="reject" data-direct="1" data-uid="${c3.uid}">\u2715 afwijzen</span>
+        <span class="pchip">org_admin \u2014 bypasst consensus (geaudit)</span>`;
+    } else {
+      buttons = wait;
     }
     return `<div class="card"><div class="ct">${esc(v2.headline || c3.type)}</div>
       <div class="crow">${chips}</div>
@@ -85879,13 +85929,14 @@ async function renderChores() {
   const done = (data2.resolved || []).slice(0, 12).map((c3) => {
     const ok = c3.status === "resolved";
     return `<div style="opacity:.65;margin:4px 0">${ok ? "\u2713" : "\u2717"} ${esc(c3.view?.headline || c3.type)}
-      <span style="color:var(--dim)"> \u2014 ${ok ? "toegepast" : "afgewezen"}${c3.resolved_by_name ? " door " + esc(c3.resolved_by_name) : ""}${c3.resolved ? " \xB7 " + fmt(c3.resolved) : ""}</span></div>`;
+      <span style="color:var(--dim)"> \u2014 ${ok ? "toegepast" : "afgewezen"}${c3.resolved_by_name ? " door " + esc(c3.resolved_by_name) : ""}${c3.resolved ? " \xB7 " + fmt(c3.resolved) : ""}</span>
+      ${c3.resolution ? `<div class="cex">${esc(c3.resolution)}</div>` : ""}</div>`;
   }).join("");
   body.innerHTML = `<div class="crow"><span class="stat"><b>${data2.ready ?? 0}</b><span>ready</span></span>
     <span class="stat"><b>${(data2.chores || []).length}</b><span>open</span></span></div>
     <h3>open / actief</h3>${cards}<h3>afgehandeld</h3>${done || `<div class="empty">nog niets</div>`}`;
   body.querySelectorAll("[data-res]").forEach((b2) => b2.onclick = () => act(() => api(
-    `/graph/chores/${b2.dataset.uid}/resolve?action=${b2.dataset.res}${ME?.can_review ? "&direct=true" : ""}`,
+    `/graph/chores/${b2.dataset.uid}/resolve?action=${b2.dataset.res}${b2.dataset.direct ? "&direct=true" : ""}`,
     { method: "POST", body: JSON.stringify({ note: "via mind" }) }
   )));
   body.querySelectorAll("[data-think]").forEach((b2) => b2.onclick = () => act(() => api("/graph/think/resolve", { method: "POST", body: JSON.stringify({ pollen_uid: b2.dataset.uid, decision: b2.dataset.think, note: "via mind" }) })));
@@ -85940,7 +85991,7 @@ async function renderGovernance() {
       audit = `<h3>\u{1F4DC} audit-trail (laatste ${rows.length})</h3>` + rows.map((e2) => `
         <div style="margin:7px 0;border-left:2px solid var(--line);padding-left:10px">
           <div style="color:var(--dim);font-size:10px">${fmt(e2.at)}</div>
-          <div><b>${esc(e2.action)}</b> \xB7 ${esc(e2.account || "systeem")}${e2.target_title ? ` \u2014 ${esc(e2.target_title)}` : ""}</div>
+          <div><b>${esc(histLabel(e2.action))}</b> \xB7 ${esc(e2.account || "systeem")}${e2.target_title ? ` \u2014 ${esc(e2.target_title)}` : ""}</div>
           ${detTxt(e2.detail) ? `<div style="color:var(--dim)">${detTxt(e2.detail)}</div>` : ""}
         </div>`).join("");
     } catch {
@@ -85970,6 +86021,92 @@ async function renderGovernance() {
     <h3>\u26A0\uFE0F als gevoelig geclassificeerd (${sens})</h3>
     ${(g2.sensitive_nodes || []).map((n2) => `<div style="margin:3px 0"><span class="ddot" style="background:#ff6a45"></span>${esc(n2.title)} ${pill(n2.type)}</div>`).join("") || `<div class="empty">niets gemarkeerd \u2014 schoon</div>`}
     ${audit}`;
+}
+var HIST_LABELS = {
+  remember: "onthouden",
+  create_topic: "topic aangemaakt",
+  move_node: "verplaatst",
+  merge_topics: "topics samengevoegd",
+  delete: "verwijderd",
+  suggest: "wijziging voorgesteld",
+  resolve_chore: "pollen afgehandeld",
+  admin_resolve_chore: "pollen afgehandeld (admin)",
+  attach: "bijlage toegevoegd",
+  attach_delete: "bijlage verwijderd",
+  set_system: "systeemvlag gezet",
+  set_role: "rol gewijzigd",
+  invite_create: "uitnodiging aangemaakt",
+  login: "ingelogd",
+  login_entra: "ingelogd (Microsoft)",
+  login_entra_provision: "account aangemaakt (Microsoft)",
+  password_set: "wachtwoord ingesteld",
+  password_set_for: "wachtwoord ingesteld voor",
+  secret_set: "secret opgeslagen",
+  secret_get: "secret gelezen",
+  secret_read: "secret gelezen",
+  skill_create: "skill aangemaakt",
+  skill_update: "skill bijgewerkt",
+  workflow_create: "workflow aangemaakt",
+  workflow_update: "workflow bijgewerkt",
+  approve_scope_widening: "scope-verbreding goedgekeurd",
+  supersede: "vervangen (superseded)",
+  resolve_contradiction: "tegenspraak afgehandeld",
+  resolve_think: "denk-pollen afgehandeld",
+  lifecycle: "levensfase gewijzigd",
+  set_importance: "belang aangepast",
+  set_decay: "verval aangepast",
+  reclassify_sensitivity: "gevoeligheid herbeoordeeld",
+  pagerank_scan: "pagerank herberekend",
+  contradiction_scan: "tegenspraak-scan",
+  linkpred_scan: "link-predictie",
+  tidy_scan: "opruim-scan",
+  staleness_scan: "staleness-scan",
+  relate: "gekoppeld",
+  unlink: "koppeling verwijderd",
+  reembed: "opnieuw ge-embed",
+  train_ranker: "ranker getraind",
+  feedback: "feedback gegeven",
+  invite_revoke: "uitnodiging ingetrokken",
+  token_rotate: "token geroteerd",
+  token_revoke: "token ingetrokken",
+  create_account: "account aangemaakt",
+  create_token: "token aangemaakt",
+  set_consensus: "consensus-drempel gewijzigd",
+  set_default_ui: "standaardinterface gewijzigd"
+};
+var histLabel = (a3) => HIST_LABELS[a3] || (a3 || "").replace(/_/g, " ");
+function timeAgo(ms) {
+  if (!ms) return "";
+  const s2 = Math.floor((Date.now() - ms) / 1e3);
+  if (s2 < 60) return "zojuist";
+  const m3 = Math.floor(s2 / 60);
+  if (m3 < 60) return m3 + " min geleden";
+  const h2 = Math.floor(m3 / 60);
+  if (h2 < 24) return h2 + " uur geleden";
+  const d2 = Math.floor(h2 / 24);
+  if (d2 < 7) return d2 + (d2 > 1 ? " dagen" : " dag") + " geleden";
+  return new Date(ms).toLocaleDateString("nl-NL");
+}
+async function renderHistorie() {
+  const ev = await api("/graph/audit?limit=200");
+  body.innerHTML = `<div style="color:var(--dim);margin-bottom:10px">alles wat er in de hive gebeurde \u2014 mens \xE9n zwerm. klik een naam om de node in de mind op te zoeken.</div>` + (ev.length ? ev.map((e2) => {
+    let detail = {};
+    try {
+      detail = JSON.parse(e2.detail || "{}");
+    } catch {
+    }
+    const name = e2.target_title || detail.title || (UIDISH(e2.target || "") ? "(verwijderd)" : e2.target || "");
+    const shown = name.length > 64 ? name.slice(0, 63) + "\u2026" : name;
+    const tgt = e2.target_title ? `<span class="abtn" data-jump="${esc(e2.target)}">${esc(shown)}</span>` : shown ? `<span style="color:var(--dim)">${esc(shown)}</span>` : "";
+    return `<div style="margin:7px 0;border-left:2px solid var(--line);padding-left:10px">
+        <div style="color:var(--dim);font-size:10px">${timeAgo(e2.at)} \xB7 ${esc(e2.account || "systeem")}</div>
+        <div><b>${esc(histLabel(e2.action))}</b> ${tgt}</div></div>`;
+  }).join("") : `<div class="empty">nog geen gebeurtenissen</div>`);
+  body.querySelectorAll("[data-jump]").forEach((b2) => b2.onclick = () => {
+    if (!onJump) return;
+    close();
+    onJump(b2.dataset.jump);
+  });
 }
 var BEHEER_SEC = "inzicht";
 async function renderBeheer() {
@@ -86050,13 +86187,12 @@ var BEHEER_RENDER = {
         <div style="display:flex;gap:8px;align-items:baseline"><b>${esc(it.key)}</b>
           <span class="pchip">${esc(String(it.value))}</span>${it.editable ? `<span class="pchip amber">live hierboven</span>` : ""}</div>
         ${it.what ? `<div style="color:var(--dim)">${esc(it.what)}</div>` : ""}
-        ${it.risk ? `<details><summary>risico</summary><div style="color:var(--dim)">\u26A0\uFE0F ${esc(it.risk)}${it.env ? ` \u2014 aanpasbaar via ${esc(it.env)} in .env + rebuild` : ""}</div></details>` : ""}
+        <details><summary>aanpassen &amp; risico</summary>
+          <div style="color:var(--dim)">${it.editable ? "live aanpasbaar hierboven \u2014 direct actief." : it.env ? `aanpasbaar via ${esc(it.env)} in <code>.env</code>, daarna <code>docker compose up -d --build</code>.` : "niet aanpasbaar."}</div>
+          ${it.risk ? `<div style="color:var(--dim)">\u26A0\uFE0F ${esc(it.risk)}</div>` : ""}
+        </details>
       </div>`).join("")}</div>`).join("");
     sec.innerHTML = `
-      <div class="card"><div class="ct">\u{1F5A5}\uFE0F standaardinterface</div>
-        <div style="color:var(--dim)">waar leden na inloggen landen \u2014 beide blijven bereikbaar</div>
-        <div class="crow"><span class="abtn ${ME.default_ui !== "mind" ? "amber" : ""}" data-ui="legacy">legacy</span>
-          <span class="abtn ${ME.default_ui === "mind" ? "amber" : ""}" data-ui="mind">mind 3d</span><span class="ok" id="uiOut"></span></div></div>
       <div class="card"><div class="ct">\u{1F41D} consensus-drempel <span class="pchip amber">live</span></div>
         <div style="color:var(--dim)">stemmen (per account) voordat een Pollinate 'ready' wordt</div>
         <div class="crow"><input type="number" id="consN" min="1" style="width:80px" value="${s2.consensus_threshold}">
@@ -86065,16 +86201,8 @@ var BEHEER_RENDER = {
         <div style="color:var(--dim)">nieuwe memories krijgen een research-taak; budget: max ${s2.cognition_budget?.max_new}/job \xB7 ${s2.cognition_budget?.max_depth} rondes \xB7 ${s2.cognition_budget?.daily_cap}/dag</div>
         <div class="crow"><span class="abtn ${s2.cognition_enabled ? "green" : ""}" data-cog="true">aan</span>
           <span class="abtn ${!s2.cognition_enabled ? "red" : ""}" data-cog="false">uit</span><span class="ok" id="cogOut"></span></div></div>
-      <h3>zo staat het brein afgesteld (via .env, actief na herstart)</h3>${knobHtml}`;
-    sec.querySelectorAll("[data-ui]").forEach((b2) => b2.onclick = async () => {
-      try {
-        await api("/manage/ui-default", { method: "POST", body: JSON.stringify({ ui: b2.dataset.ui }) });
-        ME.default_ui = b2.dataset.ui;
-        BEHEER_RENDER.instellingen(sec);
-      } catch (e2) {
-        alert(e2.message);
-      }
-    });
+      <h3>zo staat het brein afgesteld (via .env, actief na herstart)</h3>
+      <div style="color:var(--dim);margin:-4px 0 10px">alleen de twee knoppen hierboven zijn live; de rest zet je in <b>.env</b>, gevolgd door <code>docker compose up -d --build</code>. klap "risico" open voor wat er misgaat als je eraan draait.</div>${knobHtml}`;
     sec.querySelector("#consSave").onclick = async () => {
       try {
         await api("/manage/swarm/consensus", { method: "POST", body: JSON.stringify({ threshold: +sec.querySelector("#consN").value }) });
@@ -86316,12 +86444,41 @@ var BEHEER_RENDER = {
       const cmd = `~/.hivemind/scripts/hive-skill-install.sh "${sk.title}"`;
       return `<div style="margin:8px 0"><b>\u2728 ${esc(sk.title)}</b>
           <div style="display:flex;gap:8px;align-items:center"><code style="flex:1;color:var(--dim);font-size:10.5px">${esc(cmd)}</code>
-          <span class="abtn" data-copy="${esc(cmd)}">kopieer</span></div></div>`;
+          <span class="abtn" data-view="${esc(sk.uid)}">bekijken</span>
+          ${onJump ? `<span class="abtn" data-node="${esc(sk.uid)}">naar node</span>` : ""}
+          <span class="abtn" data-copy="${esc(cmd)}">kopieer</span></div>
+          <div id="sk-${esc(sk.uid)}"></div></div>`;
     }).join("") || `<div class="empty">nog geen skills in de hive</div>`}`;
     sec.querySelectorAll("[data-copy]").forEach((b2) => b2.onclick = () => {
       navigator.clipboard?.writeText(b2.dataset.copy);
       b2.textContent = "\u2713";
       setTimeout(() => b2.textContent = "kopieer", 1200);
+    });
+    sec.querySelectorAll("[data-node]").forEach((b2) => b2.onclick = () => {
+      close();
+      onJump?.(b2.dataset.node);
+    });
+    sec.querySelectorAll("[data-view]").forEach((b2) => b2.onclick = async () => {
+      const box = sec.querySelector(`[id="sk-${b2.dataset.view}"]`);
+      if (box.dataset.open === "1") {
+        box.innerHTML = "";
+        box.dataset.open = "";
+        b2.textContent = "bekijken";
+        return;
+      }
+      box.innerHTML = `<div style="color:var(--dim)">laden\u2026</div>`;
+      try {
+        const s2 = await api("/skills/" + b2.dataset.view);
+        const files = (s2.files || []).map((f2) => `<div style="margin-top:8px"><div style="color:var(--cyan);font-size:10.5px">${esc(f2.path)}</div>
+            <div class="cex" style="max-height:260px">${esc(f2.content)}</div></div>`).join("");
+        box.innerHTML = `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+          ${s2.description ? `<div style="color:var(--dim)">${esc(s2.description)}</div>` : ""}
+          ${files || `<div class="empty">deze skill heeft geen bestanden</div>`}</div>`;
+        box.dataset.open = "1";
+        b2.textContent = "verbergen";
+      } catch (e2) {
+        box.innerHTML = `<div style="color:#ff7847">${esc(e2.message)}</div>`;
+      }
     });
   }
 };
@@ -86330,9 +86487,17 @@ var RENDER = {
   chores: renderChores,
   review: renderReview,
   governance: renderGovernance,
+  historie: renderHistorie,
   beheer: renderBeheer
 };
-var TITLES = { focus: "focus", chores: "pollinate", review: "review", governance: "governance", beheer: "beheer" };
+var TITLES = {
+  focus: "focus",
+  chores: "pollinate",
+  review: "review",
+  governance: "governance",
+  historie: "historie",
+  beheer: "beheer"
+};
 function build() {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -86358,14 +86523,14 @@ async function open(name) {
     try {
       ME = await api("/graph/me");
     } catch {
-      location.replace("/ui");
+      location.reload();
       return;
     }
   }
-  if (name === "review" && !ME.can_review) name = "chores";
+  if (ADMIN_ONLY.has(name) && !ME.can_review) name = "chores";
   current = name;
   titleEl.textContent = TITLES[name] || name;
-  tabsEl.innerHTML = DECKS.filter(([k2]) => k2 !== "review" || ME.can_review).map(([k2, l2]) => `<span class="chip ${k2 === current ? "on" : ""}" data-deck="${k2}">${l2}${k2 === "chores" && ME.ready_chores ? ` <b style="color:var(--amber)">${ME.ready_chores}</b>` : ""}</span>`).join("");
+  tabsEl.innerHTML = DECKS.filter(([k2]) => !ADMIN_ONLY.has(k2) || ME.can_review).map(([k2, l2]) => `<span class="chip ${k2 === current ? "on" : ""}" data-deck="${k2}">${l2}${k2 === "chores" && ME.ready_chores ? ` <b style="color:var(--amber)">${ME.ready_chores}</b>` : ""}</span>`).join("");
   tabsEl.querySelectorAll("[data-deck]").forEach((c3) => c3.onclick = () => open(c3.dataset.deck));
   host.classList.add("on");
   body.innerHTML = `<div class="empty">laden\u2026</div>`;
@@ -86382,7 +86547,10 @@ function close() {
 function isOpen() {
   return !!host?.classList.contains("on");
 }
-var Decks = { open, close, isOpen };
+function init5(opts = {}) {
+  onJump = opts.onJump || null;
+}
+var Decks = { open, close, isOpen, init: init5 };
 
 // node_modules/three-spritetext/dist/three-spritetext.mjs
 function _arrayLikeToArray7(r2, a3) {
@@ -87226,13 +87394,17 @@ var esc2 = (s2) => String(s2 ?? "").replace(/[&<>"']/g, (c3) => ({ "&": "&amp;",
 var UID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var titleOf = (n2) => UID_RE.test(n2.title) ? "(naamloos topic)" : n2.title;
 var trunc2 = (s2, max2) => s2.length > max2 ? s2.slice(0, max2 - 1).trimEnd() + "\u2026" : s2;
-var SERVER = location.pathname.startsWith("/ui/");
+var SERVER = location.pathname.startsWith("/ui");
 var TOKEN2 = SERVER ? localStorage.getItem("hive_token") || "" : "";
-if (SERVER && !TOKEN2) location.replace("/ui");
+var reauth = () => {
+  localStorage.removeItem("hive_token");
+  location.reload();
+};
+if (SERVER && !TOKEN2) reauth();
 var AUTH = SERVER ? { headers: { Authorization: "Bearer " + TOKEN2 } } : void 0;
 var NODE_URL = (id) => SERVER ? `/graph/node/${id}` : `/api/node/${id}`;
 var res = await fetch(SERVER ? "/graph/full" : "./data.json", AUTH);
-if (SERVER && (res.status === 401 || res.status === 403)) location.replace("/ui");
+if (SERVER && (res.status === 401 || res.status === 403)) reauth();
 var data = await res.json();
 if (data.error) {
   el("splash").innerHTML = `<div class="t" style="color:#ff7847">hive onbereikbaar: ${esc2(data.error)}</div>`;
@@ -87313,6 +87485,26 @@ function systemData(topicId) {
     links.push({ source: inId, target: outId, __kind: "portal" });
   }
   return { nodes, links };
+}
+var ALL_TYPES = Object.keys(COLORS);
+var activeTypes = new Set((() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem("mind_types") || "null");
+    const ok = Array.isArray(saved) ? saved.filter((t2) => ALL_TYPES.includes(t2)) : [];
+    return ok.length ? ok : ALL_TYPES;
+  } catch {
+    return ALL_TYPES;
+  }
+})());
+var typeVisible = (t2) => activeTypes.has(t2);
+var allTypesOn = () => activeTypes.size === ALL_TYPES.length;
+function filtered(dataset) {
+  if (allTypesOn()) return dataset;
+  const keep = new Set(dataset.nodes.filter((n2) => typeVisible(n2.type) || n2.__role === "sun").map((n2) => n2.id));
+  return {
+    nodes: dataset.nodes.filter((n2) => keep.has(n2.id)),
+    links: dataset.links.filter((l2) => keep.has(linkSrc(l2)) && keep.has(linkTgt(l2)))
+  };
 }
 var haloTex = (() => {
   const c3 = document.createElement("canvas");
@@ -87501,7 +87693,8 @@ function enterSystem(topicId, opts = {}) {
       state.topicId = topicId;
       closePanel();
       tuneForces(2);
-      Graph.graphData(systemData(topicId));
+      state.sysData = systemData(topicId);
+      Graph.graphData(filtered(state.sysData));
       Graph.cameraPosition({ x: 0, y: 50, z: 235 }, { x: 0, y: 0, z: 0 }, 0);
       history.replaceState(null, "", `#t=${topicId}`);
       updateHud();
@@ -87538,7 +87731,7 @@ function backToGalaxy() {
       state.topicId = null;
       closePanel();
       tuneForces(state.overview === "organism" ? "organism" : 1);
-      Graph.graphData(state.overview === "organism" ? organismData : galaxyData);
+      Graph.graphData(filtered(state.overview === "organism" ? organismData : galaxyData));
       Graph.cameraPosition({ x: 0, y: 0, z: state.overview === "organism" ? 1400 : 860 }, { x: 0, y: 0, z: 0 }, 0);
       setTimeout(() => Graph.zoomToFit(900, state.overview === "organism" ? 140 : 70), 500);
       history.replaceState(null, "", location.pathname);
@@ -87891,7 +88084,7 @@ searchEl.addEventListener("input", () => {
     resultsEl.style.display = "none";
     return;
   }
-  const local = searchable.filter((n2) => n2.title.toLowerCase().includes(q2)).slice(0, 12);
+  const local = searchable.filter((n2) => typeVisible(n2.type) && n2.title.toLowerCase().includes(q2)).slice(0, 12);
   renderResults(local);
   if (!SERVER) return;
   resultsEl.insertAdjacentHTML(
@@ -87907,7 +88100,7 @@ searchEl.addEventListener("input", () => {
       const seen = new Set(local.map((n2) => n2.id));
       const extra = (sem || []).map((r2) => {
         const live = nodeById.get(r2.uid);
-        return live && !seen.has(live.id) ? { ...live, __sem: true } : null;
+        return live && !seen.has(live.id) && typeVisible(live.type) ? { ...live, __sem: true } : null;
       }).filter(Boolean);
       renderResults([...local, ...extra].slice(0, 14));
     } catch (err) {
@@ -87970,7 +88163,7 @@ el("btnMode").onclick = () => {
     state.overview = state.overview === "organism" ? "galaxy" : "organism";
     closePanel();
     tuneForces(state.overview === "organism" ? "organism" : 1);
-    Graph.graphData(state.overview === "organism" ? organismData : galaxyData);
+    Graph.graphData(filtered(state.overview === "organism" ? organismData : galaxyData));
     Graph.cameraPosition({ x: 0, y: 0, z: state.overview === "organism" ? 1400 : 900 }, { x: 0, y: 0, z: 0 }, 0);
     setTimeout(() => Graph.zoomToFit(1200, state.overview === "organism" ? 140 : 70), 1100);
     updateHud();
@@ -88080,16 +88273,72 @@ el("btnArchive").onclick = async () => {
 drill.addEventListener("click", (e2) => {
   if (e2.target === drill) closeDrill();
 });
+function goToNode(id) {
+  const n2 = nodeById.get(id);
+  if (!n2) {
+    alert("die node bestaat niet meer in deze mind \u2014 herlaad de pagina");
+    return;
+  }
+  if (n2.type === "topic") {
+    enterSystem(n2.id, { fromSystem: state.level === 2, drill: false });
+    return;
+  }
+  const tid = parentTopic.get(n2.id);
+  if (!tid) {
+    select2(n2, false);
+    return;
+  }
+  if (state.level === 2 && state.topicId === tid) {
+    const live = Graph.graphData().nodes.find((x3) => x3.id === id);
+    select2(live || n2, !!live);
+  } else enterSystem(tid, { selectId: id, fromSystem: state.level === 2, drill: false });
+}
 if (SERVER) {
+  Decks.init({ onJump: goToNode });
   const v2 = el("variants");
+  v2.style.flexWrap = "wrap";
+  v2.style.justifyContent = "flex-end";
+  v2.style.maxWidth = "52vw";
   v2.innerHTML = `<span class="chip" data-deck="focus">\u25CE focus</span>
      <span class="chip" data-deck="chores">\u{1F33C} pollinate<span id="navBadge"></span></span>
      <span class="chip" data-deck="governance">\u2696 governance</span>
      <span class="chip" data-deck="beheer">\u2699 beheer</span>
-     <a class="chip" href="/ui#legacy" title="de klassieke tabbladen-interface">\u2302 legacy</a>`;
+     <span class="chip" id="btnTopic" title="Maak een nieuw topic aan">\uFF0B topic</span>
+     <span class="chip" id="btnAcct" title="Wachtwoord wijzigen of uitloggen">\u25CD account</span>`;
   v2.querySelectorAll("[data-deck]").forEach((c3) => c3.onclick = () => Decks.open(c3.dataset.deck));
+  el("btnTopic").onclick = async () => {
+    const title = prompt("Naam van het nieuwe topic:");
+    if (!title) return;
+    const parent = prompt("Onder welk bestaand topic hangen? (leeg = top-level)") || "";
+    try {
+      await apiJ("/graph/topics", { method: "POST", body: JSON.stringify({ title, parent_topic: parent }) });
+      if (confirm(`Topic "${title}" aangemaakt. De mind opnieuw laden om 'm te zien?`)) location.reload();
+    } catch (e2) {
+      alert(e2.message);
+    }
+  };
+  el("btnAcct").onclick = async () => {
+    const what = prompt(`Ingelogd als ${MEg?.name || "?"} (${MEg?.role || "?"}).
+
+Typ "wachtwoord" om een nieuw wachtwoord te zetten, of "uitloggen" om af te melden.`);
+    if (!what) return;
+    if (what.toLowerCase().startsWith("uit")) {
+      reauth();
+      return;
+    }
+    if (!what.toLowerCase().startsWith("wacht")) return;
+    const pw = prompt(`Nieuw wachtwoord (min. 8 tekens) voor '${MEg?.name}':`);
+    if (!pw) return;
+    try {
+      await apiJ("/auth/password", { method: "POST", body: JSON.stringify({ password: pw }) });
+      alert(`Wachtwoord ingesteld. Je kunt nu inloggen met '${MEg?.name}' + wachtwoord.`);
+    } catch (e2) {
+      alert(e2.message);
+    }
+  };
   fetch("/graph/me", AUTH).then((r2) => r2.json()).then((me) => {
     MEg = me;
+    el("btnAcct").textContent = `\u25CD ${me.name} \xB7 ${me.role}`;
     if (me.ready_chores) {
       const b2 = document.getElementById("navBadge");
       if (b2) {
@@ -88099,17 +88348,52 @@ if (SERVER) {
       }
     }
     if (me.can_review) {
-      const r2 = document.createElement("span");
-      r2.className = "chip";
-      r2.textContent = "\u2611 review";
-      r2.onclick = () => Decks.open("review");
-      v2.insertBefore(r2, v2.children[3]);
+      for (const [key, label2] of [["review", "\u2611 review"], ["historie", "\u{1F558} historie"]]) {
+        const c3 = document.createElement("span");
+        c3.className = "chip";
+        c3.textContent = label2;
+        c3.onclick = () => Decks.open(key);
+        v2.insertBefore(c3, el("btnTopic"));
+      }
+    }
+    const want = (location.hash || "").slice(1);
+    if (["focus", "chores", "governance", "beheer", "review", "historie"].includes(want)) {
+      history.replaceState(null, "", location.pathname);
+      Decks.open(want);
     }
   }).catch(() => {
   });
 }
+function renderFilters() {
+  const box = el("filters");
+  if (!box) return;
+  box.innerHTML = `<div class="ftitle">filter op type<span class="fall" id="fAll">${allTypesOn() ? "niets uit" : "alles aan"}</span></div>
+    <div class="frow">${ALL_TYPES.map((t2) => `<span class="tchip ${typeVisible(t2) ? "on" : ""}" data-type="${t2}">
+        <span class="sw" style="background:${COLORS[t2]}"></span>${t2}</span>`).join("")}</div>`;
+  box.querySelectorAll("[data-type]").forEach((c3) => c3.onclick = () => {
+    const t2 = c3.dataset.type;
+    activeTypes.has(t2) ? activeTypes.delete(t2) : activeTypes.add(t2);
+    if (!activeTypes.size) activeTypes.add(t2);
+    applyTypeFilter();
+  });
+  el("fAll").onclick = () => {
+    if (allTypesOn()) {
+      activeTypes.clear();
+      activeTypes.add("topic");
+    } else ALL_TYPES.forEach((t2) => activeTypes.add(t2));
+    applyTypeFilter();
+  };
+}
+function applyTypeFilter() {
+  localStorage.setItem("mind_types", JSON.stringify([...activeTypes]));
+  renderFilters();
+  const base = state.level === 2 ? state.sysData ||= systemData(state.topicId) : state.overview === "organism" ? organismData : galaxyData;
+  Graph.graphData(filtered(base));
+  updateHud();
+}
+renderFilters();
 tuneForces(1);
-Graph.graphData(galaxyData);
+Graph.graphData(filtered(galaxyData));
 Graph.cameraPosition({ x: 0, y: 0, z: 1100 });
 setTimeout(() => Graph.zoomToFit(1600, 70), 1200);
 setTimeout(() => {

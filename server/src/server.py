@@ -7,7 +7,6 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from src.authentication.deps import AuthedAccount, require_account
 from src.components.config import get_settings
@@ -101,15 +100,11 @@ def install_zip(account: AuthedAccount = Depends(require_account)):
                         filename="hivemind-install.zip")
 
 
+# The hive GUI: the 3D "mind" interface (galaxy + cockpit drilldown, built from graph-ui-3d/).
+# It is the only GUI — /ui and /ui/mind serve the same page, so old links, bookmarks and the
+# Entra callback (/ui#token=…) keep working. The page carries its own login gate; every API
+# call it makes is Bearer-guarded like the rest.
 @app.get("/ui", response_class=HTMLResponse)
-def ui():
-    """The hive GUI: click through the mind, handle chores, review, manage accounts."""
-    return (_STATIC / "index.html").read_text()
-
-
-# The 3D "mind" interface (galaxy + cockpit drilldown, built from graph-ui-3d/): an
-# alternative front door next to the legacy tabs. Auth happens client-side with the same
-# GUI token; every API call it makes is Bearer-guarded like the rest.
 @app.get("/ui/mind", response_class=HTMLResponse)
 def ui_mind():
     return (_STATIC / "mind.html").read_text()
@@ -129,9 +124,6 @@ def ui_mind_bundle():
 def ui_cockpit_bundle():
     return FileResponse(_STATIC / "cockpit.bundle.js", media_type="text/javascript")
 
-
-# Built UI assets (the React Flow graph island bundle from graph-ui/): public, immutable files.
-app.mount("/ui/assets", StaticFiles(directory=_STATIC / "assets"), name="ui_assets")
 
 # Mounted last so named routes win; the MCP endpoint lives at /mcp.
 app.mount("/", mcp_app)

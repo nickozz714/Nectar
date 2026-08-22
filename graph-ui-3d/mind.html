@@ -130,6 +130,47 @@
   #panel .md .mdh { display: block; color: var(--amber); font-weight: 700; letter-spacing: .06em; margin: 6px 0 2px; }
   #panel .md code { background: rgba(62,224,255,.08); padding: 0 4px; font-size: 11px; }
 
+  /* ── login-gate: de enige toegang tot Nectar (token, wachtwoord, Microsoft) ───────── */
+  #gate { position: fixed; inset: 0; z-index: 30; background: var(--bg);
+          display: none; align-items: center; justify-content: center; }
+  #gate.on { display: flex; }
+  #gate .box { width: min(380px, 92vw); background: var(--panel); border: 1px solid var(--line);
+               padding: 26px 24px; backdrop-filter: blur(8px);
+               clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
+  #gate h1 { margin: 0 0 3px; font-size: 15px; letter-spacing: .34em; color: var(--amber); font-weight: 700; }
+  #gate h1 span { color: var(--cyan); }
+  #gate .sub { font-size: 10px; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; margin-bottom: 18px; }
+  #gate .hint { font-size: 11px; color: var(--dim); line-height: 1.6; margin-bottom: 10px; }
+  #gate label { display: block; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+                color: var(--dim); margin: 10px 0 3px; }
+  #gate input { width: 100%; background: rgba(2,4,9,.6); color: var(--ink); border: 1px solid var(--line);
+                font: 12px var(--mono); padding: 9px 11px; outline: none; }
+  #gate input:focus { border-color: var(--cyan); }
+  #gate .row { display: flex; gap: 6px; margin-bottom: 14px; }
+  #gate .row .chip { flex: 1; justify-content: center; }
+  #gate .chip.on { color: var(--amber); border-color: rgba(255,181,71,.4); }
+  #gate .go { display: block; width: 100%; text-align: center; margin-top: 14px; padding: 10px;
+              border: 1px solid rgba(255,181,71,.45); color: var(--amber); font-size: 10.5px;
+              letter-spacing: .18em; text-transform: uppercase; cursor: pointer; user-select: none; }
+  #gate .go:hover { background: rgba(255,181,71,.09); }
+  #gate .alt { display: block; width: 100%; text-align: center; margin-top: 8px; padding: 9px;
+               border: 1px solid var(--line); color: var(--cyan); font-size: 10px;
+               letter-spacing: .16em; text-transform: uppercase; cursor: pointer; user-select: none; }
+  #gate .alt:hover { background: rgba(62,224,255,.08); }
+  #gateErr { color: #ff7847; font-size: 11px; margin-top: 12px; min-height: 14px; }
+
+  /* bottom-left: typefilter + legenda */
+  #filters { bottom: 24px; left: 26px; max-width: 40vw; }
+  #filters .ftitle { font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+  #filters .frow { display: flex; flex-wrap: wrap; gap: 5px; max-width: 340px; }
+  #filters .tchip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line);
+                    padding: 3px 8px; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+                    color: var(--dim); cursor: pointer; user-select: none; background: var(--panel); }
+  #filters .tchip.on { color: var(--ink); border-color: var(--cyan-dim); }
+  #filters .tchip .sw { width: 7px; height: 7px; transform: rotate(45deg); opacity: .35; }
+  #filters .tchip.on .sw { opacity: 1; }
+  #filters .fall { color: var(--cyan); cursor: pointer; margin-left: 4px; }
+
   /* loading splash */
   #splash { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 18px; background: var(--bg); }
@@ -235,9 +276,46 @@
   <div><span class="key">sleep</span> draai · <span class="key">scroll</span> zoom · <span class="key">/</span> zoekt</div>
 </div>
 
+<div class="hud" id="filters"></div>
+
 <div id="drill"><iframe id="drillFrame" aria-label="cockpit-drilldown"></iframe></div>
 
 <div id="splash"><div class="ring"></div><div class="t">mind wordt geladen…</div></div>
+
+<div id="gate">
+  <div class="box">
+    <h1>NECTAR <span>//</span> MIND</h1>
+    <div class="sub">toegang tot de hive</div>
+
+    <div id="gateWizard" style="display:none">
+      <div class="hint">Welkom! De hive is nog leeg. Maak het eerste account aan — dit wordt meteen de <b>org_admin</b>.</div>
+      <label>naam / gebruikersnaam</label><input id="wName" autocomplete="username">
+      <label>e-mail (optioneel, voor Microsoft-login)</label><input id="wMail" autocomplete="email">
+      <label>wachtwoord (min. 8 tekens)</label><input id="wPass" type="password" autocomplete="new-password">
+      <div class="go" id="wGo">account aanmaken</div>
+    </div>
+
+    <div id="gateLogin" style="display:none">
+      <div class="row">
+        <span class="chip on" id="tabPw">gebruikersnaam</span>
+        <span class="chip" id="tabTok">token</span>
+      </div>
+      <div id="loginPw">
+        <label>gebruikersnaam</label><input id="lUser" autocomplete="username">
+        <label>wachtwoord</label><input id="lPass" type="password" autocomplete="current-password">
+        <div class="go" id="lGo">inloggen</div>
+      </div>
+      <div id="loginTok" style="display:none">
+        <div class="hint">Log in met je account-token — hetzelfde token dat je Claude-client gebruikt.</div>
+        <label>account token</label><input id="lTok" type="password" autocomplete="off">
+        <div class="go" id="tGo">verbinden</div>
+      </div>
+      <div class="alt" id="entraGo" style="display:none">inloggen met microsoft</div>
+    </div>
+
+    <div id="gateErr"></div>
+  </div>
+</div>
 
 <script>
   // never hang silently on the splash — surface any startup error on the page
@@ -246,8 +324,114 @@
   window.addEventListener("error", e => showErr(e.message || e.type));
   window.addEventListener("unhandledrejection", e => showErr(e.reason?.message || String(e.reason)));
 </script>
-<!-- mind.bundle.js = mind.src.js + deps; rebuild after editing:
+<!-- De gate: zonder geldig token laadt de mind niet. Pas na een geslaagde login (wachtwoord,
+     token of Microsoft) wordt mind.bundle.js binnengehaald.
+     mind.bundle.js = mind.src.js + deps; rebuild na wijzigen:
      npx esbuild mind.src.js --bundle --format=esm --target=es2022 --outfile=mind.bundle.js -->
-<script type="module" src="./mind.bundle.js"></script>
+<script type="module">
+  const $ = id => document.getElementById(id);
+  const SERVER = location.pathname.startsWith("/ui");
+  const BUNDLE = SERVER ? "/ui/mind.bundle.js" : "./mind.bundle.js";
+  const gate = $("gate"), errBox = $("gateErr");
+  const fail = m => { errBox.textContent = m || ""; };
+  const boot = () => import(BUNDLE).catch(e => showErr(e.message || String(e)));
+
+  if (!SERVER) { boot(); }                     // standalone dev-modus (serve.py): geen auth
+  else {
+    // Token dat de Microsoft-callback in de URL-fragment teruggeeft.
+    const hash = new URLSearchParams(location.hash.slice(1));
+    if (hash.get("token")) {
+      localStorage.setItem("hive_token", hash.get("token"));
+      history.replaceState(null, "", location.pathname);
+    }
+    const hashErr = hash.get("error");
+
+    const token = localStorage.getItem("hive_token") || "";
+    let ok = false;
+    if (token) {
+      try {
+        const r = await fetch("/graph/me", { headers: { Authorization: "Bearer " + token } });
+        ok = r.ok;
+      } catch { ok = false; }
+      if (!ok) localStorage.removeItem("hive_token");
+    }
+    if (ok) { boot(); }
+    else {
+      $("splash").remove();
+      gate.classList.add("on");
+      if (hashErr) fail(decodeURIComponent(hashErr));
+
+      const enter = (el, fn) => el.addEventListener("keydown", e => { if (e.key === "Enter") fn(); });
+      const arrive = t => { localStorage.setItem("hive_token", t); location.reload(); };
+
+      // Eerste start? Dan de wizard i.p.v. de login.
+      let firstRun = false;
+      try { firstRun = !!(await (await fetch("/register")).json()).first_run; } catch {}
+      $(firstRun ? "gateWizard" : "gateLogin").style.display = "";
+
+      if (firstRun) {
+        const wizard = async () => {
+          const name = $("wName").value.trim();
+          if (name.length < 2) return fail("Naam te kort");
+          fail("");
+          try {
+            const reg = await (await fetch("/register", { method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name, email: $("wMail").value.trim() || null }) })).json();
+            if (!reg.token) throw new Error(reg.detail || "mislukt");
+            const pass = $("wPass").value;
+            if (pass) await fetch("/auth/password", { method: "POST",
+              headers: { Authorization: "Bearer " + reg.token, "Content-Type": "application/json" },
+              body: JSON.stringify({ password: pass }) });
+            arrive(reg.token);
+          } catch (e) { fail(e.message); }
+        };
+        $("wGo").onclick = wizard;
+        [$("wName"), $("wMail"), $("wPass")].forEach(el => enter(el, wizard));
+      } else {
+        const tab = which => {
+          $("loginPw").style.display = which === "pw" ? "" : "none";
+          $("loginTok").style.display = which === "tok" ? "" : "none";
+          $("tabPw").classList.toggle("on", which === "pw");
+          $("tabTok").classList.toggle("on", which === "tok");
+          fail("");
+        };
+        $("tabPw").onclick = () => tab("pw");
+        $("tabTok").onclick = () => tab("tok");
+
+        const byPassword = async () => {
+          fail("");
+          try {
+            const r = await fetch("/auth/login", { method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: $("lUser").value.trim(), password: $("lPass").value }) });
+            if (!r.ok) throw new Error();
+            arrive((await r.json()).token);
+          } catch { fail("Ongeldige gebruikersnaam of wachtwoord"); }
+        };
+        const byToken = async () => {
+          const t = $("lTok").value.trim();
+          fail("");
+          try {
+            const r = await fetch("/graph/me", { headers: { Authorization: "Bearer " + t } });
+            if (!r.ok) throw new Error();
+            arrive(t);
+          } catch { fail("Token niet geldig"); }
+        };
+        $("lGo").onclick = byPassword;
+        $("tGo").onclick = byToken;
+        [$("lUser"), $("lPass")].forEach(el => enter(el, byPassword));
+        enter($("lTok"), byToken);
+
+        try {
+          if ((await (await fetch("/auth/entra/status")).json()).enabled) {
+            $("entraGo").style.display = "";
+            $("entraGo").onclick = () => location.href = "/auth/entra/login";
+          }
+        } catch {}
+      }
+    }
+  }
+</script>
 </body>
 </html>
