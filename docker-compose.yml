@@ -1,5 +1,9 @@
 services:
   hivemind:
+    # Voorgebakken image van GHCR (docker compose pull) — gepubliceerd door
+    # .github/workflows/docker-release.yml op elke v*-tag. Lokale build
+    # blijft de dev-route: docker compose up -d --build.
+    image: ${NECTAR_IMAGE:-ghcr.io/nickozz714/nectar:latest}
     build: .
     init: true
     env_file: .env

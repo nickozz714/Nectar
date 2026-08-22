@@ -6,11 +6,19 @@ From zero to a working, connected hive. Assumes Docker and a recent Claude Code 
 
 ## 1. Run the hive (one container, zero config)
 
+The prebuilt image on GHCR is the fastest path — no local build, ~1 minute:
+
 ```bash
 git clone https://github.com/nickozz714/Nectar.git
 cd Nectar
+docker compose pull && docker compose up -d   # pulls ghcr.io/nickozz714/nectar:latest
+curl -s localhost:8642/health                 # -> {"status":"ok"}
+```
+
+Building locally instead (development, or when you changed the code):
+
+```bash
 docker compose up -d --build           # first build bakes in the embedding model (a few min)
-curl -s localhost:8642/health          # -> {"status":"ok"}
 ```
 
 That's it — no `.env` needed to start. Everything runs in one container: API + MCP on
