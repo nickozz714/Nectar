@@ -1,10 +1,9 @@
-"""The 3D 'mind' interface: /graph/full feed, /ui/mind pages, default_ui org setting."""
+"""De 3D-mind: de /graph/full-voeding en de pagina's. Er is nog maar één GUI —
+de keuze tussen twee interfaces (default_ui) bestaat sinds 2026-09-09 niet meer."""
 from __future__ import annotations
 
-import pytest
-
-from src.repository import graph_repo, tenancy_repo
-from src.services import memory_service, org_service
+from src.repository import graph_repo
+from src.services import memory_service
 
 CONTENT = "Inhoud die ruim lang genoeg is voor de write-gate van de hive, met context."
 
@@ -33,16 +32,6 @@ def test_full_graph_respects_scope(graph, account):
     assert "Team-geheim over project Orion" not in titles
 
 
-def test_default_ui_setting(graph, account):
-    admin = account("nick", role="org_admin")
-    assert tenancy_repo.get_default_ui(graph, admin.org_uid) == "legacy"
-    out = org_service.set_default_ui(graph, admin, "mind")
-    assert out == {"default_ui": "mind"}
-    assert tenancy_repo.get_default_ui(graph, admin.org_uid) == "mind"
-    with pytest.raises(ValueError, match="legacy"):
-        org_service.set_default_ui(graph, admin, "vr-bril")
-
-
 def test_ui_mind_pages_served(client):
     r = client.get("/ui/mind")
     assert r.status_code == 200 and "mind.bundle.js" in r.text
@@ -50,3 +39,17 @@ def test_ui_mind_pages_served(client):
     assert r.status_code == 200 and "cockpit.bundle.js" in r.text
     assert client.get("/ui/mind.bundle.js").status_code == 200
     assert client.get("/ui/cockpit.bundle.js").status_code == 200
+
+
+def test_er_is_maar_een_gui(client):
+    """/ui is de mind — niet een tweede, oudere pagina ernaast.
+
+    Dit is een afspraak die al een keer is teruggeslopen: er stonden twee
+    interfaces naast elkaar, elk scherm moest twee keer gebouwd en gerepareerd
+    worden, en /ui bleef de oude tonen. Deze test houdt dat tegen."""
+    ui, mind = client.get("/ui"), client.get("/ui/mind")
+    assert ui.status_code == 200
+    assert ui.text == mind.text, "/ui moet exact dezelfde pagina zijn als /ui/mind"
+    # de oude GUI en zijn bundel bestaan niet meer
+    assert "graph.js" not in ui.text and "NectarGraph" not in ui.text
+    assert client.get("/ui/assets/graph.js").status_code == 404

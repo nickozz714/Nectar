@@ -31,7 +31,6 @@ def me(
         "can_review": has_role(account, "org_admin"),
         "can_resolve": has_role(account, "member"),   # any Swarm member may pick up ready Pollen
         "ready_chores": governance_repo.ready_count(session, account),
-        "default_ui": tenancy_repo.get_default_ui(session, account.org_uid),
     }
 
 

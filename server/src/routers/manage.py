@@ -31,8 +31,6 @@ class CognitionBody(BaseModel):
     enabled: bool
 
 
-class DefaultUiBody(BaseModel):
-    ui: str  # legacy | mind
 
 
 @router.get("/teams")
@@ -194,19 +192,6 @@ def set_cognition(
     (org_admin, enforced in the service)."""
     try:
         return org_service.set_cognition_enabled(session, account, body.enabled)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@router.post("/ui-default")
-def set_ui_default(
-    body: DefaultUiBody,
-    account: AuthedAccount = Depends(require_account),
-    session: Session = Depends(get_graph),
-):
-    """Set the org's default interface: 'legacy' or 'mind' (org_admin, enforced in service)."""
-    try:
-        return org_service.set_default_ui(session, account, body.ui)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

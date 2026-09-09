@@ -214,17 +214,24 @@ tokens (plaintext shown once), grant secrets, and the **human review queue** for
 
 ## 12. v1 scope & open items
 
-**In v1**: everything above, plus the **hive GUI** at `/ui` (2026-07-25): a single page
-(works offline) with an interactive force-directed graph of the mind
-(click = detail + expand, double-click = collapse, hover = tooltip), semantic search, the
-swarm chore queue (resolve buttons for maintainers), the human review queue (org_admins)
-and basic account/token administration. Browsing the GUI does not rejuvenate memories —
-only actual use does. Since 2026-08-09 the mind graph is a **React Flow island**
-(`graph-ui/`, Vite + d3-force layout with collision, bundled self-contained to
-`server/src/static/assets/` and served at `/ui/assets/`); the rest of the page stays
-vanilla JS and talks to it via the small `window.NectarGraph` bridge API. Rebuild with
-`cd graph-ui && npm install && npm run build`; the built bundle is committed, so the
-Docker image needs no Node.
+**In v1**: everything above, plus the **hive GUI** at `/ui`: the 3D "mind" interface —
+topics as stars, fly into a system, cockpit drilldown per node — fed by `GET /graph/full`,
+with semantic search, the swarm chore queue (Pollinate), the human review queue, the
+governance dashboard and account/token administration as HUD decks inside the same page.
+Browsing the GUI does not rejuvenate memories — only actual use does. Source:
+`graph-ui-3d/`; rebuild with
+`npx esbuild mind.src.js --bundle --format=esm --target=es2022 --outfile=mind.bundle.js`
+and copy the result into `server/src/static/` (the bundle is committed, so the Docker image
+needs no Node).
+
+There is exactly ONE GUI. The original React-Flow/vanilla-JS page that lived at `/ui`
+until 2026-09-09 has been removed, together with its `graph-ui/` source and
+`/ui/assets/` bundle: two front doors meant every screen had to be built and fixed twice,
+and the old one kept being the copy people landed on. `/ui` and `/ui/mind` now serve the
+same page, so old links, bookmarks and the Entra callback (`/ui#token=…`) keep working —
+including the `#beheer`, `#focus`, `#chores`, `#governance`, `#review` and `#historie`
+deep links, which open the matching deck.
+
 **Deliberately later**: rate
 limiting, full-text index for fallback search, backup automation (volume snapshots for
 now), skill versioning, embedding re-indexing job, CI + test suite, chore claiming/locking
