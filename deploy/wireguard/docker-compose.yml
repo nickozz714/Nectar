@@ -1,0 +1,31 @@
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Europe/Amsterdam
+      # SERVERURL: your public IP or DDNS hostname; "auto" detects the current WAN IP.
+      SERVERURL: ${WG_SERVERURL:-auto}
+      SERVERPORT: "51820"
+      # One config per device; add a name here and restart to enroll a new device.
+      # Names must be ALPHANUMERIC (linuxserver/wireguard rejects hyphens/underscores).
+      PEERS: macbook,iphone,ipad
+      PEERDNS: auto
+      INTERNAL_SUBNET: 10.13.13.0
+      # Split tunnel: clients route ONLY the home LAN through the VPN.
+      ALLOWEDIPS: 192.168.2.0/24,10.13.13.0/24
+      LOG_CONFS: "false"
+    volumes:
+      - wg-config:/config
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+
+volumes:
+  wg-config:

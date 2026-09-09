@@ -27,6 +27,15 @@ services:
     depends_on:
       hivemind:
         condition: service_healthy
+    environment:
+      # De Caddyfile leest deze BINNEN de container ({$NECTAR_HOST}), dus hij moet
+      # hier expliciet mee: zonder deze regel is de variabele daar leeg, wordt
+      # `default_sni` een directive zonder argument, weigert Caddy de hele config
+      # en herstart hij eindeloos. De default houdt een verse clone werkend; voor
+      # toegang vanaf een ander apparaat zet je NECTAR_HOST in .env op de
+      # hostnaam of het IP van de server (daarop wordt ook het certificaat
+      # uitgegeven).
+      NECTAR_HOST: ${NECTAR_HOST:-localhost}
     ports:
       - "8643:8643"   # HTTPS: API + MCP over TLS
     volumes:
