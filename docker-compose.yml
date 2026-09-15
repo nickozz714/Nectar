@@ -23,10 +23,20 @@ services:
     #
     # Met een limiet valt deze container om in plaats van zijn buren mee te
     # slepen. Dat is vervelender voor HiveMind en veel beter voor de rest; een
-    # herstart is goedkoop, een server die staat te thrashen niet. Drie GB is
-    # ruim: na een verse start zit hij op ~140 MB, met beide modellen geladen op
-    # ~750 MB.
-    mem_limit: 3g
+    # herstart is goedkoop, een server die staat te thrashen niet.
+    #
+    # ACHT GB, en niet drie. Drie was mijn eerste gok, en die legde Nectar om
+    # (exit 137, OOMKilled) bij de eerste echte tool-aanroep. De fout in die
+    # berekening: ik keek alleen naar het PYTHON-proces — vers 140 MB, met beide
+    # modellen geladen ~750 MB — en vergat dat in deze container óók Neo4j
+    # draait. Dat is een JVM die zijn heap en page-cache standaard dimensioneert
+    # op het geheugen van de HOST (hier 23 GB), niet op dat van de container.
+    #
+    # Acht GB is daarmee ruim maar niet willekeurig: het is wat er past zolang
+    # Neo4j zichzelf niet begrenst. Wil je lager, begrens dan éérst de JVM
+    # (NEO4J_server_memory_heap_max__size en pagecache_size) — dan weet je van
+    # elk deel hoeveel het mag, in plaats van dat de JVM naar de host kijkt.
+    mem_limit: 8g
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health > /dev/null 2>&1 || exit 1"]
       interval: 5s
