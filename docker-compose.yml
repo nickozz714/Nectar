@@ -13,6 +13,20 @@ services:
       - "7687:7687"
     volumes:
       - hive-data:/data
+    # Een plafond, zodat dit proces de machine niet kan leegtrekken.
+    #
+    # Aanleiding: op 14-09-2026 stond deze container op 10,4 GB van de 23 GB van
+    # de thuisserver. De oorzaak is inmiddels weg (de ONNX-arena, zie
+    # ONNX_MEM_ARENA in server/src/components/config.py), maar het plafond blijft
+    # staan — want het probleem was niet dat er een lek was, het was dat NIEMAND
+    # het merkte tot de hele server ging swappen en alles erop vastliep.
+    #
+    # Met een limiet valt deze container om in plaats van zijn buren mee te
+    # slepen. Dat is vervelender voor HiveMind en veel beter voor de rest; een
+    # herstart is goedkoop, een server die staat te thrashen niet. Drie GB is
+    # ruim: na een verse start zit hij op ~140 MB, met beide modellen geladen op
+    # ~750 MB.
+    mem_limit: 3g
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health > /dev/null 2>&1 || exit 1"]
       interval: 5s

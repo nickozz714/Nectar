@@ -99,6 +99,19 @@ class Settings(BaseSettings):
     RERANK_ENABLED: bool = True
     RERANK_MODEL: str = "Xenova/ms-marco-MiniLM-L-6-v2"
     RERANK_TOP_K: int = 40
+    # ONNX Runtime houdt standaard een ARENA aan: het reserveert geheugenblokken
+    # per tensorvorm en geeft die nooit terug aan het besturingssysteem. Bij een
+    # webdienst met wisselende invoer is dat een ratel die alleen omhoog gaat —
+    # elke nieuwe vorm (andere tekstlengte, ander aantal kandidaten) claimt erbij
+    # en niets komt vrij. Op de thuisserver groeide het proces daardoor in vier
+    # dagen naar 10,4 GB, waarna de machine ging swappen en alles erop traag
+    # werd; gemeten: elke zoekopdracht liet de RSS stijgen en nooit dalen.
+    #
+    # Zonder arena vraagt ONNX per aanroep geheugen aan het OS en geeft het
+    # daarna terug. Dat kost iets aan latentie — een allocatie in plaats van een
+    # hergebruikt blok — en dat is het hier ruimschoots waard. Zet op true als je
+    # een machine hebt waar geheugen niet schaars is en je elke milliseconde wilt.
+    ONNX_MEM_ARENA: bool = False
     # Structural importance: a periodic in-app PageRank over the CONTAINS/RELATES graph writes
     # a 0..1 pagerank per node; recall adds PAGERANK_WEIGHT·pagerank so well-connected,
     # central knowledge surfaces a little higher. No GDS plugin — the graph is small.

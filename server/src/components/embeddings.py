@@ -12,7 +12,11 @@ def _local():
     if _local_model is None:
         from fastembed import TextEmbedding
 
-        _local_model = TextEmbedding(get_settings().EMBEDDINGS_MODEL)
+        settings = get_settings()
+        # enable_cpu_mem_arena: zie ONNX_MEM_ARENA in config.py. Zonder dit
+        # groeit dit proces onbegrensd bij wisselende tekstlengtes.
+        _local_model = TextEmbedding(settings.EMBEDDINGS_MODEL,
+                                     enable_cpu_mem_arena=settings.ONNX_MEM_ARENA)
     return _local_model
 
 

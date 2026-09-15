@@ -26,7 +26,12 @@ def _get_model():
         return None
     try:
         from fastembed.rerank.cross_encoder import TextCrossEncoder
-        _model = TextCrossEncoder(model_name=settings.RERANK_MODEL)
+        # enable_cpu_mem_arena: zie ONNX_MEM_ARENA in config.py. De
+        # cross-encoder is de grootste boosdoener — hij krijgt tot RERANK_TOP_K
+        # documenten van willekeurige lengte in één batch, dus bijna elke
+        # aanroep heeft een vorm die de arena nog niet had.
+        _model = TextCrossEncoder(model_name=settings.RERANK_MODEL,
+                                  enable_cpu_mem_arena=settings.ONNX_MEM_ARENA)
         _log.info("reranker loaded", extra={"path": settings.RERANK_MODEL})
     except Exception as exc:  # noqa: BLE001 - degrade to no-rerank rather than break search
         _log.warning("reranker unavailable, continuing without it: %s", exc)
