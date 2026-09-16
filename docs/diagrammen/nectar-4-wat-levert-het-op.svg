@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n4">
+  <title id="n4">Wat Nectar oplevert, en waar het ophoudt</title>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 38px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 19px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 4 — WAT HET OPLEVERT</text>
+  <text class="f title" x="70" y="120">Wat het oplevert — en waar het ophoudt</text>
+  <text class="f sub" x="70" y="153">Zes dingen die merkbaar veranderen zodra er één gedeeld geheugen is.</text>
+
+  <rect x="70" y="198" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="70" y="198" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="102" y="238">Niemand begint blanco</text>
+  <text class="f lab" x="102" y="272">Een agent die aan een taak begint, en een</text>
+  <text class="f lab" x="102" y="296">collega die net binnen is, krijgen allebei wat</text>
+  <text class="f lab" x="102" y="320">er al bekend is. Dat scheelt het uitzoekwerk</text>
+  <text class="f lab" x="102" y="344">dat iemand anders al deed.</text>
+  <text class="f sm" x="102" y="374">Inwerken wordt lezen bij de bron.</text>
+
+  <rect x="565" y="198" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="565" y="198" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="597" y="238">Besluiten houden hun waarom</text>
+  <text class="f lab" x="597" y="272">"We doen het zo" is de helft. De andere helft</text>
+  <text class="f lab" x="597" y="296">is waaróm, en juist die verdwijnt normaal</text>
+  <text class="f lab" x="597" y="320">als eerste.</text>
+  <text class="f sm" x="597" y="350">Zonder dat waarom draai je een besluit terug dat</text>
+  <text class="f sm" x="597" y="372">er met reden stond — en kom je er later achter.</text>
+
+  <rect x="1060" y="198" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="1060" y="198" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="1092" y="238">Het onderhoudt zichzelf</text>
+  <text class="f lab" x="1092" y="272">Dubbelingen, losse eindjes en kennis die</text>
+  <text class="f lab" x="1092" y="296">elkaar tegenspreekt worden opgemerkt en</text>
+  <text class="f lab" x="1092" y="320">als klusje uitgezet.</text>
+  <text class="f sm" x="1092" y="350">Elke kennisbank verzandt zonder onderhoud. Hier</text>
+  <text class="f sm" x="1092" y="372">doet de zwerm dat, niet een aangewezen persoon.</text>
+
+  <rect x="70" y="416" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="70" y="416" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="102" y="456">Eén verhaal, overal</text>
+  <text class="f lab" x="102" y="490">Twee mensen die dezelfde vraag stellen</text>
+  <text class="f lab" x="102" y="514">krijgen hetzelfde antwoord, of ze nu in een</text>
+  <text class="f lab" x="102" y="538">lab zitten of op hun eigen laptop.</text>
+  <text class="f sm" x="102" y="568">En verandert een afspraak, dan verandert hij op</text>
+  <text class="f sm" x="102" y="590">één plek — niet op negen.</text>
+
+  <rect x="565" y="416" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="565" y="416" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="597" y="456">Het blijft binnen</text>
+  <text class="f lab" x="597" y="490">Eigen server, eigen netwerk. De modelletjes</text>
+  <text class="f lab" x="597" y="514">die het zoeken doen zijn klein en draaien</text>
+  <text class="f lab" x="597" y="538">daar gewoon mee.</text>
+  <text class="f sm" x="597" y="568">Er gaat geen kennis naar een dienst van iemand</text>
+  <text class="f sm" x="597" y="590">anders om doorzoekbaar te zijn.</text>
+
+  <rect x="1060" y="416" width="470" height="196" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="1060" y="416" width="6" height="196" rx="3" fill="#E08C1E"/>
+  <text class="f h" x="1092" y="456">Niet alleen voor Claude</text>
+  <text class="f lab" x="1092" y="490">Nectar praat een open protocol. Elke</text>
+  <text class="f lab" x="1092" y="514">AI-client die dat spreekt kan erop</text>
+  <text class="f lab" x="1092" y="538">aansluiten.</text>
+  <text class="f sm" x="1092" y="568">Je legt je kennis dus niet vast in het gereedschap</text>
+  <text class="f sm" x="1092" y="590">dat je vandaag toevallig gebruikt.</text>
+
+  <!-- eerlijke grens -->
+  <rect x="70" y="644" width="1460" height="186" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="102" y="682" fill="#E08C1E">EN WAAR HET OPHOUDT — WANT DAT HOORT ER OOK BIJ</text>
+
+  <text class="f" x="102" y="722" font-size="17" font-weight="700" fill="#FFFFFF">Het is geen archief, en het vult zichzelf niet</text>
+  <text class="f" x="102" y="752" font-size="14" fill="#94A3B8">Nectar onthoudt wat er bewust in wordt gezet. Zet niemand er iets in, dan staat er niets —</text>
+  <text class="f" x="102" y="774" font-size="14" fill="#94A3B8">het leest niet vanzelf je documenten, mailbox of repositories mee.</text>
+  <text class="f" x="102" y="804" font-size="14" fill="#94A3B8">Het loont dus pas als terugschrijven een gewoonte is. Daar helpt het bij (de poort weigert ruis,</text>
+  <text class="f" x="102" y="826" font-size="14" fill="#94A3B8">de agent krijgt de vraag vanzelf), maar een gewoonte blijft het.</text>
+</svg>

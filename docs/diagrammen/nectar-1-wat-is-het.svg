@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n1">
+  <title id="n1">Wat Nectar is: het geheugen van de organisatie, niet van één gesprek</title>
+  <defs>
+    <marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#E08C1E"/>
+    </marker>
+  </defs>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 38px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 19px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 1 — WAT HET IS</text>
+  <text class="f title" x="70" y="120">Het geheugen van de organisatie, niet van één gesprek</text>
+  <text class="f sub" x="70" y="153">Wat de een uitzoekt, weet de volgende al. Ook als dat een andere persoon, een ander project of een andere week is.</text>
+
+  <!-- ================= ZONDER ================= -->
+  <rect x="70" y="200" width="690" height="386" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="98" y="238" fill="#94A3B8">ZONDER — ZOALS HET MEESTAL GAAT</text>
+
+  <rect x="98" y="258" width="298" height="104" rx="11" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text class="f lab" x="120" y="288" font-weight="700">Collega A</text>
+  <text class="f sm" x="120" y="312">zoekt uit hoe de Fabric-API werkt</text>
+  <rect x="120" y="326" width="120" height="22" rx="5" fill="#E2E8F0"/>
+  <text class="f" x="128" y="342" font-size="11.5" fill="#64748B">in een chat</text>
+
+  <rect x="432" y="258" width="298" height="104" rx="11" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text class="f lab" x="454" y="288" font-weight="700">Collega B</text>
+  <text class="f sm" x="454" y="312">zoekt datzelfde een maand later uit</text>
+  <rect x="454" y="326" width="150" height="22" rx="5" fill="#E2E8F0"/>
+  <text class="f" x="462" y="342" font-size="11.5" fill="#64748B">weet niet van A</text>
+
+  <rect x="98" y="378" width="298" height="104" rx="11" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text class="f lab" x="120" y="408" font-weight="700">Een agent</text>
+  <text class="f sm" x="120" y="432">begint elke sessie blanco</text>
+  <rect x="120" y="446" width="166" height="22" rx="5" fill="#E2E8F0"/>
+  <text class="f" x="128" y="462" font-size="11.5" fill="#64748B">notitie op één laptop</text>
+
+  <rect x="432" y="378" width="298" height="104" rx="11" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text class="f lab" x="454" y="408" font-weight="700">Het besluit van maandag</text>
+  <text class="f sm" x="454" y="432">niemand weet meer waaróm</text>
+  <rect x="454" y="446" width="104" height="22" rx="5" fill="#E2E8F0"/>
+  <text class="f" x="462" y="462" font-size="11.5" fill="#64748B">kwijt</text>
+
+  <text class="f lab" x="98" y="516">Kennis staat overal een beetje: in chats die niemand terugleest, in</text>
+  <text class="f lab" x="98" y="540">bestandjes op één machine, in iemands hoofd. Ze veroudert, en niemand</text>
+  <text class="f lab" x="98" y="564">merkt het.</text>
+
+  <!-- ================= MET ================= -->
+  <rect x="830" y="200" width="700" height="386" rx="16" fill="#FDF3E3" stroke="#E08C1E" stroke-width="2.5"/>
+  <text class="f tag" x="858" y="238" fill="#B45309">MET NECTAR</text>
+
+  <rect x="858" y="258" width="196" height="74" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f lab" x="956" y="290" text-anchor="middle" font-weight="700">Collega A</text>
+  <text class="f sm" x="956" y="312" text-anchor="middle">legt het één keer vast</text>
+
+  <rect x="1306" y="258" width="196" height="74" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f lab" x="1404" y="290" text-anchor="middle" font-weight="700">Collega B</text>
+  <text class="f sm" x="1404" y="312" text-anchor="middle">krijgt het aangereikt</text>
+
+  <rect x="858" y="454" width="196" height="74" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f lab" x="956" y="486" text-anchor="middle" font-weight="700">Een agent</text>
+  <text class="f sm" x="956" y="508" text-anchor="middle">begint niet blanco</text>
+
+  <rect x="1306" y="454" width="196" height="74" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f lab" x="1404" y="486" text-anchor="middle" font-weight="700">Nieuwe collega</text>
+  <text class="f sm" x="1404" y="508" text-anchor="middle">leest zich in bij de bron</text>
+
+  <rect x="1094" y="316" width="172" height="156" rx="14" fill="#0B1220"/>
+  <text class="f" x="1180" y="352" text-anchor="middle" font-size="16" font-weight="700" fill="#E08C1E">NECTAR</text>
+  <circle cx="1140" cy="400" r="16" fill="#E08C1E"/>
+  <circle cx="1206" cy="386" r="12" fill="#FFB547"/>
+  <circle cx="1210" cy="424" r="10" fill="#FF7847"/>
+  <line x1="1140" y1="400" x2="1206" y2="386" stroke="#8A6A30" stroke-width="2"/>
+  <line x1="1140" y1="400" x2="1210" y2="424" stroke="#8A6A30" stroke-width="2"/>
+  <text class="f" x="1180" y="456" text-anchor="middle" font-size="12.5" fill="#94A3B8">één gedeeld geheugen</text>
+
+  <path d="M1054 300 L1094 336" stroke="#E08C1E" stroke-width="2.5" marker-end="url(#ah)"/>
+  <path d="M1266 336 L1306 300" stroke="#E08C1E" stroke-width="2.5" marker-end="url(#ah)"/>
+  <path d="M1054 486 L1094 452" stroke="#E08C1E" stroke-width="2.5" marker-end="url(#ah)"/>
+  <path d="M1266 452 L1306 486" stroke="#E08C1E" stroke-width="2.5" marker-end="url(#ah)"/>
+
+  <text class="f lab" x="858" y="560">Eén plek waar het staat, en iedereen — mens én agent — leest en schrijft daar.</text>
+
+  <!-- ================= WAT ERIN ZIT ================= -->
+  <rect x="70" y="620" width="1460" height="210" rx="16" fill="#F1F5F9"/>
+  <text class="f tag" x="102" y="656" fill="#64748B">WAT ERIN ZIT — EN HET IS MEER DAN NOTITIES</text>
+
+  <rect x="102" y="676" width="216" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="122" y="706" font-weight="700">Besluiten</text>
+  <text class="f sm" x="122" y="730">met het waarom erbij,</text>
+  <text class="f sm" x="122" y="752">zodat je ze later kunt</text>
+  <text class="f sm" x="122" y="774">navertellen</text>
+
+  <rect x="334" y="676" width="216" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="354" y="706" font-weight="700">Werkwijzen</text>
+  <text class="f sm" x="354" y="730">hoe iets hier gaat, en</text>
+  <text class="f sm" x="354" y="752">welke valkuilen erin</text>
+  <text class="f sm" x="354" y="774">zitten</text>
+
+  <rect x="566" y="676" width="216" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="586" y="706" font-weight="700">Conventies</text>
+  <text class="f sm" x="586" y="730">afspraken waar je je</text>
+  <text class="f sm" x="586" y="752">aan houdt zonder er</text>
+  <text class="f sm" x="586" y="774">elke keer over te praten</text>
+
+  <rect x="798" y="676" width="216" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="818" y="706" font-weight="700">Skills en workflows</text>
+  <text class="f sm" x="818" y="730">kant-en-klare stappen</text>
+  <text class="f sm" x="818" y="752">die een agent meteen</text>
+  <text class="f sm" x="818" y="774">kan uitvoeren</text>
+
+  <rect x="1030" y="676" width="216" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="1050" y="706" font-weight="700">Geheimen</text>
+  <text class="f sm" x="1050" y="730">tokens en sleutels per</text>
+  <text class="f sm" x="1050" y="752">persoon, versleuteld —</text>
+  <text class="f sm" x="1050" y="774">nooit in een chat</text>
+
+  <rect x="1262" y="676" width="236" height="128" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="1282" y="706" font-weight="700">Waar je nu aan werkt</text>
+  <text class="f sm" x="1282" y="730">de lopende taak en de</text>
+  <text class="f sm" x="1282" y="752">staande instructies, zodat</text>
+  <text class="f sm" x="1282" y="774">niemand van koers raakt</text>
+</svg>

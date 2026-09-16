@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n3">
+  <title id="n3">Niets staat lokaal: skills, workflows en afspraken komen uit Nectar</title>
+  <defs>
+    <marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#E08C1E"/>
+    </marker>
+  </defs>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 38px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 19px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 3 — ÉÉN BRON</text>
+  <text class="f title" x="70" y="120">Skills, workflows en afspraken staan niet lokaal</text>
+  <text class="f sub" x="70" y="153">Ze komen uit Nectar. Wat op een machine staat is kladpapier — en kladpapier mag verdwijnen.</text>
+
+  <!-- de bron -->
+  <rect x="70" y="204" width="410" height="392" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="98" y="242" fill="#E08C1E">DE BRON</text>
+  <text class="f" x="98" y="280" font-size="24" font-weight="700" fill="#FFFFFF">Nectar</text>
+  <text class="f" x="98" y="308" font-size="14" fill="#94A3B8">één plek, voor iedereen dezelfde</text>
+
+  <rect x="98" y="330" width="354" height="52" rx="9" fill="#1E293B"/>
+  <text class="f" x="118" y="362" font-size="15.5" font-weight="700" fill="#FFE2B8">Skills</text>
+  <text class="f" x="196" y="362" font-size="13.5" fill="#94A3B8">hoe je iets hier aanpakt</text>
+
+  <rect x="98" y="392" width="354" height="52" rx="9" fill="#1E293B"/>
+  <text class="f" x="118" y="424" font-size="15.5" font-weight="700" fill="#FFE2B8">Workflows</text>
+  <text class="f" x="216" y="424" font-size="13.5" fill="#94A3B8">stappen die je herhaalt</text>
+
+  <rect x="98" y="454" width="354" height="52" rx="9" fill="#1E293B"/>
+  <text class="f" x="118" y="486" font-size="15.5" font-weight="700" fill="#FFE2B8">Conventies</text>
+  <text class="f" x="226" y="486" font-size="13.5" fill="#94A3B8">afspraken en besluiten</text>
+
+  <rect x="98" y="516" width="354" height="52" rx="9" fill="#1E293B"/>
+  <text class="f" x="118" y="548" font-size="15.5" font-weight="700" fill="#FFE2B8">Geheimen</text>
+  <text class="f" x="212" y="548" font-size="13.5" fill="#94A3B8">per persoon, versleuteld</text>
+
+  <path d="M480 300 L560 300" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+  <path d="M480 400 L560 400" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+  <path d="M480 500 L560 500" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+
+  <!-- wie het ophaalt -->
+  <rect x="570" y="204" width="470" height="392" rx="16" fill="#FDF3E3" stroke="#E08C1E" stroke-width="2"/>
+  <text class="f tag" x="598" y="242" fill="#B45309">WIE HET OPHAALT</text>
+
+  <rect x="598" y="262" width="414" height="90" rx="11" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="620" y="294">Een agent in een lab</text>
+  <text class="f sm" x="620" y="318">haalt de skill op die hij nodig heeft en voert</text>
+  <text class="f sm" x="620" y="338">hem uit — hij hoeft hem niet bij zich te hebben</text>
+
+  <rect x="598" y="364" width="414" height="90" rx="11" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="620" y="396">Jij, op je laptop</text>
+  <text class="f sm" x="620" y="420">zelfde skills, zelfde afspraken, zelfde antwoord</text>
+  <text class="f sm" x="620" y="440">als je collega drie kamers verderop</text>
+
+  <rect x="598" y="466" width="414" height="90" rx="11" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="620" y="498">Een nieuwe machine</text>
+  <text class="f sm" x="620" y="522">aansluiten is genoeg. Er valt niets te kopiëren,</text>
+  <text class="f sm" x="620" y="542">want er stond nooit iets lokaal</text>
+
+  <!-- wat lokaal blijft -->
+  <rect x="1070" y="204" width="460" height="392" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="1098" y="242" fill="#94A3B8">WAT LOKAAL BLIJFT</text>
+  <text class="f h" x="1098" y="278">Kladpapier</text>
+  <text class="f lab" x="1098" y="310">Een notitiebestand op je machine, de</text>
+  <text class="f lab" x="1098" y="334">werkaantekeningen van één sessie, een</text>
+  <text class="f lab" x="1098" y="358">half idee.</text>
+
+  <rect x="1098" y="380" width="404" height="112" rx="11" fill="#F8FAFC"/>
+  <text class="f sm" x="1118" y="410">Dat mag bestaan, maar het is van één machine,</text>
+  <text class="f sm" x="1118" y="434">van één account, onzichtbaar voor de rest, en</text>
+  <text class="f sm" x="1118" y="458">het veroudert zonder dat iemand het merkt.</text>
+  <text class="f" x="1118" y="482" font-size="13.5" font-weight="700" fill="#B45309">Dus: houdbaar tot volgende week.</text>
+
+  <text class="f lab" x="1098" y="524">Blijkt zo'n aantekening tóch bruikbaar voor</text>
+  <text class="f lab" x="1098" y="548">een ander, dan gaat hij naar Nectar — en mag</text>
+  <text class="f lab" x="1098" y="572">het lokale krabbeltje verlopen.</text>
+
+  <!-- waarom dit uitmaakt -->
+  <rect x="70" y="632" width="1460" height="198" rx="16" fill="#F1F5F9"/>
+  <text class="f tag" x="102" y="668" fill="#64748B">WAAROM DIT UITMAAKT</text>
+
+  <rect x="102" y="688" width="340" height="120" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="122" y="718" font-weight="700">Eén keer aanpassen</text>
+  <text class="f sm" x="122" y="744">Verandert een werkwijze, dan pas je hem</text>
+  <text class="f sm" x="122" y="766">op één plek aan. Niet op negen laptops,</text>
+  <text class="f sm" x="122" y="788">waarvan er zeven achterblijven.</text>
+
+  <rect x="458" y="688" width="340" height="120" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="478" y="718" font-weight="700">Geen kennis die wegloopt</text>
+  <text class="f sm" x="478" y="744">Gaat iemand weg, dan gaat zijn manier</text>
+  <text class="f sm" x="478" y="766">van werken niet met hem mee de deur</text>
+  <text class="f sm" x="478" y="788">uit.</text>
+
+  <rect x="814" y="688" width="340" height="120" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="834" y="718" font-weight="700">Wegwerpbare werkplekken</text>
+  <text class="f sm" x="834" y="744">Een lab dat je weggooit kost je niets,</text>
+  <text class="f sm" x="834" y="766">want er stond geen kennis in die je</text>
+  <text class="f sm" x="834" y="788">kwijt kon raken.</text>
+
+  <rect x="1170" y="688" width="328" height="120" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="1190" y="718" font-weight="700">Eén verhaal</text>
+  <text class="f sm" x="1190" y="744">Twee mensen die dezelfde vraag stellen</text>
+  <text class="f sm" x="1190" y="766">krijgen hetzelfde antwoord — en dat is</text>
+  <text class="f sm" x="1190" y="788">precies wat een afspraak hoort te doen.</text>
+</svg>
