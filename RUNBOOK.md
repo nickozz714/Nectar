@@ -30,6 +30,42 @@ their own token.
 > and owns the store. Never point two instances at the same volume, and never scale out —
 > scale *up* (CPU/RAM). There is no clustering here to fall back on.
 
+### Exactly what lands where
+
+This runbook touches **two** machines, and they are usually not the same one. Steps 1–3 set
+up the hive; step 4 connects a client and runs wherever that person works.
+
+**On the hive machine** (steps 1–3):
+
+| What | Where |
+| --- | --- |
+| The repository | a `Nectar/` directory in whatever folder you clone from |
+| Two containers | `<project>-hivemind-1` (Neo4j + API + models) and `<project>-caddy-1` |
+| Two Docker volumes | `<project>_hive-data` (**the graph, the vault, everything**) and `<project>_caddy-data` |
+| Ports | `8642` API + MCP over HTTP · `8643` the same over TLS · `7474` Neo4j Browser · `7687` Bolt |
+| `.env` | only if you set `NECTAR_HOST`; nothing else is required |
+
+`<project>` is the compose project name, which compose derives from the **directory name** —
+clone into `Nectar/` and the volume is `nectar_hive-data`. Nothing is installed outside
+Docker: no system packages, no services, no files outside that directory.
+
+**On each client machine** (step 4, once per machine plus once per project):
+
+| What | Where |
+| --- | --- |
+| Helper scripts | `~/.hivemind/scripts/` |
+| The connection **including the token** | `~/.hivemind/config.json` (chmod 600) |
+| macOS only, behind a LAN IP | `~/Library/LaunchAgents/com.hivemind.tunnel.plist`, loaded into launchd |
+| Per project | `.claude/settings.json` (recall hook + `HIVE_ENABLED`, `HIVE_URL`, `HIVE_TOKEN`, `HIVE_PROJECT`, `HIVE_ANCHORS`) and `.mcp.json` |
+
+> **Those two project files contain the token.** In a git repository, put
+> `.claude/settings.json` and `.mcp.json` in `.gitignore` before you commit anything. The
+> installer prints a reminder; it does not do it for you.
+
+The download kit itself (`hivemind-install.zip` and the unpacked `hivemind-install/`) also
+lands in the project directory. It is only needed during the install — delete it afterwards
+so it does not end up in a commit.
+
 ## 0. Inputs you need
 
 | Name | What it is | Where it comes from |
@@ -133,6 +169,15 @@ unzip -o hivemind-install.zip && cd hivemind-install
 **Check:** `claude mcp list` from that directory shows `hivemind` as connected, and
 `.claude/settings.json` in the project now contains `HIVE_ENABLED` and the anchor topics.
 
+Then clean up after yourself — the kit has done its work and both project files hold a
+token:
+
+```bash
+cd .. && rm -rf hivemind-install hivemind-install.zip
+grep -q '^\.claude/settings\.json$' .gitignore 2>/dev/null || \
+  printf '.claude/settings.json\n.mcp.json\n' >> .gitignore   # git repo only
+```
+
 > **macOS needs that 4th argument.** The Claude Code CLI cannot reach a private LAN IP
 > (Local Network permission bug, claude-code #27828/#55169) and shows
 > `FailedToOpenSocket`. The installer routes the MCP through a persistent `launchd`
@@ -195,10 +240,11 @@ Tell the user:
 - the URL (`http://<host>:8642`, GUI on `/ui`);
 - the **org_admin token**, and that it is the only credential there is;
 - which projects you connected;
-- **that the data volume is the organisation's memory.** Back it up
+- **that the `<project>_hive-data` volume is the organisation's memory.** Back it up
   (`./scripts/backup.sh` → `backups/hive-data-<stamp>.tgz`; it stops the container briefly
-  for a consistent copy). If `SECRET_MASTER_KEY` was left to auto-generate it lives on that
-  volume — losing the volume loses the vault with it.
+  for a consistent copy and refuses to write an archive without the Neo4j store in it). If
+  `SECRET_MASTER_KEY` was left to auto-generate it lives on that same volume — losing the
+  volume loses the vault with it.
 
 ## Known pitfalls
 
