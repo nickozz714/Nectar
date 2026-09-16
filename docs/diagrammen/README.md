@@ -35,6 +35,28 @@ Honinggeel `#E08C1E` is Nectar (uit de mind-interface), donker `#0B1220` is de h
 De LabX-platen gebruiken blauw `#3B82F6`; op een plaat waar beide voorkomen zie je daardoor
 zonder legenda welke kant welk product is.
 
+## Naar PowerPoint
+
+```bash
+python3 maak-pptx.py --titel "Nectar" \
+    --ondertitel "Het geheugen van de organisatie — acht platen, van wat het is tot wat het oplevert" \
+    --accent E08C1E --uit Nectar-platen.pptx
+```
+
+Levert een 16:9-deck op met een titeldia, één dia per plaat en **sprekersnotities**
+(waarvoor die plaat is, en waar je bij het vertellen op moet letten). In elke dia zit de
+SVG én een bitmap-voorvertoning: PowerPoint 2019+ toont de vector — scherp op elk formaat en
+met rechtermuis → *Converteren naar vorm* tot losse vormen te maken — en oudere versies
+vallen terug op de bitmap. Zo gaat het deck overal open.
+
+Het renderen gebeurt met Chrome in headless-modus en niet met ImageMagick: die laatste
+rendert SVG-tekst met een eigen, beperkte engine en maakt er een potje van zodra er een
+lettertype-fallback aan te pas komt.
+
+De `.pptx` staat bewust **niet** in git — het is een gegenereerd bestand dat bij elke
+regeneratie in zijn geheel verandert, en de platen ernaast zijn de bron. Het bouwen kost een
+paar seconden.
+
 ## In een presentatie
 
 - **PowerPoint / Keynote**: Invoegen → Afbeeldingen → het `.svg`-bestand.
