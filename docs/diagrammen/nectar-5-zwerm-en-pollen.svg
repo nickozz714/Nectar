@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n7">
+  <title id="n7">De zwerm en de pollen: hoe het geheugen zichzelf onderhoudt</title>
+  <defs>
+    <marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#E08C1E"/>
+    </marker>
+    <marker id="ap" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#7C4DEF"/>
+    </marker>
+  </defs>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 37px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 18.5px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 5 — DE ZWERM</text>
+  <text class="f title" x="70" y="120">Het geheugen ruimt zichzelf op, door de agenten die het gebruiken</text>
+  <text class="f sub" x="70" y="153">Geen bibliothecaris die achteraf alles nakijkt. Wie langskomt, doet onderweg een klein klusje.</text>
+
+  <!-- waar pollen vandaan komen -->
+  <rect x="70" y="196" width="400" height="330" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="98" y="232" fill="#94A3B8">WAAR EEN KLUSJE VANDAAN KOMT</text>
+
+  <rect x="98" y="252" width="344" height="76" rx="10" fill="#F8FAFC"/>
+  <text class="f lab" x="118" y="280" font-weight="700">Een agent valt iets op</text>
+  <text class="f sm" x="118" y="304">"deze twee notities spreken elkaar tegen" —</text>
+  <text class="f sm" x="118" y="322">hij stelt het voor in plaats van het zelf te doen</text>
+
+  <rect x="98" y="340" width="344" height="166" rx="10" fill="#F8FAFC"/>
+  <text class="f lab" x="118" y="368" font-weight="700">Nectar kijkt zelf rond</text>
+  <text class="f sm" x="118" y="392">Op de achtergrond zoekt hij naar:</text>
+  <text class="f sm" x="118" y="416">· twee keer hetzelfde, net anders verwoord</text>
+  <text class="f sm" x="118" y="438">· kennis die al lang niemand meer raakte</text>
+  <text class="f sm" x="118" y="460">· dingen die elkaar tegenspreken</text>
+  <text class="f sm" x="118" y="482">· losse knopen die nergens aan hangen</text>
+
+  <path d="M470 360 L508 360" stroke="#7C4DEF" stroke-width="3" marker-end="url(#ap)"/>
+
+  <!-- de pollen -->
+  <rect x="518" y="196" width="330" height="330" rx="16" fill="#F4F1FB" stroke="#7C4DEF" stroke-width="2.5"/>
+  <text class="f tag" x="546" y="232" fill="#5B36C7">HET WORDT EEN POLLEN</text>
+  <text class="f h" x="546" y="268">Een klein, af te ronden klusje</text>
+  <text class="f sm" x="546" y="296">Geen project. Eén ding, in een paar</text>
+  <text class="f sm" x="546" y="318">minuten te doen door wie toch al</text>
+  <text class="f sm" x="546" y="340">in de buurt was.</text>
+
+  <rect x="546" y="362" width="274" height="50" rx="9" fill="#FFFFFF" stroke="#B9A7EE" stroke-width="1.5"/>
+  <text class="f sm" x="566" y="392">"Zijn dit dezelfde afspraak?"</text>
+  <rect x="546" y="420" width="274" height="50" rx="9" fill="#FFFFFF" stroke="#B9A7EE" stroke-width="1.5"/>
+  <text class="f sm" x="566" y="450">"Geldt dit besluit nog?"</text>
+
+  <text class="f sm" x="546" y="500">Wie hem oppakt, claimt hem.</text>
+
+  <path d="M848 360 L886 360" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+
+  <!-- de zwerm lost op -->
+  <rect x="896" y="196" width="634" height="330" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="924" y="232" fill="#E08C1E">DE ZWERM LOST HET OP</text>
+  <text class="f" x="924" y="270" font-size="21" font-weight="700" fill="#FFFFFF">Elke aangesloten agent, een beetje</text>
+  <text class="f" x="924" y="302" font-size="14.5" fill="#94A3B8">Je stelt een vraag, krijgt je antwoord — en onderweg pakt de agent</text>
+  <text class="f" x="924" y="324" font-size="14.5" fill="#94A3B8">één klusje op. Jij merkt er niets van; het geheugen wel.</text>
+
+  <rect x="924" y="348" width="290" height="70" rx="10" fill="#1E293B"/>
+  <text class="f" x="944" y="376" font-size="14.5" font-weight="700" fill="#FFE2B8">Samenvoegen</text>
+  <text class="f" x="944" y="400" font-size="13" fill="#94A3B8">twee versies worden er één</text>
+
+  <rect x="1230" y="348" width="272" height="70" rx="10" fill="#1E293B"/>
+  <text class="f" x="1250" y="376" font-size="14.5" font-weight="700" fill="#FFE2B8">Vervangen</text>
+  <text class="f" x="1250" y="400" font-size="13" fill="#94A3B8">het oude blijft vindbaar</text>
+
+  <rect x="924" y="428" width="290" height="70" rx="10" fill="#1E293B"/>
+  <text class="f" x="944" y="456" font-size="14.5" font-weight="700" fill="#FFE2B8">Verbinden</text>
+  <text class="f" x="944" y="480" font-size="13" fill="#94A3B8">losse kennis krijgt zijn plek</text>
+
+  <rect x="1230" y="428" width="272" height="70" rx="10" fill="#1E293B"/>
+  <text class="f" x="1250" y="456" font-size="14.5" font-weight="700" fill="#FFE2B8">Opbergen</text>
+  <text class="f" x="1250" y="480" font-size="13" fill="#94A3B8">wat niet meer geldt, gaat opzij</text>
+
+  <!-- waarborgen -->
+  <rect x="70" y="558" width="1460" height="272" rx="16" fill="#F1F5F9"/>
+  <text class="f tag" x="102" y="594" fill="#64748B">DE WAARBORGEN — WANT ÉÉN AGENT MAG NIET DE GESCHIEDENIS HERSCHRIJVEN</text>
+
+  <rect x="102" y="614" width="340" height="94" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="122" y="644" font-weight="700">Meer dan één stem</text>
+  <text class="f sm" x="122" y="668">Een wijziging in bestaande kennis telt pas</text>
+  <text class="f sm" x="122" y="690">als er verschillende accounts achter staan.</text>
+
+  <rect x="458" y="614" width="340" height="94" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="478" y="644" font-weight="700">Niet je eigen werk goedkeuren</text>
+  <text class="f sm" x="478" y="668">Wie een notitie schreef, beslist niet zelf dat</text>
+  <text class="f sm" x="478" y="690">die een oudere mag vervangen.</text>
+
+  <rect x="814" y="614" width="340" height="94" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="834" y="644" font-weight="700">Geclaimd is onzichtbaar</text>
+  <text class="f sm" x="834" y="668">Pakt iemand een klusje op, dan zien de</text>
+  <text class="f sm" x="834" y="690">anderen het even niet. Geen dubbel werk.</text>
+
+  <rect x="1170" y="614" width="328" height="94" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="1190" y="644" font-weight="700">Alles blijft nagaanbaar</text>
+  <text class="f sm" x="1190" y="668">Wie wat wanneer wijzigde staat vast, en dat</text>
+  <text class="f sm" x="1190" y="690">spoor is alleen aan te vullen, niet te wissen.</text>
+
+  <rect x="102" y="724" width="1396" height="86" rx="11" fill="#FFFFFF" stroke="#E08C1E" stroke-width="2"/>
+  <text class="f h" x="126" y="756" fill="#B45309">En één ding gaat nooit vanzelf: iets zichtbaar maken voor een grotere groep</text>
+  <text class="f lab" x="126" y="784">Kennis breder delen dan waar hij voor bedoeld was, is de enige wijziging die altijd bij een mens terechtkomt.</text>
+</svg>

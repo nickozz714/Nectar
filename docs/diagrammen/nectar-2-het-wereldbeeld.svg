@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n8">
+  <title id="n8">Het wereldbeeld achter Nectar: de bijenkorf, en wat het werkelijk is</title>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 37px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 18.5px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+    .term { font-size: 17px; font-weight: 700; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 2 — HET WERELDBEELD</text>
+  <text class="f title" x="70" y="120">Eén beeld, en alle woorden volgen eruit</text>
+  <text class="f sub" x="70" y="153">De namen zijn geen marketing. Ze horen bij elkaar, en dat maakt ze te onthouden na één keer horen.</text>
+
+  <!-- de metafoor -->
+  <rect x="70" y="196" width="720" height="440" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="98" y="234" fill="#E08C1E">DE KORF</text>
+
+  <rect x="98" y="256" width="664" height="82" rx="11" fill="#1E293B"/>
+  <text class="f term" x="122" y="290" fill="#FFB547">Hive</text>
+  <text class="f" x="122" y="316" font-size="14" fill="#94A3B8">de korf — alles wat de organisatie weet, op één plek</text>
+
+  <rect x="98" y="348" width="664" height="82" rx="11" fill="#1E293B"/>
+  <text class="f term" x="122" y="382" fill="#FFB547">Swarm</text>
+  <text class="f" x="122" y="408" font-size="14" fill="#94A3B8">de zwerm — elke AI die erop is aangesloten, samen</text>
+
+  <rect x="98" y="440" width="664" height="82" rx="11" fill="#1E293B"/>
+  <text class="f term" x="122" y="474" fill="#FFB547">Nectar</text>
+  <text class="f" x="122" y="500" font-size="14" fill="#94A3B8">wat ze binnenbrengen — en de naam van het geheel</text>
+
+  <rect x="98" y="532" width="324" height="82" rx="11" fill="#1E293B"/>
+  <text class="f term" x="122" y="566" fill="#FFB547">Pollen</text>
+  <text class="f" x="122" y="592" font-size="13.5" fill="#94A3B8">een klein onderhoudsklusje</text>
+
+  <rect x="438" y="532" width="324" height="82" rx="11" fill="#1E293B"/>
+  <text class="f term" x="462" y="566" fill="#FFB547">Bloom</text>
+  <text class="f" x="462" y="592" font-size="13.5" fill="#94A3B8">kennis die rijpt en weer verwelkt</text>
+
+  <!-- de rest van de woorden -->
+  <rect x="814" y="196" width="716" height="440" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="842" y="234" fill="#94A3B8">EN DE WOORDEN DIE JE VERDER TEGENKOMT</text>
+
+  <text class="f lab" x="842" y="274" font-weight="700">Geheugen</text>
+  <text class="f sm" x="1030" y="274">één stukje kennis, met een soort: besluit, werkwijze, valkuil…</text>
+  <line x1="842" y1="290" x2="1502" y2="290" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="318" font-weight="700">Onderwerp</text>
+  <text class="f sm" x="1030" y="318">waar een geheugen onder hangt — meerdere mag</text>
+  <line x1="842" y1="334" x2="1502" y2="334" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="362" font-weight="700">Anker</text>
+  <text class="f sm" x="1030" y="362">het onderwerp van jouw project; kleurt wat je te zien krijgt</text>
+  <line x1="842" y1="378" x2="1502" y2="378" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="406" font-weight="700">Focus · baan</text>
+  <text class="f sm" x="1030" y="406">je koers, en een eigen spoor per sessie (plaat 6)</text>
+  <line x1="842" y1="422" x2="1502" y2="422" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="450" font-weight="700">Poort</text>
+  <text class="f sm" x="1030" y="450">de toets op alles wat erin geschreven wordt (plaat 4)</text>
+  <line x1="842" y1="466" x2="1502" y2="466" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="494" font-weight="700">Bereik</text>
+  <text class="f sm" x="1030" y="494">voor wie iets zichtbaar is: jij, je team, of de organisatie</text>
+  <line x1="842" y1="510" x2="1502" y2="510" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="538" font-weight="700">Vervangen</text>
+  <text class="f sm" x="1030" y="538">nieuwer dan dit — het oude blijft vindbaar, maar zakt weg</text>
+  <line x1="842" y1="554" x2="1502" y2="554" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="582" font-weight="700">Gat</text>
+  <text class="f sm" x="1030" y="582">een vraag die telkens niets oplevert — dus ontbrekende kennis</text>
+  <line x1="842" y1="598" x2="1502" y2="598" stroke="#F1F5F9" stroke-width="2"/>
+
+  <text class="f lab" x="842" y="626" font-weight="700">Herkomst</text>
+  <text class="f sm" x="1030" y="626">welk model, welk account, welke mens — achter elk geheugen</text>
+
+  <!-- waarom een beeld -->
+  <rect x="70" y="668" width="1460" height="162" rx="16" fill="#FDF3E3" stroke="#E08C1E" stroke-width="2"/>
+  <text class="f h" x="102" y="708">Waarom een beeld in plaats van een afkorting</text>
+  <text class="f lab" x="102" y="744">Een "distributed knowledge graph with consensus-gated mutations" moet je elke keer opnieuw uitleggen. Een korf</text>
+  <text class="f lab" x="102" y="770">waar een zwerm iets in brengt en onderhoudt, snapt iedereen meteen — en het klopt ook nog: de bijen doen het samen,</text>
+  <text class="f lab" x="102" y="796">niemand stuurt, en de korf is van de groep en niet van één bij.</text>
+  <text class="f sm" x="102" y="820">Waar de vergelijking ophoudt: een korf vult zichzelf, dit geheugen niet. Wat niemand erin zet, staat er niet.</text>
+</svg>

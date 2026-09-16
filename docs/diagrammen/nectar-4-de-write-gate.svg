@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n5">
+  <title id="n5">De write-gate: wat er gebeurt met wat je terugschrijft</title>
+  <defs>
+    <marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#E08C1E"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#DC2626"/>
+    </marker>
+    <marker id="agr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#0E9F6E"/>
+    </marker>
+  </defs>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 37px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 18.5px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 4 — DE POORT</text>
+  <text class="f title" x="70" y="120">Niet alles wat een agent opschrijft hoort in het geheugen</text>
+  <text class="f sub" x="70" y="153">Toevoegen mag zonder te vragen. Maar er staat een poort voor, en die is voor iedereen dezelfde.</text>
+
+  <!-- instap -->
+  <rect x="70" y="204" width="238" height="188" rx="14" fill="#FDF3E3" stroke="#E08C1E" stroke-width="2.5"/>
+  <text class="f tag" x="94" y="240" fill="#B45309">WAT ERIN GAAT</text>
+  <text class="f h" x="94" y="278">Iets dat je leerde</text>
+  <text class="f sm" x="94" y="308">Een werkwijze die werkte,</text>
+  <text class="f sm" x="94" y="330">een besluit met het waarom,</text>
+  <text class="f sm" x="94" y="352">een valkuil in een systeem.</text>
+  <text class="f sm" x="94" y="378">Met een titel en een onderwerp.</text>
+
+  <path d="M308 298 L344 298" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+
+  <!-- toets 1 -->
+  <rect x="354" y="204" width="300" height="188" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="354" y="204" width="300" height="40" rx="14" fill="#1E293B"/>
+  <rect x="354" y="230" width="300" height="14" fill="#1E293B"/>
+  <text class="f tag" x="378" y="231" fill="#FFFFFF">TOETS 1 · IS HET BRUIKBAAR?</text>
+  <text class="f lab" x="378" y="276">Staat er genoeg in om er later</text>
+  <text class="f lab" x="378" y="298">iets aan te hebben?</text>
+  <text class="f lab" x="378" y="326">Staan er persoonsgegevens in</text>
+  <text class="f lab" x="378" y="348">die er niet horen?</text>
+  <text class="f sm" x="378" y="376">Een losse kreet van vier woorden valt af.</text>
+
+  <path d="M504 392 L504 430" stroke="#DC2626" stroke-width="2.5" marker-end="url(#ar)"/>
+  <rect x="354" y="438" width="300" height="60" rx="10" fill="#FDECEC" stroke="#DC2626" stroke-width="1.5"/>
+  <text class="f lab" x="378" y="466" font-weight="700" fill="#B91C1C">Geweigerd, met reden</text>
+  <text class="f sm" x="378" y="488">de agent hoort wát er mis was</text>
+
+  <path d="M654 298 L690 298" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+
+  <!-- toets 2 -->
+  <rect x="700" y="204" width="320" height="188" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="700" y="204" width="320" height="40" rx="14" fill="#1E293B"/>
+  <rect x="700" y="230" width="320" height="14" fill="#1E293B"/>
+  <text class="f tag" x="724" y="231" fill="#FFFFFF">TOETS 2 · STAAT HET ER AL?</text>
+  <text class="f lab" x="724" y="276">Niet op exacte woorden, maar op</text>
+  <text class="f lab" x="724" y="298">betekenis — anders had je er tien</text>
+  <text class="f lab" x="724" y="320">varianten van hetzelfde in staan.</text>
+  <text class="f sm" x="724" y="352">Daarna kijkt hij ook of het onderwerp al</text>
+  <text class="f sm" x="724" y="374">bestaat, in plaats van er een nieuw te maken.</text>
+
+  <!-- drie uitkomsten -->
+  <path d="M1020 252 L1062 252" stroke="#0E9F6E" stroke-width="3" marker-end="url(#agr)"/>
+  <rect x="1072" y="212" width="458" height="80" rx="12" fill="#E7F7F1" stroke="#0E9F6E" stroke-width="2"/>
+  <text class="f h" x="1096" y="244" fill="#0E7A55">Nieuw genoeg — het komt erin</text>
+  <text class="f sm" x="1096" y="270">onder een bestaand onderwerp, of onder een nieuw als dat er niet is</text>
+
+  <path d="M1020 344 L1062 344" stroke="#D97706" stroke-width="3" marker-end="url(#ah)"/>
+  <rect x="1072" y="304" width="458" height="94" rx="12" fill="#FEF3E2" stroke="#D97706" stroke-width="2"/>
+  <text class="f h" x="1096" y="336" fill="#B45309">Lijkt erop, maar net niet hetzelfde</text>
+  <text class="f sm" x="1096" y="362">Het komt erin én er gaat een vraag uit naar de zwerm: is dit een</text>
+  <text class="f sm" x="1096" y="384">aanvulling, een vervanging, of kan het weg? Zie plaat 5.</text>
+
+  <path d="M1020 448 L1062 448" stroke="#64748B" stroke-width="3" marker-end="url(#ah)"/>
+  <rect x="1072" y="410" width="458" height="80" rx="12" fill="#F1F5F9"/>
+  <text class="f h" x="1096" y="442">Dit staat er al</text>
+  <text class="f sm" x="1096" y="468">Geen tweede exemplaar. Het bestaande wordt aangetikt: het leeft nog.</text>
+
+  <!-- waarom -->
+  <rect x="70" y="538" width="730" height="292" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="102" y="576" fill="#E08C1E">WAAROM DIT ER MOET ZIJN</text>
+  <text class="f" x="102" y="614" font-size="21" font-weight="700" fill="#FFFFFF">Een geheugen zonder poort wordt een zolder</text>
+  <text class="f" x="102" y="652" font-size="15" fill="#94A3B8">Agenten schrijven makkelijk. Zonder iets ertussen krijg je binnen een maand</text>
+  <text class="f" x="102" y="674" font-size="15" fill="#94A3B8">vijf varianten van dezelfde afspraak, sessienotities die niemand aangaan,</text>
+  <text class="f" x="102" y="696" font-size="15" fill="#94A3B8">en tussen die ruis vindt niemand meer het ene ding dat ertoe doet.</text>
+  <text class="f" x="102" y="734" font-size="15" fill="#94A3B8">De poort is bewust <tspan font-weight="700" fill="#FFE2B8">deterministisch</tspan>: dezelfde tekst krijgt altijd hetzelfde</text>
+  <text class="f" x="102" y="756" font-size="15" fill="#94A3B8">oordeel, ongeacht welk model hem aanbiedt. Geen model dat over andermans</text>
+  <text class="f" x="102" y="778" font-size="15" fill="#94A3B8">bijdrage oordeelt — dat zou een tweede soort willekeur toevoegen.</text>
+  <text class="f" x="102" y="808" font-size="14" fill="#6B7A90">En wat er wél doorheen komt, staat met bron en tijdstip vast: van welk model,</text>
+
+  <!-- instelbaar -->
+  <rect x="824" y="538" width="706" height="292" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="856" y="576" fill="#94A3B8">DE DREMPELS STAAN NIET VAST</text>
+  <text class="f h" x="856" y="612">Hoe streng de poort is, bepaal je zelf</text>
+  <text class="f lab" x="856" y="648">Hoeveel gelijkenis telt als "dit staat er al". Hoeveel als "dit lijkt</text>
+  <text class="f lab" x="856" y="672">erop, laat de zwerm ernaar kijken". Hoe kort een titel of een tekst</text>
+  <text class="f lab" x="856" y="696">mag zijn. Wanneer een nieuw onderwerp gemaakt wordt.</text>
+
+  <rect x="856" y="718" width="642" height="88" rx="11" fill="#F8FAFC"/>
+  <text class="f sm" x="878" y="748">Die waarden staan op één plek en zijn zichtbaar in de beheerschermen,</text>
+  <text class="f sm" x="878" y="770">zodat niemand hoeft te raden waarom zijn bijdrage werd geweigerd.</text>
+  <text class="f sm" x="878" y="794">Strenger betekent minder ruis en meer terechte weigeringen — de afweging is aan jou.</text>
+</svg>

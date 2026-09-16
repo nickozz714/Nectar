@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-labelledby="n6">
+  <title id="n6">Focus: koers houden over meerdere sessies, en per baan</title>
+  <defs>
+    <marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11 z" fill="#E08C1E"/>
+    </marker>
+  </defs>
+  <style>
+    .f { font-family: Archivo, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    .title { font-size: 37px; font-weight: 700; fill: #0B1220; }
+    .sub { font-size: 18px; fill: #64748B; }
+    .eyebrow { font-size: 14px; font-weight: 700; fill: #C9761A; letter-spacing: 2.4px; }
+    .h { font-size: 18.5px; font-weight: 700; fill: #0B1220; }
+    .lab { font-size: 14.5px; fill: #334155; }
+    .sm { font-size: 13.5px; fill: #64748B; }
+    .tag { font-size: 12.5px; font-weight: 700; letter-spacing: 1.1px; }
+  </style>
+
+  <rect width="1600" height="900" fill="#FBFCFE"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#E08C1E"/>
+
+  <text class="f eyebrow" x="70" y="76">NECTAR · PLAAT 6 — KOERS HOUDEN</text>
+  <text class="f title" x="70" y="120">Focus: de opdracht blijft staan, ook als het gesprek lang wordt</text>
+  <text class="f sub" x="70" y="153">Een agent die twintig stappen ver is, weet niet meer wat je in bericht één vroeg. Tenzij het er elke keer bij staat.</text>
+
+  <!-- wat een focus is -->
+  <rect x="70" y="200" width="440" height="404" rx="16" fill="#FDF3E3" stroke="#E08C1E" stroke-width="2.5"/>
+  <text class="f tag" x="98" y="238" fill="#B45309">WAT JE VASTLEGT</text>
+
+  <rect x="98" y="258" width="384" height="72" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="118" y="288">Het doel</text>
+  <text class="f sm" x="118" y="312">waar je naartoe werkt, in één zin</text>
+
+  <rect x="98" y="340" width="384" height="72" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="118" y="370">De stappen</text>
+  <text class="f sm" x="118" y="394">wat er achtereenvolgens moet gebeuren</text>
+
+  <rect x="98" y="422" width="384" height="72" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="118" y="452">De grenzen</text>
+  <text class="f sm" x="118" y="476">wat er níét mag gebeuren onderweg</text>
+
+  <rect x="98" y="504" width="384" height="72" rx="10" fill="#FFFFFF" stroke="#E5B979" stroke-width="1.5"/>
+  <text class="f h" x="118" y="534">Wanneer het klaar is</text>
+  <text class="f sm" x="118" y="558">zodat "af" geen mening is</text>
+
+  <path d="M510 400 L556 400" stroke="#E08C1E" stroke-width="3" marker-end="url(#ah)"/>
+
+  <!-- elke prompt opnieuw -->
+  <rect x="566" y="200" width="420" height="404" rx="16" fill="#0B1220"/>
+  <text class="f tag" x="594" y="238" fill="#E08C1E">EN DAN, BIJ ELKE VRAAG</text>
+  <text class="f" x="594" y="278" font-size="21" font-weight="700" fill="#FFFFFF">Het staat er weer bij</text>
+  <text class="f" x="594" y="312" font-size="14.5" fill="#94A3B8">Samen met de kennis die past bij</text>
+  <text class="f" x="594" y="334" font-size="14.5" fill="#94A3B8">wat je vraagt.</text>
+
+  <rect x="594" y="358" width="364" height="42" rx="8" fill="#1E293B"/>
+  <text class="f" x="612" y="385" font-size="14" fill="#FFE2B8">stap 1 · onderzocht wat er stuk was ✓</text>
+  <rect x="594" y="408" width="364" height="42" rx="8" fill="#1E293B"/>
+  <text class="f" x="612" y="435" font-size="14" fill="#FFE2B8">stap 2 · de oorzaak bevestigd ✓</text>
+  <rect x="594" y="458" width="364" height="42" rx="8" fill="#3B2C12"/>
+  <text class="f" x="612" y="485" font-size="14" font-weight="700" fill="#FFB547">stap 3 · herstellen en testen ← nu</text>
+  <rect x="594" y="508" width="364" height="42" rx="8" fill="#161F2E"/>
+  <text class="f" x="612" y="535" font-size="14" fill="#6B7A90">stap 4 · uitrollen</text>
+
+  <text class="f" x="594" y="578" font-size="13.5" fill="#94A3B8">Een stap afvinken doet de agent zelf. Jij ziet</text>
+  <text class="f" x="594" y="596" font-size="13.5" fill="#94A3B8">waar hij is zonder het te vragen.</text>
+
+  <!-- banen -->
+  <rect x="1042" y="200" width="488" height="404" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text class="f tag" x="1070" y="238" fill="#94A3B8">MEERDERE DINGEN TEGELIJK</text>
+  <text class="f h" x="1070" y="274">Elke sessie zijn eigen baan</text>
+  <text class="f sm" x="1070" y="302">Werk je aan twee dingen in hetzelfde project, dan</text>
+  <text class="f sm" x="1070" y="324">houdt elke sessie zijn eigen koers vast.</text>
+
+  <rect x="1070" y="346" width="432" height="68" rx="10" fill="#EAF1FE" stroke="#93C0FB" stroke-width="1.5"/>
+  <text class="f lab" x="1090" y="374" font-weight="700">Baan 1 — de mailkoppeling repareren</text>
+  <text class="f sm" x="1090" y="398">stap 2 van 4</text>
+
+  <rect x="1070" y="424" width="432" height="68" rx="10" fill="#F1ECFE" stroke="#B9A7EE" stroke-width="1.5"/>
+  <text class="f lab" x="1090" y="452" font-weight="700">Baan 2 — de documentatie bijwerken</text>
+  <text class="f sm" x="1090" y="476">stap 1 van 3</text>
+
+  <rect x="1070" y="502" width="432" height="68" rx="10" fill="#E7F7F1" stroke="#7FCBB1" stroke-width="1.5"/>
+  <text class="f lab" x="1090" y="530" font-weight="700">Baan 3 — een collega, ander onderwerp</text>
+  <text class="f sm" x="1090" y="554">stap 3 van 5</text>
+
+  <text class="f sm" x="1070" y="592">Ze zien elkaars koers niet — wel elkaars kennis.</text>
+
+  <!-- waarom -->
+  <rect x="70" y="638" width="1460" height="192" rx="16" fill="#F1F5F9"/>
+  <text class="f tag" x="102" y="674" fill="#64748B">WAAROM DIT HET VERSCHIL MAAKT</text>
+
+  <rect x="102" y="694" width="450" height="118" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="122" y="724" font-weight="700">Een lang gesprek verliest zijn begin</text>
+  <text class="f sm" x="122" y="750">Hoe verder een agent komt, hoe verder de oorspronkelijke</text>
+  <text class="f sm" x="122" y="772">opdracht naar achteren zakt. Dan gaat hij iets náást de</text>
+  <text class="f sm" x="122" y="794">vraag doen, netjes en al.</text>
+
+  <rect x="568" y="694" width="450" height="118" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="588" y="724" font-weight="700">Het overleeft de sessie</text>
+  <text class="f sm" x="588" y="750">Sluit je af en kom je morgen terug, dan staat de koers er</text>
+  <text class="f sm" x="588" y="772">nog. Ook als het morgen een andere agent is, of een</text>
+  <text class="f sm" x="588" y="794">collega die het overneemt.</text>
+
+  <rect x="1034" y="694" width="464" height="118" rx="11" fill="#FFFFFF"/>
+  <text class="f lab" x="1054" y="724" font-weight="700">Jij hoeft jezelf niet te herhalen</text>
+  <text class="f sm" x="1054" y="750">Eén keer zeggen wat het doel is en waar de grenzen liggen,</text>
+  <text class="f sm" x="1054" y="772">in plaats van elke paar berichten "denk erom dat je niet…"</text>
+  <text class="f sm" x="1054" y="794">er weer bij zetten.</text>
+</svg>
