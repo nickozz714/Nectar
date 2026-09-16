@@ -6,7 +6,8 @@
 > cloud, no data leaving your network.
 
 This folder is the deep-dive documentation. For a 5-minute start use the root
-**[INSTALL.md](../INSTALL.md)**; for the plain-language overview use the root
+**[INSTALL.md](../INSTALL.md)**; for an install carried out by an AI agent use the root
+**[RUNBOOK.md](../RUNBOOK.md)**; for the plain-language overview use the root
 **[README.md](../README.md)**.
 
 ## Map

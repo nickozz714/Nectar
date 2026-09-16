@@ -2,6 +2,9 @@
 
 From zero to a working, connected hive. Assumes Docker and a recent Claude Code CLI.
 
+> Letting an AI agent do the install instead? Point it at **[RUNBOOK.md](RUNBOOK.md)** —
+> the same path, but as deterministic steps with a check after each one.
+
 ---
 
 ## 1. Run the hive (one container, zero config)

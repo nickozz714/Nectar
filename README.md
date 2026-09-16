@@ -5,6 +5,8 @@ right knowledge on every prompt, cleans itself up, and gets smarter over time. I
 local in one container** (Neo4j + API + local models) — no cloud, no data leaving your network.
 
 - **New here? → [INSTALL.md](INSTALL.md)** — zero to a working hive in ~5 minutes.
+- **Letting an agent install it? → [RUNBOOK.md](RUNBOOK.md)** — the same path as
+  deterministic steps, each with a check.
 - **How it works & why → [DESIGN.md](DESIGN.md)**
 - **Deep dive → [docs/](docs/)** — architecture diagrams, ML & formulas, deployment (server/Azure/OpenShift), security, Cypher cookbook, API/MCP reference, and more.
 - **How it compares → [docs/WHY-AND-WHEN.md](docs/WHY-AND-WHEN.md)** — honest positioning vs Mem0, Zep/Graphiti, Letta and Neo4j-labs.
