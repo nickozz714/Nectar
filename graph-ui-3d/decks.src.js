@@ -140,8 +140,13 @@ const stepsToText = steps => (steps || []).map(s => (stepDone(s) ? "x " : "") + 
 const textToSteps = t => t.split("\n").map(l => l.trim()).filter(Boolean).map(l =>
   l.toLowerCase().startsWith("x ") ? { text: l.slice(2).trim(), status: "done" } : { text: l, status: "open" });
 
+let focusOrgBreed = false;
+
 async function renderFocus() {
-  const foci = await api("/focus");
+  // Standaard je eigen banen; met de schakelaar die van de hele org. Dat laatste is
+  // niet zomaar een extraatje: agents delen meestal één serviceaccount, dus met je
+  // eigen login zie je een lege lijst terwijl er van alles loopt.
+  const foci = await api(`/focus?scope=${focusOrgBreed ? "org" : "account"}`);
   const list = Array.isArray(foci) ? foci : (foci ? [foci] : []);
   const stepIcon = s => ({ done: "✓", current: "▶" }[typeof s === "object" ? s.status : ""] || "○");
   // Meerdere banen (lanes) per project: elke sessie steert zijn eigen focus. De baan-pill laat
@@ -173,7 +178,15 @@ async function renderFocus() {
     </div>`).join("")).join("");
   /* één formulier, twee standen: nieuwe focus of een bestaande baan bewerken */
   const f = focusEdit;
-  body.innerHTML = (list.length ? cards : `<div class="empty">Geen actieve focus — hieronder zet je er één.</div>`) + `
+  const schakelaar = `<div class="crow" style="margin-bottom:10px">
+      <span class="abtn${focusOrgBreed ? " amber" : ""}" id="fScope">${
+        focusOrgBreed ? "◉ hele organisatie" : "○ alleen mijn banen"}</span>
+      <span class="cex" style="margin-left:8px">Agents delen vaak één account — zet dit aan om hun banen te zien.</span>
+    </div>`;
+  const leeg = focusOrgBreed
+    ? `<div class="empty">Geen actieve focus in deze organisatie — hieronder zet je er één.</div>`
+    : `<div class="empty">Geen actieve focus op jouw account. Draaien je agents onder een eigen account? Zet hierboven "hele organisatie" aan.</div>`;
+  body.innerHTML = schakelaar + (list.length ? cards : leeg) + `
     <h3>${f ? "focus bewerken" : "nieuwe focus"}</h3>
     <div class="card">
       <div style="display:flex;flex-direction:column;gap:8px">
@@ -192,6 +205,8 @@ async function renderFocus() {
         <div><span class="abtn amber" id="fSet">${f ? "opslaan" : "focus zetten"}</span>
           ${f ? `<span class="abtn" id="fCancel">annuleren</span>` : ""}<span class="ok" id="fOut"></span></div>
       </div></div>`;
+  const scopeEl = body.querySelector("#fScope");
+  if (scopeEl) scopeEl.onclick = () => { focusOrgBreed = !focusOrgBreed; renderFocus(); };
   body.querySelectorAll("[data-adv]").forEach(b => b.onclick = async () => {
     try { await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b.dataset.adv, project: b.dataset.proj, lane: b.dataset.lane }) }); renderFocus(); }
     catch (e) { alert(e.message); } });

@@ -142,11 +142,23 @@ def get_focus(
     session: Session, account: AuthedAccount, project: str = "",
     session_id: str = "", name: str = "", lane: str | None = None,
 ) -> dict | None:
-    """The focus for the caller's lane. A session with no lane of its own falls back to the
-    project-wide focus (lane ""), so clients that send no session id behave exactly as before."""
+    """The focus for the caller's lane.
+
+    A caller that identifies itself (a session token) and has no lane of its own gets
+    NOTHING — deliberately. It used to fall back to the project-wide focus (lane ""), and
+    that turned "I don't know your lane" into "here, have someone else's task". With one
+    shared account and an empty project — which is exactly how LabX's labs connect — that
+    meant every unrelated agent got the same focus injected on every prompt. Silently
+    steering an agent towards a task that isn't his is worse than steering him not at all.
+
+    A caller that sends NO session id still gets the project-wide focus: that is a client
+    which has only ever had one task per project, and nothing about it has changed.
+    """
     if lane is None:
         lane = resolve_lane(session, account, project, session_id, name)
         if lane is None:
+            if session_token(session_id):
+                return None
             lane = ""
     record = session.run(
         f"MATCH (f:HiveFocus {{account_uid: $acc, project: $project, lane: $lane}}) {_RETURN}",
@@ -155,17 +167,32 @@ def get_focus(
     return _row_to_dict(record) if record else None
 
 
-def list_for(session: Session, account: AuthedAccount, project: str | None = None) -> list[dict]:
-    """All active foci (lanes) for this account — across projects, or within one project."""
+def list_for(session: Session, account: AuthedAccount, project: str | None = None,
+             scope: str = "account") -> list[dict]:
+    """Active foci (lanes), for this account or for the whole org.
+
+    `scope="org"` exists because a lane belongs to the ACCOUNT that set it, and a fleet of
+    agents usually shares one service account. Look at the GUI with your own login and you
+    see nothing, while dozens of lanes are running under the account your agents use — which
+    reads as "the focus panel is broken" and is in fact "you are looking at your own empty
+    shelf". Who owns a lane comes along in `account_uid` so the panel can say so.
+    """
+    orgbreed = (scope or "").lower() == "org"
     result = session.run(
         f"""
-        MATCH (f:HiveFocus {{account_uid: $acc}})
-        WHERE $project IS NULL OR f.project = $project
-        {_RETURN} ORDER BY f.updated DESC
+        MATCH (f:HiveFocus)
+        WHERE ($orgbreed AND f.org_uid = $org) OR (NOT $orgbreed AND f.account_uid = $acc)
+        AND ($project IS NULL OR f.project = $project)
+        {_RETURN}, f.account_uid AS account_uid ORDER BY f.updated DESC
         """,
-        acc=account.uid, project=project,
+        acc=account.uid, org=account.org_uid, project=project, orgbreed=orgbreed,
     )
-    return [_row_to_dict(r) for r in result]
+    rijen = []
+    for r in result:
+        d = _row_to_dict(r)
+        d["account_uid"] = r["account_uid"]
+        rijen.append(d)
+    return rijen
 
 
 def touch(session: Session, account: AuthedAccount, project: str, lane: str) -> None:

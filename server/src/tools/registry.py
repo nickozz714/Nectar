@@ -52,6 +52,26 @@ def _project() -> str:
         return ""
 
 
+def _session(explicit: str = "") -> str:
+    """Which session is calling — what the caller passed, else the X-Hive-Session header.
+
+    The header exists because the `session` argument is something the MODEL has to
+    remember to pass, and in practice it doesn't: of the 22 focus lanes on the shared LabX
+    account, 22 had no session bound. Every one of those agents then fell back to the
+    project-wide focus and got a task that wasn't his.
+
+    A client that knows which session it is (LabX knows: its thread id) can say so in a
+    header, once, and the model never has to think about it. The argument still wins — it
+    is how a session deliberately joins another lane.
+    """
+    if (explicit or "").strip():
+        return explicit.strip()
+    try:
+        return (get_http_request().headers.get("x-hive-session", "") or "").strip()
+    except Exception:
+        return ""
+
+
 @mcp.tool
 def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8,
                 session: str = "") -> str:
@@ -68,7 +88,7 @@ def hive_recall(query: str, anchors: list[str] | None = None, limit: int = 8,
     with _authed() as (graph, account):
         from src.services import recall_service
         return recall_service.recall(graph, account, query, anchors=anchors, limit=limit,
-                                     project=_project(), session_id=session)["context"]
+                                     project=_project(), session_id=_session(session))["context"]
 
 
 @mcp.tool
@@ -489,7 +509,7 @@ def focus_set(goal: str, steps: list, guardrails: list[str] | None = None,
             raise ValueError("goal is required")
         return focus_repo.set_focus(graph, account, goal, steps, guardrails,
                                     done_when, project=_project(),
-                                    session_id=session, name=name)
+                                    session_id=_session(session), name=name)
 
 
 @mcp.tool
@@ -502,7 +522,7 @@ def focus_advance(completed_step: str | int | None = None, note: str | None = No
     parallel session's focus; `name` addresses a named lane instead."""
     with _authed() as (graph, account):
         updated = focus_repo.advance_focus(graph, account, completed_step, note,
-                                           project=_project(), session_id=session, name=name)
+                                           project=_project(), session_id=_session(session), name=name)
         if updated is None:
             raise ValueError("No active focus for this lane — set one with focus_set first")
         return updated
@@ -515,7 +535,7 @@ def focus_get(session: str = "", name: str = "") -> dict:
     get the project-wide focus."""
     with _authed() as (graph, account):
         focus = focus_repo.get_focus(graph, account, project=_project(),
-                                     session_id=session, name=name)
+                                     session_id=_session(session), name=name)
         if focus is None:
             return {"active": False}
         return {"active": True, **focus}
@@ -537,7 +557,7 @@ def focus_clear(session: str = "", name: str = "", all_lanes: bool = False) -> d
     all_lanes=True to wipe every lane in this project."""
     with _authed() as (graph, account):
         removed = focus_repo.clear_focus(graph, account, project=_project(),
-                                         session_id=session, name=name, all_lanes=all_lanes)
+                                         session_id=_session(session), name=name, all_lanes=all_lanes)
         return {"cleared": removed > 0, "removed": removed}
 
 

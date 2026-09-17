@@ -156,14 +156,28 @@ def test_named_lane_can_be_resumed_from_a_new_session(graph, account):
     assert len(focus_repo.list_for(graph, me, project="p")) == 1  # still ONE lane
 
 
-def test_session_without_lane_falls_back_to_project_focus(graph, account):
-    """Clients that send no session id (or a brand-new session) see the project-wide focus —
-    the original single-focus behaviour stays intact."""
+def test_client_without_session_id_keeps_the_project_focus(graph, account):
+    """A client that never sends a session id sees the project-wide focus — the original
+    single-focus behaviour, untouched."""
     me = account("nick", role="member")
     focus_repo.set_focus(graph, me, "Project-breed", ["s"], None, "", project="p")
 
     assert focus_repo.get_focus(graph, me, "p")["goal"] == "Project-breed"
-    assert focus_repo.get_focus(graph, me, "p", session_id="onbekend")["goal"] == "Project-breed"
+
+
+def test_unknown_session_gets_nothing_rather_than_someone_elses_task(graph, account):
+    """A caller that DOES identify itself and has no lane of its own gets nothing.
+
+    This used to return the project-wide focus, and that turned "I don't know your lane"
+    into "here, have someone else's task". On the live hive that is exactly what happened:
+    22 lanes on one shared service account, none of them with a session bound, every agent
+    getting the same unrelated goal injected on every prompt. Steering an agent towards a
+    task that isn't his is worse than not steering him at all.
+    """
+    me = account("nick", role="member")
+    focus_repo.set_focus(graph, me, "Project-breed", ["s"], None, "", project="p")
+
+    assert focus_repo.get_focus(graph, me, "p", session_id="onbekend") is None
 
 
 def test_recall_gives_each_session_its_own_focus_and_lane_token(client, graph, account):

@@ -43,11 +43,16 @@ class BindBody(BaseModel):
 @router.get("")
 def list_focus(
     project: str | None = None,
+    scope: str = "account",
     account: AuthedAccount = Depends(require_account),
     session: Session = Depends(get_graph),
 ):
-    """All active foci (lanes) for this account — across projects, or within one project."""
-    return focus_repo.list_for(session, account, project=project)
+    """Active foci (lanes): your own by default, `scope=org` for the whole organisation.
+
+    Org-breed is er omdat een baan bij het ACCOUNT hoort dat hem zette, en een vloot agents
+    meestal één serviceaccount deelt. Met je eigen login zie je dan niets terwijl er tientallen
+    banen lopen."""
+    return focus_repo.list_for(session, account, project=project, scope=scope)
 
 
 @router.post("")

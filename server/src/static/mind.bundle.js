@@ -85766,8 +85766,9 @@ var stepTxt = (s2) => typeof s2 === "string" ? s2 : s2.text ?? s2.step ?? JSON.s
 var stepDone = (s2) => typeof s2 === "object" && s2.status === "done";
 var stepsToText = (steps) => (steps || []).map((s2) => (stepDone(s2) ? "x " : "") + stepTxt(s2)).join("\n");
 var textToSteps = (t2) => t2.split("\n").map((l2) => l2.trim()).filter(Boolean).map((l2) => l2.toLowerCase().startsWith("x ") ? { text: l2.slice(2).trim(), status: "done" } : { text: l2, status: "open" });
+var focusOrgBreed = false;
 async function renderFocus() {
-  const foci = await api("/focus");
+  const foci = await api(`/focus?scope=${focusOrgBreed ? "org" : "account"}`);
   const list = Array.isArray(foci) ? foci : foci ? [foci] : [];
   const stepIcon = (s2) => ({ done: "\u2713", current: "\u25B6" })[typeof s2 === "object" ? s2.status : ""] || "\u25CB";
   const laneLbl = (f3) => f3.label || (f3.lane ? f3.lane : "project-breed");
@@ -85796,7 +85797,12 @@ async function renderFocus() {
         <span class="abtn red" data-clear="${esc(f3.project || "")}" data-lane="${esc(f3.lane || "")}">\u2715 baan wissen</span></div>
     </div>`).join("")).join("");
   const f2 = focusEdit;
-  body.innerHTML = (list.length ? cards : `<div class="empty">Geen actieve focus \u2014 hieronder zet je er \xE9\xE9n.</div>`) + `
+  const schakelaar = `<div class="crow" style="margin-bottom:10px">
+      <span class="abtn${focusOrgBreed ? " amber" : ""}" id="fScope">${focusOrgBreed ? "\u25C9 hele organisatie" : "\u25CB alleen mijn banen"}</span>
+      <span class="cex" style="margin-left:8px">Agents delen vaak \xE9\xE9n account \u2014 zet dit aan om hun banen te zien.</span>
+    </div>`;
+  const leeg = focusOrgBreed ? `<div class="empty">Geen actieve focus in deze organisatie \u2014 hieronder zet je er \xE9\xE9n.</div>` : `<div class="empty">Geen actieve focus op jouw account. Draaien je agents onder een eigen account? Zet hierboven "hele organisatie" aan.</div>`;
+  body.innerHTML = schakelaar + (list.length ? cards : leeg) + `
     <h3>${f2 ? "focus bewerken" : "nieuwe focus"}</h3>
     <div class="card">
       <div style="display:flex;flex-direction:column;gap:8px">
@@ -85815,6 +85821,11 @@ async function renderFocus() {
         <div><span class="abtn amber" id="fSet">${f2 ? "opslaan" : "focus zetten"}</span>
           ${f2 ? `<span class="abtn" id="fCancel">annuleren</span>` : ""}<span class="ok" id="fOut"></span></div>
       </div></div>`;
+  const scopeEl = body.querySelector("#fScope");
+  if (scopeEl) scopeEl.onclick = () => {
+    focusOrgBreed = !focusOrgBreed;
+    renderFocus();
+  };
   body.querySelectorAll("[data-adv]").forEach((b2) => b2.onclick = async () => {
     try {
       await api("/focus/advance", { method: "POST", body: JSON.stringify({ completed_step: b2.dataset.adv, project: b2.dataset.proj, lane: b2.dataset.lane }) });
