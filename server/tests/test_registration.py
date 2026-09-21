@@ -80,6 +80,29 @@ def test_set_token_role(client):
     assert me["role"] == "maintainer"
 
 
+def test_org_admin_is_never_narrowed_by_its_token(client):
+    """An org_admin may do everything in their own org, whichever token the request
+    arrives on. The GUI member list shows the ACCOUNT role, so a token bound to a lower
+    role used to produce "requires the 'maintainer' role (your role: 'member')" for
+    someone the GUI called org_admin."""
+    admin = client.post("/register", json={"name": "Alice"}).json()
+    ah = {"Authorization": f"Bearer {admin['token']}"}
+    accounts = client.get("/manage/accounts", headers=ah).json()
+    alice = next(a for a in accounts if a["name"] == "Alice")
+    thash = client.get(f"/manage/accounts/{alice['uid']}/tokens", headers=ah).json()[0]["hash"]
+
+    # bind the token itself to the lowest role
+    assert client.post(f"/manage/tokens/{thash}/role", headers=ah,
+                       json={"role": "member"}).status_code == 200
+
+    me = client.get("/graph/me", headers=ah).json()
+    assert me["role"] == "org_admin"
+    assert me["can_maintain"] is True and me["can_review"] is True
+
+    # and an org_admin-gated call still works on that same token
+    assert client.get("/manage/accounts", headers=ah).status_code == 200
+
+
 def test_org_admin_creates_account_via_manage_no_admin_token(client):
     """An org_admin creates accounts + tokens with their OWN session token via /manage —
     the operator admin token is not needed (the GUI Beheer tab relies on this)."""
