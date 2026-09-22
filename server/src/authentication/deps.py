@@ -27,6 +27,23 @@ def has_role(account: AuthedAccount, minimum: str) -> bool:
     return _ROLE_ORDER.get(account.role, 0) >= _ROLE_ORDER[minimum]
 
 
+def effective_role(account_role: str | None, token_role: str | None) -> str:
+    """Which role a request actually runs with.
+
+    A token carries its own role so you can hand out a narrowed one — a read-only
+    token for a script, say — and that is why the token normally wins. The one
+    exception is org_admin: that role means "may do everything in this org", so an
+    org_admin's request is never narrowed by whichever token it arrived on. Without
+    that floor the member list in the GUI (which shows the ACCOUNT role) and the
+    API (which enforced only the TOKEN role) could disagree, and an org_admin would
+    be told "requires the 'maintainer' role (your role: 'member')" about their own
+    hive.
+    """
+    if account_role == "org_admin":
+        return "org_admin"
+    return token_role or account_role or "member"
+
+
 def assert_role(account: AuthedAccount, minimum: str, action: str) -> None:
     if not has_role(account, minimum):
         raise ValueError(
@@ -46,7 +63,8 @@ def account_from_token(session: Session, token: str) -> AuthedAccount:
         WHERE t.revoked = false AND (t.expires_at IS NULL OR t.expires_at > timestamp())
         SET t.last_used = timestamp()
         RETURN a.uid AS uid, a.org_uid AS org_uid, a.team_uid AS team_uid,
-               a.name AS name, coalesce(t.role, a.role, 'member') AS role
+               a.name AS name, coalesce(t.role, a.role, 'member') AS token_role,
+               a.role AS account_role
         """,
         hash=hash_token(token),
     ).single()
@@ -57,7 +75,7 @@ def account_from_token(session: Session, token: str) -> AuthedAccount:
         org_uid=record["org_uid"],
         team_uid=record["team_uid"],
         name=record["name"],
-        role=record["role"] or "member",
+        role=effective_role(record["account_role"], record["token_role"]),
     )
 
 
